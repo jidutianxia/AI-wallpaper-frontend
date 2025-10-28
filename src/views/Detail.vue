@@ -23,7 +23,7 @@
               <el-button 
                 :type="wallpaper.isLiked ? 'danger' : 'default'"
                 size="large"
-                :icon="Heart"
+                :icon="Star"
                 @click="toggleLike"
                 :loading="likeLoading"
               >
@@ -136,7 +136,7 @@
             <h4>{{ item.title }}</h4>
             <div class="related-stats">
               <span><el-icon><View /></el-icon> {{ item.views }}</span>
-              <span><el-icon><Heart /></el-icon> {{ item.likes }}</span>
+              <span><el-icon><Star /></el-icon> {{ item.likes }}</span>
             </div>
           </div>
         </div>
@@ -166,7 +166,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { 
   Download, 
-  Heart, 
   Star, 
   View, 
   Calendar 

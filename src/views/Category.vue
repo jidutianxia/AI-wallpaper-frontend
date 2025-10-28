@@ -61,7 +61,7 @@
               @click.stop="previewWallpaper(wallpaper)"
             />
             <el-button 
-              :icon="Heart" 
+              :icon="Star" 
               circle 
               size="small" 
               :type="wallpaper.isLiked ? 'danger' : 'default'"
@@ -101,7 +101,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { View, Heart, Download } from '@element-plus/icons-vue'
+import { View, Star, Download } from '@element-plus/icons-vue'
 import { getWallpapers, getCategories, likeWallpaper } from '@/api/wallpaper'
 import { useUserStore } from '@/store/user'
 

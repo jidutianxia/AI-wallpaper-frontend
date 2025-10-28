@@ -46,7 +46,7 @@
             <div class="wallpaper-overlay">
               <div class="wallpaper-actions">
                 <el-button 
-                  :icon="Heart" 
+                  :icon="Star" 
                   circle 
                   size="small" 
                   type="danger"
@@ -83,7 +83,7 @@
             <div class="wallpaper-overlay">
               <div class="wallpaper-actions">
                 <el-button 
-                  :icon="Heart" 
+                  :icon="Star" 
                   circle 
                   size="small" 
                   type="danger"
@@ -224,7 +224,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Heart, Download, Edit, Delete, Plus, UploadFilled } from '@element-plus/icons-vue'
+import { Star, Download, Edit, Delete, Plus, UploadFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper } from '@/api/wallpaper'
 import request from '@/api/wallpaper'
