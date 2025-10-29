@@ -130,14 +130,14 @@ const fetchWallpapers = async () => {
       {
         id: 1,
         title: '美丽风景',
-        thumbUrl: 'https://via.placeholder.com/300x200',
+        thumbUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&crop=center',
         views: 1234,
         likes: 56
       },
       {
         id: 2,
         title: '抽象艺术',
-        thumbUrl: 'https://via.placeholder.com/300x200',
+        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
         views: 2345,
         likes: 78
       }
@@ -321,9 +321,20 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .wallpaper-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1rem;
+  .search {
+    padding: 0 16px;
+  }
+  
+  .search-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .search-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .search-header p {
+    font-size: 1rem;
   }
   
   .filters {
@@ -332,10 +343,85 @@ onMounted(() => {
   
   .filters .el-row {
     flex-direction: column;
+    gap: 12px;
   }
   
   .filters .el-col {
-    margin-bottom: 1rem;
+    width: 100%;
+    margin-bottom: 0;
+  }
+  
+  .filters .el-select,
+  .filters .el-button {
+    width: 100%;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .wallpaper-item img {
+    height: 150px;
+  }
+  
+  .wallpaper-info {
+    padding: 12px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .wallpaper-stats {
+    font-size: 0.8rem;
+  }
+  
+  .pagination {
+    margin-top: 1.5rem;
+  }
+  
+  .pagination .el-pagination {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .search {
+    padding: 0 12px;
+  }
+  
+  .search-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .filters {
+    padding: 0.75rem;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .wallpaper-item img {
+    height: 200px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 1rem;
+  }
+  
+  .wallpaper-stats {
+    font-size: 0.85rem;
+  }
+  
+  .pagination .el-pagination {
+    flex-wrap: wrap;
+  }
+  
+  .no-results {
+    padding: 2rem 1rem;
   }
 }
 </style>

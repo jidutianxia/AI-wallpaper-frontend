@@ -199,8 +199,8 @@ const fetchWallpaper = async (id) => {
     wallpaper.value = {
       id: parseInt(id),
       title: '美丽的风景壁纸',
-      url: 'https://via.placeholder.com/1920x1080/4CAF50/white?text=Wallpaper',
-      thumbUrl: 'https://via.placeholder.com/400x300/4CAF50/white?text=Wallpaper',
+      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop&crop=center',
+      thumbUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center',
       width: 1920,
       height: 1080,
       fileSize: 2048000,
@@ -217,7 +217,7 @@ const fetchWallpaper = async (id) => {
       uploader: {
         id: 1,
         username: '摄影师小王',
-        avatar: 'https://via.placeholder.com/40x40/FF9800/white?text=U',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
         uploadCount: 25
       }
     }
@@ -243,21 +243,21 @@ const fetchRelatedWallpapers = async () => {
       {
         id: 2,
         title: '相关壁纸1',
-        thumbUrl: 'https://via.placeholder.com/300x200/2196F3/white?text=Related1',
+        thumbUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&h=200&fit=crop&crop=center',
         views: 567,
         likes: 34
       },
       {
         id: 3,
         title: '相关壁纸2',
-        thumbUrl: 'https://via.placeholder.com/300x200/FF9800/white?text=Related2',
+        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
         views: 890,
         likes: 67
       },
       {
         id: 4,
         title: '相关壁纸3',
-        thumbUrl: 'https://via.placeholder.com/300x200/9C27B0/white?text=Related3',
+        thumbUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&h=200&fit=crop&crop=center',
         views: 234,
         likes: 12
       }
@@ -614,50 +614,182 @@ onMounted(() => {
 @media (max-width: 1024px) {
   .detail-content {
     grid-template-columns: 1fr;
-    gap: 30px;
+    gap: 20px;
   }
   
   .wallpaper-info {
     order: -1;
   }
+  
+  .wallpaper-display {
+    max-height: 60vh;
+  }
 }
 
 @media (max-width: 768px) {
   .detail {
-    padding: 15px;
+    padding: 12px;
   }
   
-  .wallpaper-info {
+  .wallpaper-container {
+    border-radius: 8px;
+  }
+  
+  .wallpaper-overlay {
     padding: 20px;
-  }
-  
-  .wallpaper-title {
-    font-size: 24px;
+    opacity: 1;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
   }
   
   .overlay-actions {
     flex-direction: column;
+    gap: 8px;
+  }
+  
+  .overlay-actions .el-button {
+    width: 100%;
+    font-size: 14px;
+  }
+  
+  .wallpaper-info {
+    padding: 16px;
+  }
+  
+  .wallpaper-title {
+    font-size: 20px;
+    line-height: 1.4;
+  }
+  
+  .wallpaper-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .stat-item {
+    font-size: 13px;
+  }
+  
+  .info-section {
+    margin-bottom: 20px;
+  }
+  
+  .info-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .info-item {
+    padding: 6px 0;
+  }
+  
+  .uploader-info {
+    gap: 12px;
+  }
+  
+  .related-section {
+    padding: 16px;
+  }
+  
+  .related-section h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
   }
   
   .related-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .related-item img {
+    height: 100px;
+  }
+  
+  .related-info {
+    padding: 12px;
+  }
+  
+  .related-info h4 {
+    font-size: 13px;
+  }
+  
+  .related-stats {
+    font-size: 11px;
+    gap: 8px;
   }
 }
 
 @media (max-width: 480px) {
+  .detail {
+    padding: 8px;
+  }
+  
+  .wallpaper-title {
+    font-size: 18px;
+  }
+  
   .wallpaper-stats {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    font-size: 12px;
+  }
+  
+  .overlay-actions {
     gap: 6px;
+  }
+  
+  .overlay-actions .el-button {
+    font-size: 12px;
+    padding: 8px 12px;
   }
   
   .info-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+    padding: 8px 0;
+  }
+  
+  .info-item label {
+    font-size: 13px;
+  }
+  
+  .info-item span {
+    font-size: 14px;
+  }
+  
+  .tags {
+    gap: 6px;
+  }
+  
+  .tag-item {
+    font-size: 12px;
+  }
+  
+  .uploader-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   
   .related-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .related-item img {
+    height: 120px;
+  }
+  
+  .related-info h4 {
+    font-size: 14px;
+  }
+  
+  .related-stats {
+    font-size: 12px;
   }
 }
 </style>

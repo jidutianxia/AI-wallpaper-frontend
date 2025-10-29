@@ -203,7 +203,7 @@ const fetchWallpapers = async (append = false) => {
       {
         id: 1,
         title: '美丽山景',
-        thumbUrl: 'https://via.placeholder.com/300x200/4CAF50/white?text=Mountain',
+        thumbUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&crop=center',
         views: 1234,
         likes: 56,
         isLiked: false
@@ -211,7 +211,7 @@ const fetchWallpapers = async (append = false) => {
       {
         id: 2,
         title: '城市夜景',
-        thumbUrl: 'https://via.placeholder.com/300x200/2196F3/white?text=City',
+        thumbUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&h=200&fit=crop&crop=center',
         views: 2345,
         likes: 78,
         isLiked: false
@@ -219,7 +219,7 @@ const fetchWallpapers = async (append = false) => {
       {
         id: 3,
         title: '抽象艺术',
-        thumbUrl: 'https://via.placeholder.com/300x200/FF9800/white?text=Abstract',
+        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
         views: 3456,
         likes: 90,
         isLiked: true
@@ -441,13 +441,27 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .wallpaper-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1rem;
+  .category {
+    padding: 0 16px;
+  }
+  
+  .category-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .category-header h1 {
+    font-size: 1.8rem;
   }
   
   .category-nav {
     padding: 1rem;
+    gap: 0.5rem;
+  }
+  
+  .category-btn {
+    min-width: 60px;
+    font-size: 14px;
+    padding: 8px 12px;
   }
   
   .filters {
@@ -456,15 +470,94 @@ onMounted(() => {
   
   .filters .el-row {
     flex-direction: column;
+    gap: 12px;
   }
   
   .filters .el-col {
-    margin-bottom: 1rem;
+    width: 100%;
+    margin-bottom: 0;
+  }
+  
+  .filters .el-select,
+  .filters .el-checkbox-group {
+    width: 100%;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .wallpaper-item img {
+    height: 150px;
   }
   
   .wallpaper-overlay {
     opacity: 1;
     background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%);
+  }
+  
+  .wallpaper-actions {
+    gap: 0.25rem;
+  }
+  
+  .wallpaper-actions .el-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .wallpaper-stats {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .category {
+    padding: 0 12px;
+  }
+  
+  .category-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .category-nav {
+    padding: 0.75rem;
+    gap: 0.25rem;
+  }
+  
+  .category-btn {
+    min-width: 50px;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  
+  .filters {
+    padding: 0.75rem;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .wallpaper-item img {
+    height: 200px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 1rem;
+  }
+  
+  .wallpaper-stats {
+    font-size: 0.85rem;
+  }
+  
+  .load-more {
+    margin: 1.5rem 0;
   }
 }
 </style>

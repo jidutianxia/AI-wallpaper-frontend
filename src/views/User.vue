@@ -316,7 +316,7 @@ const fetchLikes = async () => {
       {
         id: 3,
         title: '点赞的城市',
-        thumbUrl: 'https://via.placeholder.com/300x200/2196F3/white?text=Like1',
+        thumbUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&h=200&fit=crop&crop=center',
         likeTime: '2024-01-12'
       }
     ]
@@ -340,7 +340,7 @@ const fetchUploads = async () => {
       {
         id: 4,
         title: '我上传的壁纸',
-        thumbUrl: 'https://via.placeholder.com/300x200/9C27B0/white?text=Upload1',
+        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
         status: 'approved'
       }
     ]
@@ -792,43 +792,184 @@ onMounted(() => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .user {
-    padding: 15px;
+    padding: 12px;
+  }
+  
+  .user-profile {
+    padding: 16px;
   }
   
   .profile-header {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 16px;
+  }
+  
+  .profile-info h2 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  
+  .profile-info p {
+    font-size: 14px;
   }
   
   .profile-stats {
     justify-content: center;
-    gap: 30px;
-  }
-  
-  .profile-actions {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  
-  .wallpaper-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-    padding: 15px;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-stats {
-    gap: 20px;
+    gap: 24px;
+    margin-bottom: 20px;
   }
   
   .stat-number {
     font-size: 24px;
   }
   
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .profile-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .profile-actions .el-button {
+    font-size: 14px;
+  }
+  
+  .user-tabs {
+    margin-top: 16px;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .wallpaper-item img {
+    height: 150px;
+  }
+  
+  .wallpaper-overlay {
+    padding: 12px;
+    opacity: 1;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+  }
+  
+  .wallpaper-actions {
+    gap: 6px;
+  }
+  
+  .wallpaper-actions .el-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 0.9rem;
+    color: white;
+  }
+  
+  .wallpaper-info p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .empty-state {
+    padding: 40px 16px;
+  }
+  
+  .upload-area {
+    padding: 24px;
+  }
+  
+  .upload-icon {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user {
+    padding: 8px;
+  }
+  
+  .user-profile {
+    padding: 12px;
+  }
+  
+  .profile-header .el-avatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .profile-info h2 {
+    font-size: 1.3rem;
+  }
+  
+  .profile-stats {
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  .profile-actions {
+    gap: 6px;
+  }
+  
+  .profile-actions .el-button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
   .wallpaper-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 8px;
+  }
+  
+  .wallpaper-item img {
+    height: 200px;
+  }
+  
+  .wallpaper-overlay {
+    padding: 16px;
+  }
+  
+  .wallpaper-info h3 {
+    font-size: 1rem;
+  }
+  
+  .wallpaper-info p {
+    font-size: 0.85rem;
+  }
+  
+  .empty-state {
+    padding: 32px 12px;
+  }
+  
+  .upload-area {
+    padding: 20px;
+  }
+  
+  .upload-icon {
+    font-size: 32px;
+  }
+  
+  .upload-text {
+    font-size: 13px;
+  }
+  
+  .upload-hint {
+    font-size: 11px;
   }
 }
 </style>

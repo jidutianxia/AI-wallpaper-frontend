@@ -67,8 +67,10 @@ onMounted(() => {
     <nav class="navbar">
       <div class="nav-left">
         <router-link to="/" class="nav-brand">AI壁纸</router-link>
-        <router-link to="/" class="nav-link">首页</router-link>
-        <router-link to="/category" class="nav-link">分类</router-link>
+        <div class="nav-links">
+          <router-link to="/" class="nav-link">首页</router-link>
+          <router-link to="/category" class="nav-link">分类</router-link>
+        </div>
       </div>
       
       <div class="nav-center">
@@ -147,6 +149,12 @@ onMounted(() => {
   gap: 2rem;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
 .nav-brand {
   font-size: 1.5rem;
   font-weight: bold;
@@ -201,16 +209,70 @@ onMounted(() => {
     padding: 1rem;
   }
   
-  .nav-left,
-  .nav-center,
+  .nav-left {
+    width: 100%;
+    justify-content: space-between;
+    flex-direction: row;
+  }
+  
+  .nav-links {
+    gap: 1rem;
+  }
+  
+  .nav-brand {
+    font-size: 1.3rem;
+  }
+  
+  .nav-center {
+    width: 100%;
+    margin: 0;
+    max-width: none;
+  }
+  
   .nav-right {
     width: 100%;
     justify-content: center;
   }
   
-  .nav-center {
-    margin: 0;
-    max-width: none;
+  .main-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.75rem;
+  }
+  
+  .nav-left {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  
+  .nav-links {
+    gap: 0.75rem;
+  }
+  
+  .nav-brand {
+    font-size: 1.2rem;
+  }
+  
+  .nav-link {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .search-input {
+    font-size: 14px;
+  }
+  
+  .nav-right .el-button {
+    font-size: 14px;
+  }
+  
+  .main-content {
+    padding: 0.75rem;
   }
 }
 </style>
