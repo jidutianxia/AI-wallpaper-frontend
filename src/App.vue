@@ -29,7 +29,16 @@ const submap = {
   type: ['插画', '二次元', '风景', '极简', '赛博朋克', '像素风', '3D渲染'],
   class: ['人物', '动物', '植物', '建筑', '美食', '运动', '科技'],
   ratio: ['4K', '8K', '1080P', '2K', '超宽屏', '手机竖屏'],
-  color: ['红色', '橙色', '黄色', '绿色', '青色', '蓝色', '紫色', '黑白']
+  color: [
+    { label: '红色', color: '#ff4d4f' },
+    { label: '橙色', color: '#fa8c16' },
+    { label: '黄色', color: '#fadb14' },
+    { label: '绿色', color: '#52c41a' },
+    { label: '青色', color: '#13c2c2' },
+    { label: '蓝色', color: '#1890ff' },
+    { label: '紫色', color: '#722ed1' },
+    { label: '黑白', color: '#000000' }
+  ]
 }
 
 // 登录相关
@@ -159,11 +168,12 @@ if (localStorage.getItem('theme') === null) {
                         <div class="sub-list">
                           <button 
                             v-for="sub in submap[cat.key]" 
-                            :key="sub"
+                            :key="typeof sub === 'object' ? sub.label : sub"
                             class="sub-item"
-                            @click.stop="selectSub(sub)"
+                            @click.stop="selectSub(typeof sub === 'object' ? sub.label : sub)"
                           >
-                            {{ sub }}
+                            <span v-if="typeof sub === 'object'" class="color-dot" :style="{ background: sub.color }"></span>
+                            {{ typeof sub === 'object' ? sub.label : sub }}
                           </button>
                         </div>
                       </div>
@@ -444,16 +454,25 @@ if (localStorage.getItem('theme') === null) {
 }
 
 .dark .sub-item { 
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #cbd5e1; 
-  box-shadow: none;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 .dark .sub-item:hover { 
-  background: rgba(255, 255, 255, 0.2); 
+  background: #1e293b; 
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
   border-color: rgba(255, 255, 255, 0.3);
+}
+
+.color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
 .nav-right {
