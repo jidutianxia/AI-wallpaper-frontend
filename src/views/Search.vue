@@ -5,6 +5,15 @@
       <p v-if="route.query.q">关键词："{{ route.query.q }}"</p>
       <p v-if="route.query.tag">标签："{{ route.query.tag }}"</p>
     </div>
+    <div class="tag-cloud" v-if="tagCloud.length">
+      <span
+        v-for="tag in tagCloud"
+        :key="tag.name"
+        class="tag"
+        :style="{ fontSize: `${tag.weight}px` }"
+        @click="applyTag(tag.name)"
+      >#{{ tag.name }}</span>
+    </div>
     
     <!-- 筛选器 -->
     <div class="filters">
@@ -41,21 +50,13 @@
     
     <!-- 壁纸列表 -->
     <div class="wallpaper-grid" v-loading="loading">
-      <div 
-        v-for="wallpaper in wallpapers" 
-        :key="wallpaper.id" 
-        class="wallpaper-item"
-        @click="viewDetail(wallpaper.id)"
-      >
-        <img :src="wallpaper.thumbUrl" :alt="wallpaper.title" />
-        <div class="wallpaper-info">
-          <h3>{{ wallpaper.title }}</h3>
-          <div class="wallpaper-stats">
-            <span><i class="el-icon-view"></i> {{ wallpaper.views }}</span>
-            <span><i class="el-icon-heart"></i> {{ wallpaper.likes }}</span>
-          </div>
-        </div>
-      </div>
+      <WallpaperCard
+        v-for="wallpaper in wallpapers"
+        :key="wallpaper.id"
+        :data="toCard(wallpaper)"
+        @preview="() => viewDetail(wallpaper.id)"
+      />
+      <div ref="sentinel" class="h-1"></div>
     </div>
     
     <!-- 分页 -->
@@ -83,6 +84,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getWallpapers, getCategories } from '@/api/wallpaper'
+import WallpaperCard from '@/components/WallpaperCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -94,6 +96,9 @@ const categories = ref([])
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(12)
+const tagCloud = ref([])
+const sentinel = ref(null)
+let io
 
 // 筛选器
 const filters = reactive({
@@ -103,8 +108,8 @@ const filters = reactive({
 })
 
 // 获取壁纸列表
-const fetchWallpapers = async () => {
-  loading.value = true
+const fetchWallpapers = async (append = false) => {
+  loading.value = !append
   try {
     const params = {
       page: currentPage.value,
@@ -121,12 +126,17 @@ const fetchWallpapers = async () => {
     }
     
     const response = await getWallpapers(params)
-    wallpapers.value = response.data || []
-    total.value = response.total || 0
+    const data = response.data || []
+    if (append) {
+      wallpapers.value.push(...data)
+    } else {
+      wallpapers.value = data
+    }
+    total.value = response.total || wallpapers.value.length
   } catch (error) {
     ElMessage.error('获取壁纸列表失败：' + (error.response?.data?.message || error.message))
     // 模拟数据
-    wallpapers.value = [
+    const mock = [
       {
         id: 1,
         title: '美丽风景',
@@ -142,7 +152,9 @@ const fetchWallpapers = async () => {
         likes: 78
       }
     ]
-    total.value = 2
+    if (append) wallpapers.value.push(...mock)
+    else wallpapers.value = mock
+    total.value = wallpapers.value.length
   } finally {
     loading.value = false
   }
@@ -153,6 +165,11 @@ const fetchCategories = async () => {
   try {
     const response = await getCategories()
     categories.value = response || []
+    const tags = categories.value.flatMap(c => c.tags || [])
+    const freq = tags.reduce((m, t) => (m[t] = (m[t]||0)+1, m), {})
+    const counts = Object.values(freq)
+    const max = counts.length ? Math.max(...counts) : 1
+    tagCloud.value = Object.entries(freq).map(([name, count]) => ({ name, weight: 12 + Math.round(8 * (count/max)) }))
   } catch (error) {
     // 模拟分类数据
     categories.value = [
@@ -160,6 +177,12 @@ const fetchCategories = async () => {
       { id: 2, name: '抽象' },
       { id: 3, name: '动漫' },
       { id: 4, name: '游戏' }
+    ]
+    tagCloud.value = [
+      { name: '自然', weight: 18 },
+      { name: '城市', weight: 16 },
+      { name: '抽象', weight: 20 },
+      { name: '游戏', weight: 14 }
     ]
   }
 }
@@ -190,7 +213,7 @@ const handleSizeChange = (val) => {
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
-  fetchWallpapers()
+  fetchWallpapers(true)
 }
 
 // 查看详情
@@ -227,7 +250,24 @@ watch(() => route.query, () => {
 // 组件挂载
 onMounted(() => {
   fetchCategories()
+  if ('IntersectionObserver' in window) {
+    io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && wallpapers.value.length < total.value) {
+          currentPage.value += 1
+          fetchWallpapers(true)
+        }
+      })
+    }, { rootMargin: '300px' })
+    setTimeout(() => { if (sentinel.value) io.observe(sentinel.value) }, 0)
+  }
 })
+
+const applyTag = (name) => {
+  router.push({ path: '/search', query: { ...route.query, tag: name } })
+}
+
+const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url || w.thumbUrl, resolution: w.resolution, previewVideoUrl: w.previewVideoUrl })
 </script>
 
 <style scoped>
@@ -258,55 +298,15 @@ onMounted(() => {
   margin-bottom: 2rem;
 }
 
+.tag-cloud { text-align: center; margin: 1rem 0 2rem; }
+.tag-cloud .tag { display: inline-block; margin: 6px 10px; color: #409eff; cursor: pointer; }
+.tag-cloud .tag:hover { text-decoration: underline; }
+
 .wallpaper-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
-}
-
-.wallpaper-item {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.wallpaper-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.wallpaper-item img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.wallpaper-info {
-  padding: 1rem;
-}
-
-.wallpaper-info h3 {
-  margin: 0 0 0.5rem 0;
-  color: #2c3e50;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.wallpaper-stats {
-  display: flex;
-  justify-content: space-between;
-  color: #909399;
-  font-size: 0.9rem;
-}
-
-.wallpaper-stats span {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
 }
 
 .pagination {
@@ -424,4 +424,10 @@ onMounted(() => {
     padding: 2rem 1rem;
   }
 }
+.dark .filters { background: #1e293b; }
+.dark .wallpaper-item { background: #1e293b; box-shadow: none; }
+.dark .search-header h1 { color: #e5e7eb; }
+.dark .search-header p { color: #cbd5e1; }
+.dark .wallpaper-info h3 { color: #e5e7eb; }
+.dark .wallpaper-stats { color: #cbd5e1; }
 </style>

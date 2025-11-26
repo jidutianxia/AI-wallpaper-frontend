@@ -4,12 +4,33 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useDark, useToggle } from '@vueuse/core'
+import { ClickOutside as vClickOutside } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 // 搜索相关
 const searchKeyword = ref('')
+const isSearchFocused = ref(false)
+const activeMain = ref('hot')
+
+// 模拟数据
+const mainCategories = [
+  { key: 'hot', label: '昨日热门' },
+  { key: 'type', label: '壁纸种类' },
+  { key: 'class', label: '壁纸分类' },
+  { key: 'ratio', label: '分辨率' },
+  { key: 'color', label: '颜色分类' }
+]
+
+const submap = {
+  hot: ['最新', '推荐的', '昨日热门', '近三天热门', '上周热门', '上月热门', '近半年热门', '去年热榜'],
+  type: ['插画', '二次元', '风景', '极简', '赛博朋克', '像素风', '3D渲染'],
+  class: ['人物', '动物', '植物', '建筑', '美食', '运动', '科技'],
+  ratio: ['4K', '8K', '1080P', '2K', '超宽屏', '手机竖屏'],
+  color: ['红色', '橙色', '黄色', '绿色', '青色', '蓝色', '紫色', '黑白']
+}
 
 // 登录相关
 const showLoginDialog = ref(false)
@@ -26,7 +47,22 @@ const handleSearch = () => {
       path: '/search',
       query: { q: searchKeyword.value.trim() }
     })
+    closeSearch()
   }
+}
+
+const handleSearchFocus = () => {
+  isSearchFocused.value = true
+}
+
+const closeSearch = () => {
+  isSearchFocused.value = false
+}
+
+const selectSub = (sub) => {
+  const cat = activeMain.value
+  router.push({ path: '/search', query: { q: searchKeyword.value, cat, sub } })
+  closeSearch()
 }
 
 // 登录处理
@@ -60,51 +96,148 @@ const handleLogout = () => {
 onMounted(() => {
   userStore.initAuth()
 })
+
+const isDark = useDark({ selector: 'html', attribute: 'class', valueDark: 'dark', valueLight: '', storageKey: 'theme' })
+const toggleTheme = useToggle(isDark)
+
+// 默认使用暗色模式
+if (localStorage.getItem('theme') === null) {
+  isDark.value = true
+}
 </script>
 
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'search-active': isSearchFocused }">
     <nav class="navbar">
-      <div class="nav-left">
-        <router-link to="/" class="nav-brand">AI壁纸</router-link>
-        <div class="nav-links">
-          <router-link to="/" class="nav-link">首页</router-link>
-          <router-link to="/category" class="nav-link">分类</router-link>
+      <div class="nav-container">
+        <!-- Logo & Links (Hidden when searching) -->
+        <div class="nav-left" :class="{ 'nav-hidden': isSearchFocused }">
+          <router-link to="/" class="nav-brand">AI壁纸</router-link>
+          <div class="nav-links">
+            <router-link to="/" class="nav-link">首页</router-link>
+            <router-link to="/category" class="nav-link">分类</router-link>
+          </div>
         </div>
-      </div>
-      
-      <div class="nav-center">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索壁纸..."
-          class="search-input"
-          @keyup.enter="handleSearch"
-        >
-          <template #suffix>
-            <el-button 
-              type="primary" 
-              :icon="Search" 
-              @click="handleSearch"
-              size="small"
-            />
+        
+        <!-- Search Area (Expands) -->
+        <div class="nav-center" :class="{ 'expanded': isSearchFocused }" v-click-outside="closeSearch">
+          <div class="search-wrapper">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索壁纸..."
+              class="search-input"
+              :class="{ 'input-expanded': isSearchFocused }"
+              @focus="handleSearchFocus"
+              @keyup.enter="handleSearch"
+            >
+              <template #prefix>
+                <el-icon class="search-icon"><Search /></el-icon>
+              </template>
+            </el-input>
+            
+            <!-- Categories (Visible only when focused) -->
+            <transition name="fade">
+              <div class="search-categories" v-if="isSearchFocused">
+                <!-- Main Categories with relative positioning for sub-dropdowns -->
+                <div class="main-cats">
+                  <div 
+                    v-for="cat in mainCategories" 
+                    :key="cat.key"
+                    class="cat-group"
+                    @mouseenter="activeMain = cat.key"
+                  >
+                    <button 
+                      class="cat-pill"
+                      :class="{ active: activeMain === cat.key }"
+                    >
+                      {{ cat.label }}
+                    </button>
+                    
+                    <!-- Sub Categories Dropdown (Nested for positioning) -->
+                    <transition name="fade-list">
+                      <div class="sub-dropdown" v-if="activeMain === cat.key && submap[cat.key]">
+                        <div class="sub-list">
+                          <button 
+                            v-for="sub in submap[cat.key]" 
+                            :key="sub"
+                            class="sub-item"
+                            @click.stop="selectSub(sub)"
+                          >
+                            {{ sub }}
+                          </button>
+                        </div>
+                      </div>
+                    </transition>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+        
+        <!-- Right: User & Theme -->
+        <div class="nav-right">
+          <template v-if="userStore.isAuthenticated">
+            <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
+            <el-button @click="handleLogout" size="small">退出</el-button>
           </template>
-        </el-input>
-      </div>
-      
-      <div class="nav-right">
-        <template v-if="userStore.isAuthenticated">
-          <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
-          <el-button @click="handleLogout" size="small">退出</el-button>
-        </template>
-        <template v-else>
-          <el-button @click="showLoginDialog = true" size="small">登录</el-button>
-        </template>
+          <template v-else>
+            <el-button @click="showLoginDialog = true" size="small">登录</el-button>
+          </template>
+          <el-switch v-model="isDark" class="theme-switch glow" inline-prompt active-text="暗色" inactive-text="浅色" />
+        </div>
       </div>
     </nav>
     
     <main class="main-content">
       <router-view />
     </main>
+    
+    <!-- 全局页脚 -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <h3>PixFlow</h3>
+            <p>发现、分享和创造美好的设计作品。我们致力于为创作者提供最优质的平台。</p>
+          </div>
+          
+          <div class="footer-links">
+            <div class="link-group">
+              <h4>创作相关</h4>
+              <ul>
+                <li><a href="#">首页</a></li>
+                <li><a href="#">分类</a></li>
+                <li><a href="#">关于我们</a></li>
+              </ul>
+            </div>
+            
+            <div class="link-group">
+              <h4>帮助支持</h4>
+              <ul>
+                <li><a href="#">帮助中心</a></li>
+                <li><a href="#">联系我们</a></li>
+                <li><a href="#">意见反馈</a></li>
+                <li><a href="#">服务条款</a></li>
+              </ul>
+            </div>
+            
+            <div class="link-group">
+              <h4>订阅邮件</h4>
+              <p>订阅我们的邮件，获取最新的设计灵感和作品推荐。</p>
+              <div class="newsletter">
+                <el-input placeholder="输入邮箱地址..." />
+                <el-button type="primary">订阅</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="footer-bottom">
+          <p>© 2023 PixFlow. 保留所有权利。</p>
+        </div>
+      </div>
+    </footer>
     
     <!-- 登录对话框 -->
     <el-dialog v-model="showLoginDialog" title="用户登录" width="400px">
@@ -131,45 +264,196 @@ onMounted(() => {
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(255,255,255,.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.nav-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e4e7ed;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0.8rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  height: 72px;
+  position: relative;
 }
 
 .nav-left {
   display: flex;
   align-items: center;
   gap: 2rem;
+  overflow: hidden;
+  max-width: 600px;
+  opacity: 1;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.nav-left.nav-hidden {
+  max-width: 0;
+  opacity: 0;
+  gap: 0;
+}
+
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #409eff 0%, #a0cfff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
   gap: 2rem;
-}
-
-.nav-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #409eff;
-  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-center {
   flex: 1;
   max-width: 400px;
+  min-width: 300px; /* Prevent collapse */
   margin: 0 2rem;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1); /* Smoother timing */
+  position: relative;
+  flex-shrink: 0; /* Prevent squashing by other elements */
+}
+
+.nav-center.expanded {
+  max-width: 1200px; /* Replaced none with specific value for transition */
+  margin: 0;
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+  /* Shift left */
+  transform: translateX(0); 
+}
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
 }
 
 .search-input {
   width: 100%;
+  transition: all 0.3s;
+}
+
+.nav-center.expanded .search-input {
+  width: 320px; /* Width of the red box area roughly */
+}
+
+/* Search Categories */
+.search-categories {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.main-cats {
+  display: flex;
+  gap: 8px;
+}
+
+.cat-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cat-pill {
+  padding: 6px 16px;
+  border-radius: 99px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #606266;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.cat-pill:hover, .cat-pill.active {
+  background: rgba(64,158,255,0.1);
+  color: #409eff;
+}
+
+.dark .cat-pill { color: #cbd5e1; }
+.dark .cat-pill:hover, .dark .cat-pill.active { background: rgba(64,158,255,0.2); color: #93c5fd; }
+
+/* Sub Categories Dropdown */
+.sub-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-width: 260px;
+  z-index: 101;
+}
+
+.dark .sub-dropdown {
+  background: transparent;
+  border-color: transparent;
+}
+
+.sub-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sub-item {
+  padding: 8px 16px;
+  border-radius: 99px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  color: #606266;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sub-item:hover {
+  background: #f5f7fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: #409eff;
+  border-color: #c6e2ff;
+}
+
+.dark .sub-item { 
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1; 
+  box-shadow: none;
+}
+.dark .sub-item:hover { 
+  background: rgba(255, 255, 255, 0.2); 
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .nav-right {
@@ -189,90 +473,82 @@ onMounted(() => {
 
 .nav-link:hover {
   color: #409eff;
-  background-color: #f0f9ff;
-}
-
-.nav-link.router-link-active {
-  color: #409eff;
-  background-color: #ecf5ff;
 }
 
 .main-content {
-  padding: 2rem;
-  min-height: calc(100vh - 80px);
+  flex: 1;
+  padding-top: 2rem;
+}
+
+.theme-switch { margin-left: 12px; }
+
+/* Dark Mode */
+:root.dark .navbar {
+  background-color: rgba(11,18,32,0.8);
+  border-bottom-color: rgba(255,255,255,0.08);
+}
+:root.dark .nav-link { color: #cbd5e1; }
+:root.dark .nav-link:hover { color: #93c5fd; }
+
+/* Footer Styles */
+.footer {
+  background: #2c3e50;
+  color: white;
+  padding: 3rem 0 1rem;
+  margin-top: 4rem;
+}
+.dark .footer { background: #111827; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.footer-brand h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #a0cfff;
+}
+
+.footer-brand p { opacity: 0.8; line-height: 1.6; }
+
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.link-group h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #a0cfff;
+}
+
+.link-group ul { list-style: none; padding: 0; }
+.link-group li { margin-bottom: 0.5rem; }
+.link-group a { color: rgba(255,255,255,0.7); text-decoration: none; transition: 0.3s; }
+.link-group a:hover { color: #a0cfff; }
+.link-group p { opacity: 0.8; margin-bottom: 1rem; font-size: 0.9rem; }
+
+.newsletter { display: flex; gap: 0.5rem; }
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 1rem;
+  text-align: center;
+  opacity: 0.6;
 }
 
 @media (max-width: 768px) {
-  .navbar {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-  }
-  
-  .nav-left {
-    width: 100%;
-    justify-content: space-between;
-    flex-direction: row;
-  }
-  
-  .nav-links {
-    gap: 1rem;
-  }
-  
-  .nav-brand {
-    font-size: 1.3rem;
-  }
-  
-  .nav-center {
-    width: 100%;
-    margin: 0;
-    max-width: none;
-  }
-  
-  .nav-right {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .main-content {
-    padding: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar {
-    padding: 0.75rem;
-  }
-  
-  .nav-left {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: center;
-  }
-  
-  .nav-links {
-    gap: 0.75rem;
-  }
-  
-  .nav-brand {
-    font-size: 1.2rem;
-  }
-  
-  .nav-link {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-  }
-  
-  .search-input {
-    font-size: 14px;
-  }
-  
-  .nav-right .el-button {
-    font-size: 14px;
-  }
-  
-  .main-content {
-    padding: 0.75rem;
-  }
+  .footer-content { grid-template-columns: 1fr; }
+  .footer-links { grid-template-columns: 1fr; }
+  .nav-center.expanded .search-input { width: 100%; }
+  .main-cats { display: none; } /* Hide cats on mobile or adapt */
 }
 </style>

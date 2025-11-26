@@ -5,17 +5,22 @@
       <p v-if="currentCategory">当前分类：{{ currentCategory.name }}</p>
     </div>
     
-    <!-- 分类导航 -->
-    <div class="category-nav">
-      <el-button
+    <!-- 分类磁贴 -->
+    <div class="category-tiles">
+      <div
         v-for="category in categories"
         :key="category.id"
-        :type="currentCategoryId === category.id ? 'primary' : 'default'"
+        class="tile"
+        :class="{ active: currentCategoryId === category.id }"
+        :style="tileStyle(category)"
         @click="selectCategory(category.id)"
-        class="category-btn"
       >
-        {{ category.name }}
-      </el-button>
+        <div class="tile-mask"></div>
+        <div class="tile-text">
+          <h3>{{ category.name }}</h3>
+          <span v-if="category.count">{{ category.count }}+</span>
+        </div>
+      </div>
     </div>
     
     <!-- 筛选和排序 -->
@@ -45,44 +50,13 @@
     
     <!-- 壁纸网格 -->
     <div class="wallpaper-grid" v-loading="loading">
-      <div 
-        v-for="wallpaper in wallpapers" 
-        :key="wallpaper.id" 
-        class="wallpaper-item"
-        @click="viewDetail(wallpaper.id)"
-      >
-        <img :src="wallpaper.thumbUrl" :alt="wallpaper.title" />
-        <div class="wallpaper-overlay">
-          <div class="wallpaper-actions">
-            <el-button 
-              :icon="View" 
-              circle 
-              size="small" 
-              @click.stop="previewWallpaper(wallpaper)"
-            />
-            <el-button 
-              :icon="Star" 
-              circle 
-              size="small" 
-              :type="wallpaper.isLiked ? 'danger' : 'default'"
-              @click.stop="toggleLike(wallpaper)"
-            />
-            <el-button 
-              :icon="Download" 
-              circle 
-              size="small" 
-              @click.stop="downloadWallpaper(wallpaper)"
-            />
-          </div>
-          <div class="wallpaper-info">
-            <h3>{{ wallpaper.title }}</h3>
-            <div class="wallpaper-stats">
-              <span><i class="el-icon-view"></i> {{ wallpaper.views }}</span>
-              <span><i class="el-icon-heart"></i> {{ wallpaper.likes }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <WallpaperCard
+        v-for="wallpaper in wallpapers"
+        :key="wallpaper.id"
+        :data="toCard(wallpaper)"
+        @preview="() => viewDetail(wallpaper.id)"
+        @like="toggleLike(wallpaper)"
+      />
     </div>
     
     <!-- 无限滚动加载更多 -->
@@ -102,6 +76,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Star, Download } from '@element-plus/icons-vue'
+import WallpaperCard from '@/components/WallpaperCard.vue'
 import { getWallpapers, getCategories, likeWallpaper } from '@/api/wallpaper'
 import { useUserStore } from '@/store/user'
 
@@ -267,6 +242,12 @@ const previewWallpaper = (wallpaper) => {
   ElMessage.info('预览功能开发中...')
 }
 
+// 分类磁贴样式计算
+const tileStyle = (category) => {
+  const cover = category.cover || `https://source.unsplash.com/800x600/?${encodeURIComponent(category.name)}`
+  return { backgroundImage: `url(${cover})` }
+}
+
 // 切换点赞
 const toggleLike = async (wallpaper) => {
   if (!userStore.isAuthenticated) {
@@ -331,20 +312,29 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 
-.category-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
+.category-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-radius: 8px;
 }
 
-.category-btn {
-  min-width: 80px;
+.tile {
+  position: relative;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
+.tile:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.25); }
+.tile.active { outline: 2px solid #409eff; }
+.tile-mask { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.55)); }
+.tile-text { position: absolute; bottom: 10px; left: 12px; color: #fff; display: flex; gap: 6px; align-items: baseline; }
+.tile-text h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+.tile-text span { font-size: .8rem; opacity: .85; }
 
 .filters {
   background: #ffffff;
@@ -359,75 +349,6 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
-}
-
-.wallpaper-item {
-  position: relative;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.wallpaper-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.wallpaper-item:hover .wallpaper-overlay {
-  opacity: 1;
-}
-
-.wallpaper-item img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.wallpaper-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1rem;
-}
-
-.wallpaper-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.wallpaper-info {
-  color: white;
-}
-
-.wallpaper-info h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.wallpaper-stats {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.wallpaper-stats span {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
 }
 
 .load-more {
@@ -560,4 +481,18 @@ onMounted(() => {
     margin: 1.5rem 0;
   }
 }
+.dark .filters { background: #1e293b; box-shadow: none; }
+.dark .wallpaper-item { background: #1e293b; box-shadow: none; }
+.dark .category-header h1 { color: #e5e7eb; }
+.dark .category-header p { color: #cbd5e1; }
+.dark .wallpaper-info h3 { color: #e5e7eb; }
+.dark .wallpaper-stats { color: #cbd5e1; }
 </style>
+const toCard = (w) => ({
+  id: w.id,
+  title: w.title,
+  thumb: w.thumbUrl,
+  url: w.url || w.thumbUrl,
+  resolution: w.resolution,
+  previewVideoUrl: w.previewVideoUrl
+})
