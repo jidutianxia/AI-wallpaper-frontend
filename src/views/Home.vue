@@ -297,10 +297,19 @@ const heroStyle = computed(() => ({
 
 .wallpapers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
 }
+@media (max-width: 48em) {
+  .wallpapers-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding: 0 0.75rem; }
+}
+@media (min-width: 48em) and (max-width: 64em) {
+  .wallpapers-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 64em) {
+  .wallpapers-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
 
 .load-more {
   text-align: center;
@@ -348,9 +357,9 @@ const heroStyle = computed(() => ({
   }
   
   .wallpapers-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 12px;
-    padding: 0 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0 0.75rem;
   }
   
   .wallpaper-item {
@@ -408,8 +417,9 @@ const heroStyle = computed(() => ({
   }
   
   .wallpapers-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    padding: 0 0.5rem;
   }
   
   .section-title {

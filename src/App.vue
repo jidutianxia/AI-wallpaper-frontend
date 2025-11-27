@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Menu, Sunny, Moon, Top, Setting } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useDark, useToggle } from '@vueuse/core'
 import { ClickOutside as vClickOutside } from 'element-plus'
@@ -14,6 +14,7 @@ const userStore = useUserStore()
 const searchKeyword = ref('')
 const isSearchFocused = ref(false)
 const activeMain = ref('hot')
+const mobileMenuOpen = ref(false)
 
 // 模拟数据
 const mainCategories = [
@@ -74,6 +75,10 @@ const selectSub = (sub) => {
   closeSearch()
 }
 
+const toggleMobileMenu = () => {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+}
+
 // 登录处理
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
@@ -113,6 +118,16 @@ const toggleTheme = useToggle(isDark)
 if (localStorage.getItem('theme') === null) {
   isDark.value = true
 }
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const actionsSide = ref('right')
+const toggleActionsSide = () => {
+  actionsSide.value = actionsSide.value === 'right' ? 'left' : 'right'
+}
+const showSettingsDrawer = ref(false)
 </script>
 
 <template>
@@ -186,18 +201,39 @@ if (localStorage.getItem('theme') === null) {
         </div>
         
         <!-- Right: User & Theme -->
-        <div class="nav-right">
-          <template v-if="userStore.isAuthenticated">
-            <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
-            <el-button @click="handleLogout" size="small">退出</el-button>
-          </template>
-          <template v-else>
-            <el-button @click="showLoginDialog = true" size="small">登录</el-button>
-          </template>
-          <el-switch v-model="isDark" class="theme-switch glow" inline-prompt active-text="暗色" inactive-text="浅色" />
-        </div>
+      <div class="nav-right">
+        <el-button class="hamburger" @click="toggleMobileMenu" circle>
+          <el-icon><Menu /></el-icon>
+        </el-button>
+        <template v-if="userStore.isAuthenticated">
+          <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
+          <el-button @click="handleLogout" size="small">退出</el-button>
+        </template>
+        <template v-else>
+          <el-button @click="showLoginDialog = true" size="small">登录</el-button>
+        </template>
+        <el-switch v-model="isDark" class="theme-switch glow" inline-prompt active-text="暗色" inactive-text="浅色" />
       </div>
+    </div>
     </nav>
+    <transition name="fade">
+      <div class="mobile-menu" v-if="mobileMenuOpen">
+        <router-link to="/" class="mobile-link" @click="mobileMenuOpen=false">首页</router-link>
+        <router-link to="/category" class="mobile-link" @click="mobileMenuOpen=false">分类</router-link>
+      </div>
+    </transition>
+
+    <div class="floating-actions" :class="actionsSide">
+      <el-button class="fab" circle @click="toggleTheme()">
+        <el-icon v-if="isDark"><Sunny /></el-icon>
+        <el-icon v-else><Moon /></el-icon>
+      </el-button>
+      <el-button class="fab" circle @click="toggleActionsSide"><span class="icon-text">↔</span></el-button>
+      <el-button class="fab" circle @click="showSettingsDrawer=true"><el-icon><Setting /></el-icon></el-button>
+      <el-button class="fab" circle @click="scrollToTop">
+        <el-icon><Top /></el-icon>
+      </el-button>
+    </div>
     
     <main class="main-content">
       <router-view />
@@ -250,20 +286,29 @@ if (localStorage.getItem('theme') === null) {
     </footer>
     
     <!-- 登录对话框 -->
-    <el-dialog v-model="showLoginDialog" title="用户登录" width="400px">
-      <el-form :model="loginForm" label-width="80px">
+    <el-dialog v-model="showLoginDialog" title="用户登录" width="400px" class="login-dialog">
+      <el-form :model="loginForm" label-width="80px" size="large" style="padding-top: 10px;">
         <el-form-item label="用户名">
-          <el-input v-model="loginForm.username" />
+          <el-input v-model="loginForm.username" placeholder="请输入用户名" />
         </el-form-item>
         <el-form-item label="密码">
-          <el-input v-model="loginForm.password" type="password" />
+          <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showLoginDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
+        <div class="login-btn-group">
+          <el-button class="login-btn" @click="showLoginDialog = false">取消</el-button>
+          <el-button class="login-btn" type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
+        </div>
       </template>
     </el-dialog>
+    <el-drawer v-model="showSettingsDrawer" title="快捷设置" direction="rtl" size="240px">
+      <div class="settings">
+        <div class="settings-item" style="justify-content: center; color: #909399; padding: 20px 0;">
+          暂无更多设置
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -293,9 +338,9 @@ if (localStorage.getItem('theme') === null) {
   justify-content: space-between;
   align-items: center;
   padding: 0.8rem 2rem;
-  max-width: 1600px;
+  max-width: 100rem; /* 1600px */
   margin: 0 auto;
-  height: 72px;
+  height: 4.5rem; /* 72px */
   position: relative;
 }
 
@@ -334,8 +379,8 @@ if (localStorage.getItem('theme') === null) {
 
 .nav-center {
   flex: 1;
-  max-width: 400px;
-  min-width: 300px; /* Prevent collapse */
+  max-width: 25rem;
+  min-width: 18.75rem; /* 300px */
   margin: 0 2rem;
   transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1); /* Smoother timing */
   position: relative;
@@ -343,7 +388,7 @@ if (localStorage.getItem('theme') === null) {
 }
 
 .nav-center.expanded {
-  max-width: 1200px; /* Replaced none with specific value for transition */
+  max-width: 75rem; /* 1200px */
   margin: 0;
   flex: 1;
   display: flex;
@@ -509,6 +554,92 @@ if (localStorage.getItem('theme') === null) {
 :root.dark .nav-link { color: #cbd5e1; }
 :root.dark .nav-link:hover { color: #93c5fd; }
 
+/* Custom Login Dialog Buttons */
+.login-btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+:deep(.el-dialog__footer) {
+  padding-top: 10px;
+  padding-bottom: 24px;
+}
+.login-btn {
+  padding: 8px 20px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  font-weight: 500;
+}
+
+.floating-actions {
+  position: fixed;
+  right: 1rem;
+  bottom: 6rem;
+  display: none; /* Hidden on Desktop */
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem; /* Increased gap slightly */
+  z-index: 200;
+}
+.floating-actions.left { left: 1rem; right: auto; }
+.fab { 
+  width: 40px; 
+  height: 40px; 
+  padding: 0; 
+  margin-left: 0 !important; /* Fix alignment issue */
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+.dark .fab {
+  background: #1f2937;
+  color: #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.icon-text { font-size: 18px; line-height: 1; font-weight: bold; }
+.settings { display: flex; flex-direction: column; gap: 1rem; }
+.settings-item { display: flex; justify-content: space-between; align-items: center; }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .nav-container { padding: 0.6rem 1rem; height: 3.5rem; }
+  .nav-links { display: none; }
+  .hamburger { display: inline-flex; }
+  .nav-right { gap: 0.5rem; }
+  .theme-switch { display: none; }
+  .nav-center { max-width: 100%; margin: 0 0.5rem; }
+  .nav-center.expanded { max-width: 100%; }
+  .search-wrapper { gap: 0.75rem; }
+  .search-categories { flex-direction: column; align-items: flex-start; }
+  .main-cats { overflow-x: auto; gap: 0.5rem; }
+  .sub-dropdown { position: static; transform: none; margin-top: 0.5rem; min-width: 100%; }
+  .sub-list { grid-template-columns: 1fr; }
+  .cat-pill { padding: 0.375rem 0.875rem; }
+  .sub-item { padding: 0.5rem 0.875rem; }
+  .mobile-menu { padding: 0.5rem 1rem; background: rgba(255,255,255,0.95); border-top: 1px solid rgba(0,0,0,.06); }
+  :root.dark .mobile-menu { background: rgba(11,18,32,0.95); border-top-color: rgba(255,255,255,.08); }
+  .mobile-link { display: block; padding: 0.75rem 0; color: inherit; text-decoration: none; }
+  .floating-actions { display: flex; }
+}
+
+/* Tablet Responsive */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .nav-center { max-width: 56rem; }
+  .sub-list { grid-template-columns: 1fr 1fr; }
+  .search-wrapper { gap: 1rem; }
+  .floating-actions { display: flex; }
+}
+
+
+
 /* Footer Styles */
 .footer {
   background: #2c3e50;
@@ -570,4 +701,35 @@ if (localStorage.getItem('theme') === null) {
   .nav-center.expanded .search-input { width: 100%; }
   .main-cats { display: none; } /* Hide cats on mobile or adapt */
 }
+</style>
+
+<style>
+/* Dark Dialog Overrides (Global) */
+:root.dark .el-overlay {
+  background-color: rgba(10, 15, 26, 0.7);
+  backdrop-filter: blur(4px);
+}
+:root.dark .el-dialog {
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+:root.dark .el-dialog__title { color: #e5e7eb; font-weight: 600; }
+:root.dark .el-dialog__headerbtn { top: 0; right: 0; padding: 16px; }
+:root.dark .el-dialog__headerbtn .el-dialog__close { color: #9ca3af; }
+:root.dark .el-dialog__headerbtn:hover .el-dialog__close { color: #fff; }
+:root.dark .el-input__wrapper {
+  background: #111827;
+  border: 1px solid #374151;
+  box-shadow: none !important;
+  padding: 8px 12px;
+}
+:root.dark .el-input__wrapper.is-focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px #60a5fa !important;
+}
+:root.dark .el-input__inner { color: #e5e7eb; }
+:root.dark .el-form-item__label { color: #d1d5db; }
 </style>

@@ -13,6 +13,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Responsive base font size */
+html { font-size: clamp(14px, 1.2vw, 16px); }
+
 a {
   font-weight: 500;
   color: #646cff;

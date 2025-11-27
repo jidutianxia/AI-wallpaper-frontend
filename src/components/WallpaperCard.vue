@@ -1,12 +1,14 @@
 <template>
   <div class="group relative rounded overflow-hidden shadow hover:shadow-2xl transition" @mouseenter="hovering=true" @mouseleave="hovering=false">
     <div class="relative">
+      <div class="media-box">
       <template v-if="showVideo">
-        <video :src="data.previewVideoUrl" class="w-full block" muted loop playsinline :autoplay="true"></video>
+        <video :src="data.previewVideoUrl" class="media" muted loop playsinline :autoplay="true"></video>
       </template>
       <template v-else>
-        <img v-lazy="data.thumb" loading="lazy" @click="onPreview" class="w-full cursor-pointer block" />
+        <img v-lazy="data.thumb" loading="lazy" @click="onPreview" class="media cursor-pointer" />
       </template>
+      </div>
       <div class="absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-black/50 text-white backdrop-blur">
         {{ resolutionLabel }}
       </div>
@@ -41,3 +43,14 @@ const resolutionLabel = computed(() => {
 
 const showVideo = computed(() => Boolean(hovering.value && props.data?.previewVideoUrl))
 </script>
+
+<style scoped>
+.media-box { width: 100%; aspect-ratio: 16 / 10; background: #0b0f17; }
+.media { width: 100%; height: 100%; display: block; object-fit: cover; }
+.media { width: 100%; height: auto; display: block; }
+.group { transition: box-shadow .25s ease, transform .2s ease; }
+@media (max-width: 48em) {
+  .group { border-radius: 0.75rem; }
+  .media-box { aspect-ratio: 4 / 3; }
+}
+</style>
