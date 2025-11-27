@@ -706,8 +706,9 @@ const showSettingsDrawer = ref(false)
 <style>
 /* Dark Dialog Overrides (Global) */
 :root.dark .el-overlay {
-  background-color: rgba(10, 15, 26, 0.7);
-  backdrop-filter: blur(4px);
+  background-color: rgba(10, 15, 26, 0.9);
+  /* backdrop-filter: blur(4px); Removed to prevent flickering */
+  transform: translateZ(0); /* Force GPU layer to isolate from background */
 }
 :root.dark .el-dialog {
   background: #1f2937;

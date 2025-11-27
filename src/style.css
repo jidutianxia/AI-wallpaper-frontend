@@ -29,6 +29,22 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px circle at 30% -10%, #eef2ff 0%, #f8fafc 45%, #ffffff 100%)
+    , linear-gradient(180deg, rgba(255,168,255,.05), transparent);
+  transition: background-color 0.3s ease;
 }
 
 h1 {
@@ -63,10 +79,14 @@ button:focus-visible {
 
 .dark {
   color-scheme: dark;
+  background-color: #0b1220;
 }
 
 .dark body { 
   color: #e5e7eb; 
+}
+
+.dark body::before {
   background:
     radial-gradient(1200px circle at 30% -10%, #1a2438 0%, #0b1220 35%, #0a0f1a 100%)
     , linear-gradient(180deg, rgba(255,168,255,.06), transparent);
@@ -142,9 +162,7 @@ button:focus-visible {
 }
 
 html:not(.dark) body {
-  background:
-    radial-gradient(1200px circle at 30% -10%, #eef2ff 0%, #f8fafc 45%, #ffffff 100%)
-    , linear-gradient(180deg, rgba(255,168,255,.05), transparent);
+  background: none;
 }
 
 /* Decorative accents */
