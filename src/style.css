@@ -30,6 +30,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   position: relative;
+  isolation: isolate;
 }
 
 body::before {
@@ -46,6 +47,8 @@ body::before {
     , linear-gradient(180deg, rgba(255,168,255,.05), transparent);
   transition: background-color 0.3s ease;
 }
+
+.dialog-open body::before { transition: none; }
 
 h1 {
   font-size: 3.2em;
@@ -91,6 +94,15 @@ button:focus-visible {
     radial-gradient(1200px circle at 30% -10%, #1a2438 0%, #0b1220 35%, #0a0f1a 100%)
     , linear-gradient(180deg, rgba(255,168,255,.06), transparent);
   background-color: #0b1220;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body::before {
+    background: linear-gradient(180deg, rgba(255,168,255,.04), transparent);
+  }
+  .dark body::before {
+    background: linear-gradient(180deg, rgba(255,168,255,.06), transparent), #0b1220;
+  }
 }
 .dark a { color: #93c5fd; }
 .dark button { background-color: #111827; color: #e5e7eb; }

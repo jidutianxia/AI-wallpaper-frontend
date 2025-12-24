@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Menu, Sunny, Moon, Top, Setting } from '@element-plus/icons-vue'
@@ -48,6 +48,15 @@ const loginLoading = ref(false)
 const loginForm = ref({
   username: '',
   password: ''
+})
+
+watch(showLoginDialog, (v) => {
+  const el = document.documentElement
+  if (v) el.classList.add('dialog-open')
+  else el.classList.remove('dialog-open')
+})
+onUnmounted(() => {
+  document.documentElement.classList.remove('dialog-open')
 })
 
 // 搜索处理
@@ -332,6 +341,8 @@ const showSettingsDrawer = ref(false)
   border-bottom: 1px solid rgba(0,0,0,.05);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
+
+.dialog-open .navbar { backdrop-filter: none !important; }
 
 .nav-container {
   display: flex;
