@@ -13,14 +13,30 @@ export const useUserStore = defineStore('user', {
   },
   
   actions: {
+    _extract(data) {
+      // 兼容 {result:{...}} / {data:{...}} / 直接对象
+      return data?.result ?? data?.data ?? data
+    },
+    _extractToken(data) {
+      const d = this._extract(data) || {}
+      // 兼容 token / access_token / Authorization("Bearer xxx")
+      let t = d.token || d.access_token || d.authToken
+      if (!t && typeof d.Authorization === 'string') {
+        t = d.Authorization.replace(/^Bearer\s+/i, '')
+      }
+      return t
+    },
     async login(payload) {
       try {
         const r = await request.post('/auth/login', payload)
-        this.token = r.data.token
+        const data = this._extract(r.data)
+        const token = this._extractToken(r.data)
+        if (!token) throw new Error('登录响应缺少 token')
+        this.token = token
         localStorage.setItem('token', this.token)
         await this.fetchUser()
         this.isLoggedIn = true
-        return r.data
+        return data
       } catch (error) {
         throw error
       }
@@ -29,7 +45,7 @@ export const useUserStore = defineStore('user', {
     async register(payload) {
       try {
         const r = await request.post('/auth/register', payload)
-        return r.data
+        return this._extract(r.data)
       } catch (error) {
         throw error
       }
@@ -38,7 +54,8 @@ export const useUserStore = defineStore('user', {
     async fetchUser() {
       try {
         const r = await request.get('/auth/me')
-        this.info = r.data
+        const data = this._extract(r.data)
+        this.info = data
         this.isLoggedIn = true
       } catch (error) {
         this.logout()

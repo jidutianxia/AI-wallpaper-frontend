@@ -2,13 +2,21 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Menu, Sunny, Moon, Top, Setting } from '@element-plus/icons-vue'
+import { Search, Menu, Sunny, Moon, Top, Setting, Bell, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { useDark, useToggle } from '@vueuse/core'
+// removed useDark to fully control initial theme synchronously
 import { ClickOutside as vClickOutside } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// early theme guard to prevent flash
+try {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'dark') document.documentElement.classList.add('dark')
+  else if (saved === 'light') document.documentElement.classList.remove('dark')
+  else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark') }
+} catch {}
 
 // 搜索相关
 const searchKeyword = ref('')
@@ -57,6 +65,8 @@ watch(showLoginDialog, (v) => {
 })
 onUnmounted(() => {
   document.documentElement.classList.remove('dialog-open')
+  const h = (window).__authHandler
+  if (h) window.removeEventListener('auth-required', h)
 })
 
 // 搜索处理
@@ -118,15 +128,19 @@ const handleLogout = () => {
 // 初始化用户状态
 onMounted(() => {
   userStore.initAuth()
+  const handleAuthRequired = () => { showLoginDialog.value = true }
+  window.addEventListener('auth-required', handleAuthRequired)
+  ;(window).__authHandler = handleAuthRequired
 })
 
-const isDark = useDark({ selector: 'html', attribute: 'class', valueDark: 'dark', valueLight: '', storageKey: 'theme' })
-const toggleTheme = useToggle(isDark)
-
-// 默认使用暗色模式
-if (localStorage.getItem('theme') === null) {
-  isDark.value = true
-}
+const isDark = ref((localStorage.getItem('theme') ?? 'dark') === 'dark')
+const toggleTheme = () => { isDark.value = !isDark.value }
+watch(isDark, (v) => {
+  const html = document.documentElement
+  if (v) html.classList.add('dark')
+  else html.classList.remove('dark')
+  try { localStorage.setItem('theme', v ? 'dark' : 'light') } catch {}
+}, { immediate: true })
 
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -137,6 +151,22 @@ const toggleActionsSide = () => {
   actionsSide.value = actionsSide.value === 'right' ? 'left' : 'right'
 }
 const showSettingsDrawer = ref(false)
+const showNotifyDialog = ref(false)
+const activeNotify = ref('comments')
+const notifyGroups = [
+  { key: 'comments', label: '评论/回复' },
+  { key: 'likes', label: '点赞/收藏' },
+  { key: 'followers', label: '新增粉丝' },
+  { key: 'help', label: '收到帮助' },
+  { key: 'system', label: '系统通知' }
+]
+const mockNotify = {
+  comments: [ { id: 1, title: '有人回复了你的帖子', time: '刚刚' } ],
+  likes: [ { id: 2, title: '你的分享获得了新的点赞', time: '5 分钟前' } ],
+  followers: [ { id: 3, title: '新的粉丝关注了你', time: '1 小时前' } ],
+  help: [ { id: 4, title: '有人在评论中提供了帮助', time: '昨天' } ],
+  system: [ { id: 5, title: '系统维护通知', time: '2 天前' } ]
+}
 </script>
 
 <template>
@@ -149,6 +179,7 @@ const showSettingsDrawer = ref(false)
           <div class="nav-links">
             <router-link to="/" class="nav-link">首页</router-link>
             <router-link to="/category" class="nav-link">分类</router-link>
+            <router-link to="/community" class="nav-link">社区</router-link>
           </div>
         </div>
         
@@ -211,10 +242,11 @@ const showSettingsDrawer = ref(false)
         
         <!-- Right: User & Theme -->
       <div class="nav-right">
-        <el-button class="hamburger" @click="toggleMobileMenu" circle>
-          <el-icon><Menu /></el-icon>
-        </el-button>
         <template v-if="userStore.isAuthenticated">
+          <el-button class="notify-btn" @click="showNotifyDialog = true" circle>
+            <el-icon><Bell /></el-icon>
+          </el-button>
+          <el-avatar :src="userStore.info?.avatarUrl" size="small" class="nav-avatar" />
           <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
           <el-button @click="handleLogout" size="small">退出</el-button>
         </template>
@@ -229,6 +261,7 @@ const showSettingsDrawer = ref(false)
       <div class="mobile-menu" v-if="mobileMenuOpen">
         <router-link to="/" class="mobile-link" @click="mobileMenuOpen=false">首页</router-link>
         <router-link to="/category" class="mobile-link" @click="mobileMenuOpen=false">分类</router-link>
+        <router-link to="/community" class="mobile-link" @click="mobileMenuOpen=false">社区</router-link>
       </div>
     </transition>
 
@@ -295,8 +328,12 @@ const showSettingsDrawer = ref(false)
     </footer>
     
     <!-- 登录对话框 -->
-    <el-dialog v-model="showLoginDialog" title="用户登录" width="400px" class="login-dialog">
-      <el-form :model="loginForm" label-width="80px" size="large" style="padding-top: 10px;">
+    <el-dialog v-model="showLoginDialog" title="用户登录" width="420px" class="login-dialog">
+      <div class="auth-banner">
+        <el-icon class="banner-icon"><User /></el-icon>
+        <div class="banner-text">欢迎回来，请登录以发布与收藏</div>
+      </div>
+      <el-form :model="loginForm" label-width="80px" size="large" class="login-form">
         <el-form-item label="用户名">
           <el-input v-model="loginForm.username" placeholder="请输入用户名" />
         </el-form-item>
@@ -307,6 +344,7 @@ const showSettingsDrawer = ref(false)
       <template #footer>
         <div class="login-btn-group">
           <el-button class="login-btn" @click="showLoginDialog = false">取消</el-button>
+          <el-button class="login-btn" @click="router.push('/register'); showLoginDialog=false">注册</el-button>
           <el-button class="login-btn" type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
         </div>
       </template>
@@ -318,6 +356,19 @@ const showSettingsDrawer = ref(false)
         </div>
       </div>
     </el-drawer>
+    <el-dialog v-model="showNotifyDialog" title="通知中心" width="800px" class="notify-dialog">
+      <div class="notify-container">
+        <div class="notify-nav">
+          <button v-for="g in notifyGroups" :key="g.key" class="notify-item" :class="{active: activeNotify===g.key}" @click="activeNotify=g.key">{{ g.label }}</button>
+        </div>
+        <div class="notify-content">
+          <el-card v-for="n in mockNotify[activeNotify]" :key="n.id" shadow="never" class="notify-card">
+            <div class="notify-title">{{ n.title }}</div>
+            <div class="notify-time">{{ n.time }}</div>
+          </el-card>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -341,6 +392,7 @@ const showSettingsDrawer = ref(false)
   border-bottom: 1px solid rgba(0,0,0,.05);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
+.dark .navbar { background-color: #0f172a; border-bottom-color: #1f2937; backdrop-filter: none; box-shadow: 0 4px 20px rgba(0,0,0,.35); }
 
 .dialog-open .navbar { backdrop-filter: none !important; }
 
@@ -581,6 +633,12 @@ const showSettingsDrawer = ref(false)
   border-radius: 8px !important;
   font-weight: 500;
 }
+.auth-banner { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background: rgba(147,197,253,.12); margin: 4px 0 8px; }
+.banner-icon { color:#409eff; }
+.banner-text { font-size: 13px; opacity:.9; }
+.login-form { padding-top: 6px; }
+.nav-avatar { margin-right: 8px; }
+.notify-btn { margin-right: 8px; }
 
 .floating-actions {
   position: fixed;
@@ -623,7 +681,7 @@ const showSettingsDrawer = ref(false)
 @media (max-width: 768px) {
   .nav-container { padding: 0.6rem 1rem; height: 3.5rem; }
   .nav-links { display: none; }
-  .hamburger { display: inline-flex; }
+  .hamburger { display: none; }
   .nav-right { gap: 0.5rem; }
   .theme-switch { display: none; }
   .nav-center { max-width: 100%; margin: 0 0.5rem; }
@@ -728,6 +786,18 @@ const showSettingsDrawer = ref(false)
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
+:root.dark .el-dialog.notify-dialog { background:#1f2937; border-color:#374151; }
+.notify-container { display: grid; grid-template-columns: 160px 1fr; gap: 12px; }
+.notify-nav { display: grid; gap: 8px; }
+.notify-item { height: 36px; border-radius: 18px; background: rgba(255,255,255,.7); border: 1px solid rgba(148,163,184,.22); color:#1f2937; }
+.notify-item.active { background: #2563eb; color:#fff; border-color:#2563eb; }
+.dark .notify-item { background: rgba(31,41,55,.85); color:#e5e7eb; border-color:#374151; }
+.dark .notify-item.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.notify-card { margin-bottom: 8px; }
+.notify-title { font-weight: 600; }
+.notify-time { font-size: 12px; opacity: .8; }
+:root.dark .login-dialog .auth-banner { background: rgba(59,130,246,.15); }
+:root.dark .login-dialog .banner-icon { color:#93c5fd; }
 :root.dark .el-dialog__title { color: #e5e7eb; font-weight: 600; }
 :root.dark .el-dialog__headerbtn { top: 0; right: 0; padding: 16px; }
 :root.dark .el-dialog__headerbtn .el-dialog__close { color: #9ca3af; }
@@ -744,4 +814,56 @@ const showSettingsDrawer = ref(false)
 }
 :root.dark .el-input__inner { color: #e5e7eb; }
 :root.dark .el-form-item__label { color: #d1d5db; }
+
+/* Dark overrides for common Element Plus components */
+:root.dark .el-select__wrapper {
+  background: #111827;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+:root.dark .el-select__placeholder { color: #9ca3af; }
+:root.dark .el-select__caret { color: #9ca3af; }
+:root.dark .el-select__popper .el-select-dropdown {
+  background: #111827;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+:root.dark .el-select-dropdown__item.is-hover { background: #1f2937; }
+
+:root.dark .el-pagination {
+  --ep-bg: #1f2937;
+  --ep-fg: #e5e7eb;
+}
+:root.dark .el-pagination .el-pager li,
+:root.dark .el-pagination button {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #e5e7eb;
+}
+:root.dark .el-pagination .el-pager li.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+:root.dark .el-card {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+:root.dark .el-tabs__item { color: #cbd5e1; }
+:root.dark .el-tabs__item.is-active { color: #93c5fd; }
+:root.dark .el-tabs__nav-wrap::after { background: #374151; }
+
+:root.dark .el-checkbox .el-checkbox__inner {
+  background: #111827;
+  border-color: #374151;
+}
+:root.dark .el-checkbox__input.is-checked .el-checkbox__inner,
+:root.dark .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+:root.dark .el-checkbox__label { color: #e5e7eb; }
 </style>

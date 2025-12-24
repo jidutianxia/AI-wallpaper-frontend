@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// 创建axios实例
+// 创建axios实例（备用通用实例，不建议与 wallpaper.js 重复创建）
 const request = axios.create({
-  baseURL: process.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'

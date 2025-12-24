@@ -5,6 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ai-wallpaper-frontend</title>
+    <style id="theme-preload">html{visibility:hidden}</style>
+    <script>
+      (function(){
+        try {
+          var saved = localStorage.getItem('theme');
+          var html = document.documentElement;
+          if (saved === 'dark') { html.classList.add('dark'); }
+          else if (saved === 'light') { html.classList.remove('dark'); }
+          else {
+            html.classList.add('dark');
+            localStorage.setItem('theme','dark');
+          }
+          var s = document.getElementById('theme-preload');
+          if (s) s.parentNode.removeChild(s);
+        } catch {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
