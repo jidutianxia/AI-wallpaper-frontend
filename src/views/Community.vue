@@ -8,7 +8,7 @@
       <div class="grid">
         <aside class="left">
           <el-card class="profile-card">
-            <div class="profile-top">
+            <div class="profile-top" :class="{ clickable: isAuthenticated }" @click="isAuthenticated ? goProfile(userStore.info?.id) : null">
               <template v-if="isAuthenticated">
                 <img :src="avatarUrl" class="avatar-lg" />
                 <div class="creator"><div class="creator-name">{{ displayName }}</div><div class="creator-desc">{{ signature }}</div></div>
@@ -34,7 +34,14 @@
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
           </div>
-          <div class="posts">
+          <template v-if="loading">
+            <div class="posts">
+              <el-card v-for="i in 3" :key="i" class="post">
+                <el-skeleton animated :rows="3" />
+              </el-card>
+            </div>
+          </template>
+          <transition name="fade-list" v-else><div class="posts" ref="postsRef">
             <el-card v-for="p in pagedPosts" :key="p.id" class="post">
               <div class="post-header">
                 <div class="author" @click="goProfile(p.author?.id)"><img :src="p.author?.avatarUrl" class="avatar" /><span class="name">{{ p.author?.username || '匿名' }}</span></div>
@@ -44,17 +51,18 @@
               <p class="content" @click="goPost(p.id)">{{ p.content }}</p>
               <div class="images"><img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" /></div>
               <div class="post-actions">
-                <el-button size="small" :type="p.liked ? 'primary' : ''" @click="toggleLike(p)"><svg viewBox="0 0 24 24" class="btn-icon thumb-svg" aria-hidden="true"><path d="M2 21h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H2v11zM22 9h-6.31l.95-4.57A2 2 0 0 0 14.69 2L9 8v11h9a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z" fill="currentColor"/></svg> {{ p.likes }}</el-button>
-                <el-button size="small" :type="p.favorited ? 'warning' : ''" @click="toggleFavorite(p)">{{ p.favorited ? '★' : '☆' }} 收藏</el-button>
-                <el-button size="small" @click="sharePost(p)"><svg viewBox="0 0 24 24" class="btn-icon plane-svg" aria-hidden="true"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg> 分享</el-button>
-                <el-button size="small" @click="p.showComment = !p.showComment"><el-icon class="btn-icon"><ChatLineSquare /></el-icon> 评论 {{ commentCount(p) }}</el-button>
+                <el-button aria-label="点赞" size="small" :type="p.liked ? 'primary' : undefined" @click="toggleLike(p)"><svg viewBox="0 0 24 24" class="btn-icon thumb-svg" aria-hidden="true"><path d="M2 21h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H2v11zM22 9h-6.31l.95-4.57A2 2 0 0 0 14.69 2L9 8v11h9a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z" fill="currentColor"/></svg> 点赞 {{ p.likes ?? 0 }}</el-button>
+                <el-button aria-label="收藏" size="small" :type="p.favorited ? 'warning' : ''" @click="toggleFavorite(p)">{{ p.favorited ? '★' : '☆' }} 收藏</el-button>
+                <el-button aria-label="分享" size="small" @click="sharePost(p)"><svg viewBox="0 0 24 24" class="btn-icon plane-svg" aria-hidden="true"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg> 分享</el-button>
+                <el-button aria-label="评论" size="small" class="pill-btn" @click="openComments(p)"><el-icon class="btn-icon"><ChatLineSquare /></el-icon> 评论 {{ commentCount(p) }}</el-button>
               </div>
               <div v-if="p.showComment" class="comments">
-                <div class="comment" v-for="(c,i) in p.comments" :key="i">{{ c }}</div>
+                <CommentItem v-for="(c,i) in (p.comments||[])" :key="i" :comment="c" />
                 <div class="comment-editor"><el-input v-model="p.newComment" placeholder="写下评论" /><el-button size="small" type="primary" @click="addComment(p)">发布</el-button></div>
               </div>
             </el-card>
-          </div>
+          </div></transition>
+          <div v-if="!loading && filteredPosts.length === 0" class="empty">暂无帖子，去发布一条吧</div>
           <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="filteredPosts.length" v-model:current-page="page" /></div>
         </main>
         <aside class="right">
@@ -67,11 +75,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, EditPen, StarFilled, ChatLineSquare, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost } from '@/api/wallpaper'
+import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments } from '@/api/wallpaper'
+import CommentItem from '@/components/CommentItem.vue'
 
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
 const seed = [
@@ -142,23 +151,45 @@ loadHot(); loadRecentUsers()
 
 // 持久化到本地，供详情页读取
 const loading = ref(false)
+// 本地交互持久化，避免返回列表时数据回到初始值
+const interactions = ref({})
+const interactionKey = computed(() => `community_interactions_${userStore.info?.id || 'anon'}`)
+const loadInteractions = () => { try { interactions.value = JSON.parse(localStorage.getItem(interactionKey.value) || '{}') } catch { interactions.value = {} } }
+const saveInteractions = () => { try { localStorage.setItem(interactionKey.value, JSON.stringify(interactions.value)) } catch {} }
+const applyInteractions = () => {
+  posts.value = (posts.value || []).map(p => {
+    const it = interactions.value[p.id]
+    if (it) {
+      // 仅在后端未提供用户态时作为兜底，不覆盖近实时计数
+      if (typeof p.liked === 'undefined') p.liked = it.liked
+      if (typeof p.favorited === 'undefined') p.favorited = it.favorited
+    }
+    // 归一化，避免空值导致显示异常
+    p.liked = !!p.liked
+    p.favorited = !!p.favorited
+    p.likes = Number(p.likes || 0)
+    p.commentsCount = Number(p.commentsCount || 0)
+    return p
+  })
+}
 const loadPosts = async () => {
   loading.value = true
   try {
     const list = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest' })
     posts.value = list.items || []
+    applyInteractions()
   } finally { loading.value = false }
 }
 loadPosts()
+loadInteractions();
 
 const loadMyStats = async () => {
   if (!isAuthenticated.value) { myStat.value = { posts: 0, likes: 0, comments: 0 }; return }
   try {
-    const res = await getMyCommunityPosts({ page: 1, size: 100 })
-    const items = res.items || []
-    myStat.value.posts = res.total ?? items.length
-    myStat.value.likes = items.reduce((s, p) => s + (p.likes || 0), 0)
-    myStat.value.comments = items.reduce((s, p) => s + (p.commentsCount || 0), 0)
+    const stats = await getUserStats()
+    myStat.value.posts = stats.postCount ?? 0
+    myStat.value.likes = stats.likeCount ?? 0
+    myStat.value.comments = stats.receivedLikes ?? 0
   } catch { myStat.value = { posts: 0, likes: 0, comments: 0 } }
 }
 loadMyStats()
@@ -174,11 +205,38 @@ const handlePublishClick = () => {
 
 const goCompose = () => { router.push('/community/compose') }
 
+// In-view animation: observe post cards and add class
+const postsRef = ref(null)
+let io
+onMounted(() => {
+  io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in-view') })
+  }, { threshold: 0.12 })
+})
+
+watch([pagedPosts, loading], async () => {
+  await nextTick()
+  if (!postsRef.value || !io || loading.value) return
+  const cards = postsRef.value.querySelectorAll('.post')
+  cards.forEach(c => io.observe(c))
+})
+
 const toggleLike = async (p) => {
   const prev = { liked: p.liked, likes: p.likes }
   p.liked = !p.liked
-  p.likes += p.liked ? 1 : -1
-  try { await likeCommunityPost(p.id) } catch { p.liked = prev.liked; p.likes = prev.likes; ElMessage.error('点赞失败') }
+  p.likes = (prev.likes || 0) + (p.liked ? 1 : -1)
+  try {
+    const r = await likeCommunityPost(p.id)
+    if (r && typeof r === 'object') {
+      if (typeof r.liked !== 'undefined') p.liked = !!r.liked
+      if (typeof r.likes !== 'undefined') p.likes = r.likes
+    }
+    interactions.value[p.id] = { liked: p.liked, favorited: p.favorited }
+    saveInteractions()
+    ElMessage.success(p.liked ? '点赞成功' : '已取消点赞')
+  } catch {
+    p.liked = prev.liked; p.likes = prev.likes; ElMessage.error('点赞失败')
+  }
 }
 
 const commentCount = (p) => (p.comments?.length ?? p.commentsCount ?? 0)
@@ -187,15 +245,33 @@ const addComment = async (p) => {
   if (!v) return
   try {
     await commentCommunityPost(p.id, v)
-    p.comments.push(v)
+    p.comments = p.comments || []
+    p.comments.push({ content: v, createdAt: new Date().toISOString(), author: userStore.info })
     p.newComment = ''
   } catch { ElMessage.error('评论失败') }
+}
+
+const openComments = async (p) => {
+  p.showComment = !p.showComment
+  if (!p.showComment) return
+  if (!p.comments || p.comments.length === 0) {
+    try {
+      const res = await getCommunityPostComments(p.id, { page: 1, size: 10 })
+      p.comments = res.items || []
+    } catch {}
+  }
 }
 
 const toggleFavorite = async (p) => {
   const prev = p.favorited
   p.favorited = !p.favorited
-  try { await favoriteCommunityPost(p.id) } catch { p.favorited = prev; ElMessage.error('收藏失败') }
+  try {
+    const r = await favoriteCommunityPost(p.id)
+    if (r && typeof r === 'object' && typeof r.favorited !== 'undefined') p.favorited = !!r.favorited
+    interactions.value[p.id] = { liked: p.liked, favorited: p.favorited }
+    saveInteractions()
+    ElMessage.success(p.favorited ? '已收藏' : '已取消收藏')
+  } catch { p.favorited = prev; ElMessage.error('收藏失败') }
 }
 
 const sharePost = async (p) => {
@@ -224,7 +300,12 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const goPost = (id) => { router.push(`/community/post/${id}`) }
 const goImage = (id, index) => { router.push(`/community/post/${id}/image/${index}`) }
-const goProfile = (uid) => { if (uid) router.push(`/profile/${uid}`) }
+const goProfile = (uid) => {
+  if (!uid) return
+  const myId = userStore.info?.id
+  if (myId && String(myId) === String(uid)) router.push('/user')
+  else router.push(`/profile/${uid}`)
+}
 
 const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 </script>
@@ -236,6 +317,7 @@ const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 .grid { display: grid; grid-template-columns: 280px 1fr 300px; gap: 16px; align-items: start; }
 .profile-card { background: linear-gradient(180deg, rgba(147,197,253,.08), rgba(147,197,253,0)); border: 1px solid rgba(148,163,184,.18); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
 .profile-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding-bottom: 8px; }
+.profile-top.clickable { cursor: pointer; }
 .avatar-lg { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
 .avatar-lg.placeholder { display:flex; align-items:center; justify-content:center; background:#f5f7fa; color:#9aa0a6; }
 .creator-name { font-weight: 600; }
@@ -289,8 +371,30 @@ const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 .users { display: grid; gap: 10px; }
 .user { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .uinfo { display: grid; }
+.hot, .recent { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
+.dark .hot, .dark .recent { background: linear-gradient(#1f2937,#1f2937) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
+.hot h4, .recent h4 { margin: 0 0 8px 0; }
+.hot-list li { padding: 6px 12px; border-radius: 999px; background: rgba(147,197,253,.18); border: 1px solid rgba(147,197,253,.35); color:#1f2937; transition: transform .2s ease, box-shadow .2s ease; }
+.hot-list li:hover { transform: translateX(2px); box-shadow: 0 8px 20px rgba(37,99,235,.15); }
+.dark .hot-list li { background: rgba(30,64,175,.28); border-color: rgba(59,130,246,.4); color:#e5e7eb; }
+.users .user { padding: 6px 10px; border-radius: 999px; background: rgba(147,197,253,.12); border: 1px solid rgba(147,197,253,.28); transition: transform .2s ease, box-shadow .2s ease; }
+.users .user:hover { transform: translateX(2px); box-shadow: 0 8px 20px rgba(37,99,235,.15); }
+.dark .users .user { background: rgba(30,64,175,.22); border-color: rgba(59,130,246,.35); }
 @media (max-width: 768px) {
   .grid { grid-template-columns: 1fr; }
   .images { grid-template-columns: repeat(2, 1fr); }
 }
+.post { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; transition: transform .2s ease, box-shadow .2s ease; }
+.dark .post { background: linear-gradient(#1f2937,#1f2937) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
+/* in-view animation */
+.post { opacity: 0; transform: translateY(6px); }
+.post.in-view { opacity: 1; transform: translateY(0); transition: opacity .35s ease, transform .35s ease; }
+.fade-list-enter-active, .fade-list-leave-active { transition: opacity .25s ease; }
+.fade-list-enter-from, .fade-list-leave-to { opacity: 0; }
+.post:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.12); }
+.dark .post:hover { box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+:deep(.el-tag) { border-radius: 999px; padding: 0 10px; background: rgba(147,197,253,.18); border: 1px solid rgba(147,197,253,.35); color: #1f2937; }
+.dark :deep(.el-tag) { background: rgba(30,64,175,.28); border-color: rgba(59,130,246,.4); color: #e5e7eb; }
+.image:hover { transform: scale(1.02); transition: transform .2s ease; }
 </style>
+watch(() => userStore.info?.id, async () => { loadInteractions(); await loadPosts(); })

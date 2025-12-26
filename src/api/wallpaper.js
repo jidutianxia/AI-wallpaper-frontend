@@ -36,28 +36,43 @@ request.interceptors.response.use(
   }
 )
 
-export const getWallpapers = (params) => request.get('/wallpapers', { params }).then(r => r.data)
-export const getWallpaper = (id) => request.get(`/wallpapers/${id}`).then(r => r.data)
+const unwrap = (r) => (r?.data?.data ?? r?.data?.result ?? r?.data)
+
+export const getWallpapers = (params) => request.get('/wallpapers', { params }).then(unwrap)
+export const getWallpaper = (id) => request.get(`/wallpapers/${id}`).then(unwrap)
 export const likeWallpaper = (id) => request.post(`/wallpapers/${id}/like`)
 export const favoriteWallpaper = (id) => request.post(`/wallpapers/${id}/favorite`)
-export const getCategories = () => request.get('/categories').then(r => r.data)
+export const getCategories = () => request.get('/categories').then(unwrap)
 export const uploadWallpaper = (formData) => request.post('/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
 
-export const getMyFavorites = () => request.get('/wallpapers/my/favorites').then(r => r.data)
-export const getMyLikes = () => request.get('/wallpapers/my/likes').then(r => r.data)
+export const getMyFavorites = () => request.get('/wallpapers/my/favorites').then(unwrap)
+export const getMyLikes = () => request.get('/wallpapers/my/likes').then(unwrap)
 
 // Community APIs
-export const getCommunityPosts = (params) => request.get('/community/posts', { params }).then(r => r.data)
-export const getCommunityPost = (id) => request.get(`/community/posts/${id}`).then(r => r.data)
-export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(r => r.data)
-export const getCommunityPostComments = (id, params) => request.get(`/community/posts/${id}/comments`, { params }).then(r => r.data)
-export const createCommunityPost = (payload) => request.post('/community/posts', payload).then(r => r.data)
-export const likeCommunityPost = (id) => request.post(`/community/posts/${id}/like`).then(r => r.data)
-export const commentCommunityPost = (id, content) => request.post(`/community/posts/${id}/comments`, { content }).then(r => r.data)
-export const getMyCommunityPosts = (params) => request.get('/community/my/posts', { params }).then(r => r.data)
-export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(r => r.data)
-export const favoriteCommunityPost = (id) => request.post(`/community/posts/${id}/favorite`).then(r => r.data)
+export const getCommunityPosts = (params) => request.get('/community/posts', { params }).then(unwrap)
+export const getCommunityPost = (id) => request.get(`/community/posts/${id}`).then(unwrap)
+export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(unwrap)
+export const getCommunityPostComments = (id, params) => request.get(`/community/posts/${id}/comments`, { params }).then(unwrap)
+export const createCommunityPost = (payload) => request.post('/community/posts', payload).then(unwrap)
+export const likeCommunityPost = (id) => request.post(`/community/posts/${id}/like`).then(unwrap)
+export const commentCommunityPost = (id, content) => request.post(`/community/posts/${id}/comments`, { content }).then(unwrap)
+export const getMyCommunityPosts = (params) => request.get('/community/my/posts', { params }).then(unwrap)
+export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(unwrap)
+export const favoriteCommunityPost = (id) => request.post(`/community/posts/${id}/favorite`).then(unwrap)
+// User Center APIs (v3)
+export const getUserStats = () => request.get('/user/stats').then(unwrap)
+export const getUserReceivedComments = (params) => request.get('/user/received/comments', { params }).then(unwrap)
+export const getUserReceivedLikes = (params) => request.get('/user/received/likes', { params }).then(unwrap)
+export const getUserLikes = (params) => request.get('/user/likes', { params }).then(unwrap)
+export const getUserPostFavorites = (params) => request.get('/user/post-favorites', { params }).then(unwrap)
+export const getUserFavorites = (params) => request.get('/user/favorites', { params }).then(unwrap)
+
+// Image-level (community post) APIs - optional; UI will gracefully fallback if backend not ready
+export const getCommunityPostImageMeta = (postId, index) => request.get(`/community/posts/${postId}/images/${index}`).then(unwrap)
+export const likeCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/like`).then(unwrap)
+export const favoriteCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/favorite`).then(unwrap)
+export const downloadCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/download`).then(unwrap)
 
 export default request

@@ -3,6 +3,7 @@ import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Menu, Sunny, Moon, Top, Setting, Bell, User } from '@element-plus/icons-vue'
+import { getUserReceivedComments, getUserReceivedLikes } from '@/api/wallpaper'
 import { useUserStore } from '@/store/user'
 // removed useDark to fully control initial theme synchronously
 import { ClickOutside as vClickOutside } from 'element-plus'
@@ -160,13 +161,18 @@ const notifyGroups = [
   { key: 'help', label: '收到帮助' },
   { key: 'system', label: '系统通知' }
 ]
-const mockNotify = {
-  comments: [ { id: 1, title: '有人回复了你的帖子', time: '刚刚' } ],
-  likes: [ { id: 2, title: '你的分享获得了新的点赞', time: '5 分钟前' } ],
-  followers: [ { id: 3, title: '新的粉丝关注了你', time: '1 小时前' } ],
-  help: [ { id: 4, title: '有人在评论中提供了帮助', time: '昨天' } ],
-  system: [ { id: 5, title: '系统维护通知', time: '2 天前' } ]
-}
+const notifyData = ref({ comments: [], likes: [], followers: [], help: [], system: [] })
+watch(showNotifyDialog, async (open) => {
+  if (!open) return
+  try {
+    const [comments, likes] = await Promise.all([
+      getUserReceivedComments({ page: 1, size: 10 }),
+      getUserReceivedLikes({ page: 1, size: 10 })
+    ])
+    notifyData.value.comments = comments.items || []
+    notifyData.value.likes = likes.items || []
+  } catch {}
+})
 </script>
 
 <template>
@@ -246,8 +252,10 @@ const mockNotify = {
           <el-button class="notify-btn" @click="showNotifyDialog = true" circle>
             <el-icon><Bell /></el-icon>
           </el-button>
-          <el-avatar :src="userStore.info?.avatarUrl" size="small" class="nav-avatar" />
-          <router-link to="/user" class="nav-link">{{ userStore.info?.username }}</router-link>
+          <router-link to="/user" class="nav-link">
+            <el-avatar :src="userStore.info?.avatarUrl" size="small" class="nav-avatar" />
+            {{ userStore.info?.username }}
+          </router-link>
           <el-button @click="handleLogout" size="small">退出</el-button>
         </template>
         <template v-else>
@@ -362,9 +370,9 @@ const mockNotify = {
           <button v-for="g in notifyGroups" :key="g.key" class="notify-item" :class="{active: activeNotify===g.key}" @click="activeNotify=g.key">{{ g.label }}</button>
         </div>
         <div class="notify-content">
-          <el-card v-for="n in mockNotify[activeNotify]" :key="n.id" shadow="never" class="notify-card">
-            <div class="notify-title">{{ n.title }}</div>
-            <div class="notify-time">{{ n.time }}</div>
+          <el-card v-for="n in notifyData[activeNotify]" :key="n.id" shadow="never" class="notify-card">
+            <div class="notify-title">{{ n.title || n.content || '通知' }}</div>
+            <div class="notify-time">{{ n.createdAt || n.time }}</div>
           </el-card>
         </div>
       </div>
@@ -497,22 +505,24 @@ const mockNotify = {
 .cat-pill {
   padding: 6px 16px;
   border-radius: 99px;
-  background: transparent;
+  background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg,#93c5fd,#f0abfc) border-box;
   border: 1px solid transparent;
   color: #606266;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform .2s ease, box-shadow .2s ease, color .2s ease;
   white-space: nowrap;
 }
-
 .cat-pill:hover, .cat-pill.active {
-  background: rgba(64,158,255,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37,99,235,.25);
   color: #409eff;
 }
-
-.dark .cat-pill { color: #cbd5e1; }
-.dark .cat-pill:hover, .dark .cat-pill.active { background: rgba(64,158,255,0.2); color: #93c5fd; }
+.dark .cat-pill {
+  color: #cbd5e1;
+  background: linear-gradient(#0b1220,#0b1220) padding-box, linear-gradient(135deg,#3b82f6,#a78bfa) border-box;
+}
+.dark .cat-pill:hover, .dark .cat-pill.active { box-shadow: 0 8px 20px rgba(37,99,235,.35); color: #93c5fd; }
 
 /* Sub Categories Dropdown */
 .sub-dropdown {
@@ -630,8 +640,9 @@ const mockNotify = {
 .login-btn {
   padding: 8px 20px !important;
   height: 32px !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-sm) !important;
   font-weight: 500;
+  box-shadow: var(--shadow-1);
 }
 .auth-banner { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background: rgba(147,197,253,.12); margin: 4px 0 8px; }
 .banner-icon { color:#409eff; }

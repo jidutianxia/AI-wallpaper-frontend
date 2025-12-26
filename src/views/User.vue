@@ -3,7 +3,7 @@
     <!-- 用户信息卡片 -->
     <div class="user-profile">
       <div class="profile-header">
-        <el-avatar :size="80" :src="userStore.info?.avatar">
+        <el-avatar :size="80" :src="userStore.info?.avatarUrl">
           {{ userStore.info?.username?.charAt(0).toUpperCase() }}
         </el-avatar>
         <div class="profile-info">
@@ -36,75 +36,36 @@
     <el-tabs v-model="activeTab" class="user-tabs">
       <el-tab-pane label="我的收藏" name="favorites">
         <div class="wallpaper-grid" v-loading="loading.favorites">
-          <div 
-            v-for="wallpaper in favorites" 
-            :key="wallpaper.id" 
-            class="wallpaper-item"
-            @click="viewDetail(wallpaper.id)"
-          >
-            <img :src="wallpaper.thumbUrl" :alt="wallpaper.title" />
-            <div class="wallpaper-overlay">
-              <div class="wallpaper-actions">
-                <el-button 
-                  :icon="Star" 
-                  circle 
-                  size="small" 
-                  type="danger"
-                  @click.stop="removeFavorite(wallpaper)"
-                />
-                <el-button 
-                  :icon="Download" 
-                  circle 
-                  size="small" 
-                  @click.stop="downloadWallpaper(wallpaper)"
-                />
-              </div>
-              <div class="wallpaper-info">
-                <h3>{{ wallpaper.title }}</h3>
-                <p>收藏于 {{ formatDate(wallpaper.favoriteTime) }}</p>
-              </div>
-            </div>
-          </div>
+          <UnifiedCard 
+            v-for="w in favorites" 
+            :key="w.id" 
+            :title="w.title" 
+            :cover="w.thumbUrl || w.url" 
+            :subtitle="`收藏于 ${formatDate(w.favoriteTime)}`" 
+            :to="`/detail/${w.id}`" 
+            :likes="w.likes" 
+            :favorites="w.favorites"
+          />
         </div>
         <div v-if="!loading.favorites && favorites.length === 0" class="empty-state">
           <el-empty description="还没有收藏任何壁纸" />
         </div>
       </el-tab-pane>
       
-      <el-tab-pane label="我的点赞" name="likes">
+      <el-tab-pane label="我的点赞（帖子）" name="likes">
         <div class="wallpaper-grid" v-loading="loading.likes">
-          <div 
-            v-for="wallpaper in likes" 
-            :key="wallpaper.id" 
-            class="wallpaper-item"
-            @click="viewDetail(wallpaper.id)"
-          >
-            <img :src="wallpaper.thumbUrl" :alt="wallpaper.title" />
-            <div class="wallpaper-overlay">
-              <div class="wallpaper-actions">
-                <el-button 
-                  :icon="Star" 
-                  circle 
-                  size="small" 
-                  type="danger"
-                  @click.stop="toggleLike(wallpaper)"
-                />
-                <el-button 
-                  :icon="Download" 
-                  circle 
-                  size="small" 
-                  @click.stop="downloadWallpaper(wallpaper)"
-                />
-              </div>
-              <div class="wallpaper-info">
-                <h3>{{ wallpaper.title }}</h3>
-                <p>点赞于 {{ formatDate(wallpaper.likeTime) }}</p>
-              </div>
-            </div>
-          </div>
+          <UnifiedCard 
+            v-for="p in likes" 
+            :key="p.id" 
+            :title="p.title" 
+            :cover="p.images?.[0]" 
+            :subtitle="p.author?.username || ''" 
+            :to="`/community/post/${p.id}`" 
+            :likes="p.likes"
+          />
         </div>
         <div v-if="!loading.likes && likes.length === 0" class="empty-state">
-          <el-empty description="还没有点赞任何壁纸" />
+          <el-empty description="还没有点赞任何帖子" />
         </div>
       </el-tab-pane>
       
@@ -159,10 +120,10 @@
           <el-upload
             class="avatar-uploader"
             :show-file-list="false"
-            :on-success="handleAvatarSuccess"
+            :http-request="uploadAvatar"
             :before-upload="beforeAvatarUpload"
           >
-            <img v-if="editForm.avatar" :src="editForm.avatar" class="avatar" />
+            <img v-if="editForm.avatarUrl" :src="editForm.avatarUrl" class="avatar" />
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
@@ -226,7 +187,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, Download, Edit, Delete, Plus, UploadFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper } from '@/api/wallpaper'
+import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, getUserFavorites, getUserLikes } from '@/api/wallpaper'
+import UnifiedCard from '@/components/UnifiedCard.vue'
 import request from '@/api/wallpaper'
 
 const router = useRouter()
@@ -263,7 +225,7 @@ const categories = ref([])
 const editForm = reactive({
   username: '',
   email: '',
-  avatar: ''
+  avatarUrl: ''
 })
 
 // 上传表单
@@ -278,8 +240,8 @@ const uploadForm = reactive({
 const fetchFavorites = async () => {
   loading.favorites = true
   try {
-    const response = await request.get('/user/favorites')
-    favorites.value = response.data || []
+    const response = await getUserFavorites({ page: 1, size: 20 })
+    favorites.value = response.items || []
     userStats.favorites = favorites.value.length
   } catch (error) {
     // 模拟数据
@@ -307,8 +269,8 @@ const fetchFavorites = async () => {
 const fetchLikes = async () => {
   loading.likes = true
   try {
-    const response = await request.get('/user/likes')
-    likes.value = response.data || []
+    const response = await getUserLikes({ page: 1, size: 20 })
+    likes.value = response.items || []
     userStats.likes = likes.value.length
   } catch (error) {
     // 模拟数据
@@ -431,7 +393,7 @@ const deleteWallpaper = async (wallpaper) => {
 const saveProfile = async () => {
   saving.value = true
   try {
-    await request.put('/user/profile', editForm)
+    await request.put('/auth/me', { username: editForm.username, email: editForm.email, avatarUrl: editForm.avatarUrl })
     await userStore.fetchUser()
     showEditDialog.value = false
     ElMessage.success('保存成功')
@@ -442,9 +404,18 @@ const saveProfile = async () => {
   }
 }
 
-// 头像上传成功
-const handleAvatarSuccess = (response) => {
-  editForm.avatar = response.url
+// 头像上传
+const uploadAvatar = async (opt) => {
+  try {
+    const fd = new FormData(); fd.append('file', opt.file)
+    const res = await request.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    editForm.avatarUrl = res.url
+    ElMessage.success('头像上传成功')
+    opt.onSuccess && opt.onSuccess(res)
+  } catch (e) {
+    ElMessage.error('头像上传失败')
+    opt.onError && opt.onError(e)
+  }
 }
 
 // 头像上传前验证
@@ -543,7 +514,7 @@ watch(() => userStore.info, (newInfo) => {
     Object.assign(editForm, {
       username: newInfo.username || '',
       email: newInfo.email || '',
-      avatar: newInfo.avatar || ''
+      avatarUrl: newInfo.avatarUrl || ''
     })
   }
 }, { immediate: true })
@@ -558,6 +529,7 @@ onMounted(() => {
   
   fetchCategories()
   fetchFavorites()
+  fetchLikes()
 })
 </script>
 

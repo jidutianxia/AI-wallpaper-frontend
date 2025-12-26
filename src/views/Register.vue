@@ -53,6 +53,8 @@ const goLogin = () => { router.push('/'); window.dispatchEvent(new CustomEvent('
 .register { padding: 2rem 0; }
 .container { max-width: 560px; margin: 0 auto; padding: 0 2rem; }
 .panel { box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+.panel { border-radius: var(--radius-lg); box-shadow: var(--shadow-3); border: 1px solid var(--border); background: var(--card-bg); }
 .title { margin-bottom: 1rem; }
 .actions { display: flex; gap: 12px; justify-content: flex-end; }
+.actions :deep(.el-button) { border-radius: var(--radius-sm); box-shadow: var(--shadow-1); }
 </style>

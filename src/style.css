@@ -11,6 +11,20 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --color-primary: #409eff;
+  --color-text: #213547;
+  --color-muted: #606266;
+  --card-bg: #ffffff;
+  --border: rgba(148,163,184,.22);
+  --brand-gradient-start: #93c5fd;
+  --brand-gradient-end: #f0abfc;
+  --shadow-1: 0 2px 10px rgba(0,0,0,.08);
+  --shadow-2: 0 8px 20px rgba(0,0,0,.12);
+  --shadow-3: 0 12px 32px rgba(0,0,0,.18);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --focus-ring: #60A5FA;
 }
 
 /* Responsive base font size */
@@ -83,6 +97,16 @@ button:focus-visible {
 .dark {
   color-scheme: dark;
   background-color: #0b1220;
+  --color-primary: #93c5fd;
+  --color-text: #e5e7eb;
+  --color-muted: #9ca3af;
+  --card-bg: #1f2937;
+  --border: #374151;
+  --brand-gradient-start: #3b82f6;
+  --brand-gradient-end: #a78bfa;
+  --shadow-1: 0 2px 10px rgba(0,0,0,.18);
+  --shadow-2: 0 8px 20px rgba(0,0,0,.28);
+  --shadow-3: 0 12px 32px rgba(0,0,0,.38);
 }
 
 .dark body { 
@@ -106,6 +130,69 @@ button:focus-visible {
 }
 .dark a { color: #93c5fd; }
 .dark button { background-color: #111827; color: #e5e7eb; }
+
+/* Unified focus ring */
+.cat-pill:focus-visible,
+.el-button:focus-visible,
+.hot-list li:focus-visible,
+.users .user:focus-visible,
+.nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+/* Token-based component styling */
+:root :where(.el-card) {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+.dark :where(.el-card) { box-shadow: var(--shadow-2); }
+
+:root :where(.el-button) {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+:root :where(.el-button:hover) { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+
+/* Pill button for actions */
+.pill-btn {
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+              linear-gradient(135deg, #93c5fd, #f0abfc) border-box !important;
+  border: 1px solid transparent !important;
+  color: #606266;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 500 !important;
+}
+.dark .pill-btn {
+  background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+              linear-gradient(135deg, #3b82f6, #a78bfa) border-box !important;
+  color: #e5e7eb;
+}
+.pill-btn .btn-icon { width: 16px; height: 16px; margin-right: 6px; }
+/* ensure inner content inherits color */
+.pill-btn span, .pill-btn svg, .pill-btn .el-icon { color: inherit; fill: currentColor; }
+.pill-btn { font-size: 14px !important; line-height: 1 !important; }
+/* honor element plus type colors and restore filled background for primary/warning */
+.pill-btn.el-button--primary {
+  background: linear-gradient(var(--el-color-primary), var(--el-color-primary)) padding-box,
+              linear-gradient(135deg, #93c5fd, #f0abfc) border-box !important;
+  color: #fff !important;
+}
+.pill-btn.el-button--warning {
+  background: linear-gradient(var(--el-color-warning), var(--el-color-warning)) padding-box,
+              linear-gradient(135deg, #93c5fd, #f0abfc) border-box !important;
+  color: #fff !important;
+}
+.pill-btn.el-button--primary { color: #fff !important; }
+.pill-btn.el-button--warning { color: #fff !important; }
 
 /* Glassmorphism & Pills */
 .glass {
