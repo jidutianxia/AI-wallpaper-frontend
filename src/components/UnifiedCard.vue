@@ -5,12 +5,12 @@
       <span v-if="likesNum !== null" class="badge"><svg viewBox="0 0 24 24" class="icon"><path d="M2 21h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H2v11zM22 9h-6.31l.95-4.57A2 2 0 0 0 14.69 2L9 8v11h9a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z" fill="currentColor"/></svg>{{ likesNum }}</span>
       <span v-if="favoritesNum !== null" class="badge"><span class="star">★</span>{{ favoritesNum }}</span>
     </div>
-    <div class="overlay">
+<div class="overlay">
       <div class="info">
         <h3>{{ title }}</h3>
         <p v-if="subtitle">{{ subtitle }}</p>
       </div>
-      <div class="actions" @click.stop>
+      <div class="actions" @click.stop v-if="!noActions">
         <el-button size="small" @click="share"><svg viewBox="0 0 24 24" class="icon"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg>分享</el-button>
         <el-button size="small" @click="copyLink">复制链接</el-button>
       </div>
@@ -22,7 +22,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
-const props = defineProps({ title: String, cover: String, subtitle: String, to: String, likes: [Number, String], favorites: [Number, String] })
+const props = defineProps({ title: String, cover: String, subtitle: String, to: String, likes: [Number, String], favorites: [Number, String], noActions: Boolean })
 const router = useRouter()
 const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmOGY5ZmEiLz48dGV4dCB4PSIxNTAiIHk9IjEwMCIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzkxOTI5NyI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
 const imgSrc = computed(() => props.cover || placeholder)

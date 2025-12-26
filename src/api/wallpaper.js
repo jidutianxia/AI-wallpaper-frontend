@@ -47,8 +47,9 @@ export const uploadWallpaper = (formData) => request.post('/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
 
-export const getMyFavorites = () => request.get('/wallpapers/my/favorites').then(unwrap)
-export const getMyLikes = () => request.get('/wallpapers/my/likes').then(unwrap)
+export const getMyWallpaperFavorites = () => request.get('/wallpapers/my/favorites').then(unwrap)
+export const getMyFavorites = () => request.get('/community/my/favorites').then(unwrap) // Changed to point to community favorites
+export const getMyLikes = () => request.get('/community/my/likes').then(unwrap) // Changed to point to community likes
 
 // Community APIs
 export const getCommunityPosts = (params) => request.get('/community/posts', { params }).then(unwrap)
@@ -61,18 +62,32 @@ export const commentCommunityPost = (id, content) => request.post(`/community/po
 export const getMyCommunityPosts = (params) => request.get('/community/my/posts', { params }).then(unwrap)
 export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(unwrap)
 export const favoriteCommunityPost = (id) => request.post(`/community/posts/${id}/favorite`).then(unwrap)
+export const getMyPostFavorites = (params) => request.get('/community/my/favorites', { params }).then(unwrap)
+
 // User Center APIs (v3)
 export const getUserStats = () => request.get('/user/stats').then(unwrap)
 export const getUserReceivedComments = (params) => request.get('/user/received/comments', { params }).then(unwrap)
 export const getUserReceivedLikes = (params) => request.get('/user/received/likes', { params }).then(unwrap)
-export const getUserLikes = (params) => request.get('/user/likes', { params }).then(unwrap)
-export const getUserPostFavorites = (params) => request.get('/user/post-favorites', { params }).then(unwrap)
-export const getUserFavorites = (params) => request.get('/user/favorites', { params }).then(unwrap)
+// My Liked Community Posts
+export const getUserLikes = (params) => request.get('/community/my/likes', { params }).then(unwrap)
+// Other User's Liked Community Posts
+export const getOtherUserLikedPosts = (userId, params) => request.get(`/users/${userId}/likes`, { params }).then(unwrap)
+
+export const getUserPostFavorites = (params) => request.get('/community/my/favorites', { params }).then(unwrap)
+export const getOtherUserPostFavorites = (userId, params) => request.get(`/users/${userId}/post-favorites`, { params }).then(unwrap)
+
+export const getUserFavorites = (params) => request.get('/community/my/favorites', { params }).then(unwrap)
 
 // Image-level (community post) APIs - optional; UI will gracefully fallback if backend not ready
 export const getCommunityPostImageMeta = (postId, index) => request.get(`/community/posts/${postId}/images/${index}`).then(unwrap)
 export const likeCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/like`).then(unwrap)
 export const favoriteCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/favorite`).then(unwrap)
 export const downloadCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/download`).then(unwrap)
+
+// Follow system APIs
+export const followUser = (userId) => request.post(`/users/${userId}/follow`).then(unwrap)
+export const unfollowUser = (userId) => request.delete(`/users/${userId}/follow`).then(unwrap)
+export const getFollowState = (userId) => request.get(`/users/${userId}/follow/state`).then(unwrap)
+export const getFollowersCount = (userId) => request.get(`/users/${userId}/followers/count`).then(unwrap)
 
 export default request

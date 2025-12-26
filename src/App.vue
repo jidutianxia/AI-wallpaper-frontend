@@ -14,9 +14,14 @@ const userStore = useUserStore()
 // early theme guard to prevent flash
 try {
   const saved = localStorage.getItem('theme')
-  if (saved === 'dark') document.documentElement.classList.add('dark')
-  else if (saved === 'light') document.documentElement.classList.remove('dark')
-  else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark') }
+  const html = document.documentElement
+  if (saved === 'dark') html.classList.add('dark')
+  else if (saved === 'light') html.classList.remove('dark')
+  else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    if (prefersDark) { html.classList.add('dark'); localStorage.setItem('theme','dark') }
+    else { html.classList.remove('dark'); localStorage.setItem('theme','light') }
+  }
 } catch {}
 
 // 搜索相关
@@ -132,16 +137,23 @@ onMounted(() => {
   const handleAuthRequired = () => { showLoginDialog.value = true }
   window.addEventListener('auth-required', handleAuthRequired)
   ;(window).__authHandler = handleAuthRequired
+  const handleAuthChanged = () => {
+    try {
+      const current = router.currentRoute.value
+      router.replace({ path: current.path, query: current.query, hash: current.hash })
+    } catch {}
+  }
+  window.addEventListener('auth-changed', handleAuthChanged)
+  ;(window).__authChangedHandler = handleAuthChanged
 })
 
-const isDark = ref((localStorage.getItem('theme') ?? 'dark') === 'dark')
+// Initialize based on what index.html set on documentElement to ensure consistency
+const isDark = ref(document.documentElement.classList.contains('dark'))
 const toggleTheme = () => { isDark.value = !isDark.value }
 watch(isDark, (v) => {
-  const html = document.documentElement
-  if (v) html.classList.add('dark')
-  else html.classList.remove('dark')
+  document.documentElement.classList.toggle('dark', v)
   try { localStorage.setItem('theme', v ? 'dark' : 'light') } catch {}
-}, { immediate: true })
+})
 
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })

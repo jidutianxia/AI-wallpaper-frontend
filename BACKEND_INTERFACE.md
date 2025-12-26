@@ -1,6 +1,6 @@
-# AI Wallpaper Project - Backend Interface Documentation
+# AI Wallpaper Project - API Reference & Interface Specification
 
-This document outlines the RESTful API requirements for the AI Wallpaper Frontend application. The backend should be implemented using **Spring Boot**.
+This document serves as the **Single Source of Truth** for the frontend-backend interface. It reflects the actual implementation requirements for the frontend to function correctly, including Community, User Center, and Interaction features.
 
 ## 1. Global Standards
 
@@ -8,208 +8,179 @@ This document outlines the RESTful API requirements for the AI Wallpaper Fronten
 All API endpoints should be prefixed with `/api`.
 Example: `http://localhost:8080/api/wallpapers`
 
-### 1.2 Response Format
-All successful responses should follow a standard envelope structure:
+### 1.2 Response Format (Standard Envelope)
+All successful responses (HTTP 200) **MUST** follow this structure:
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": { ... }
+  "code": 200,          // Business status code (200=Success)
+  "message": "success", // Description or error message
+  "data": { ... }       // Payload (Object or Array)
 }
 ```
 
 ### 1.3 Error Handling
-Error responses should return appropriate HTTP status codes (4xx, 5xx) and a JSON body:
-```json
-{
-  "code": 400,
-  "message": "Invalid parameter description",
-  "data": null
-}
-```
+- **HTTP 401**: Unauthorized (Token expired/missing). Frontend will redirect to login.
+- **HTTP 403**: Forbidden (Insufficient permissions).
+- **HTTP 4xx/5xx**: Business or Server Error.
+  ```json
+  {
+    "code": 400,
+    "message": "Nickname already exists",
+    "data": null
+  }
+  ```
 
 ### 1.4 Authentication
-- **Mechanism**: JWT (JSON Web Token)
 - **Header**: `Authorization: Bearer <token>`
-- **Token Expiry**: Recommended 7 days for refresh token, 2 hours for access token (or simple long-lived token for MVP).
+- **Token**: JWT.
 
 ---
 
-## 2. Authentication Module
+## 2. Authentication & User Module
 
 ### 2.1 Login
 - **Endpoint**: `POST /auth/login`
-- **Description**: Authenticate user and return JWT token.
-- **Request Body**:
+- **Body**: `{ "username": "...", "password": "..." }`
+- **Response**:
   ```json
   {
-    "username": "user123",
-    "password": "password123"
-  }
-  ```
-- **Response Data**:
-  ```json
-  {
-    "token": "eyJhbGciOiJIUzI1Ni...",
-    "user": {
-      "id": 1,
-      "username": "user123",
-      "avatar": "https://..."
-    }
+    "token": "eyJ...",
+    "user": { "id": 1, "username": "admin", "nickname": "Admin", "avatarUrl": "..." }
   }
   ```
 
 ### 2.2 Register
 - **Endpoint**: `POST /auth/register`
-- **Description**: Create a new user account.
-- **Request Body**:
-  ```json
-  {
-    "username": "newuser",
-    "password": "securepassword",
-    "email": "user@example.com" // Optional based on frontend form
-  }
-  ```
-- **Response Data**: User object or Success message.
+- **Body**: `{ "username": "...", "password": "...", "email": "..." }`
 
-### 2.3 Get Current User Info
+### 2.3 Get Current User
 - **Endpoint**: `GET /auth/me`
-- **Headers**: `Authorization: Bearer <token>`
-- **Description**: Retrieve details of the currently logged-in user.
-- **Response Data**:
+- **Response**: `{ "id": 1, "username": "...", "nickname": "...", "avatarUrl": "...", "role": "user" }`
+
+### 2.4 Update Profile
+- **Endpoint**: `PUT /auth/me`
+- **Body**: `{ "nickname": "New Name", "email": "...", "avatarUrl": "..." }`
+- **Note**: `username` should typically be immutable.
+
+### 2.5 User Stats
+- **Endpoint**: `GET /user/stats`
+- **Description**: Aggregate statistics for the user profile.
+- **Response**:
   ```json
   {
-    "id": 1,
-    "username": "user123",
-    "avatar": "https://example.com/avatar.jpg",
-    "role": "user" // 'user' or 'admin'
+    "favorites": 12,      // Count of favorited wallpapers
+    "likes": 45,          // Count of liked community posts
+    "downloads": 5,
+    "receivedLikes": 100, // Likes received on own posts
+    "postCount": 10
   }
   ```
+
+### 2.6 User Interactions Lists
+- **My Liked Posts**: `GET /community/my/likes?page=1&size=20` (Returns List of Community Posts)
+- **Other User's Liked Posts**: `GET /users/{id}/likes?page=1&size=20`
+- **My Favorited Wallpapers**: `GET /wallpapers/my/favorites` (Returns List of Wallpapers)
+- **My Favorited Posts**: `GET /community/my/favorites` (Returns List of Community Posts)
+- **Other User's Favorited Posts**: `GET /users/{id}/post-favorites`
 
 ---
 
 ## 3. Wallpaper Module
 
-### 3.1 Get Wallpapers (List/Search)
+### 3.1 Get Wallpapers
 - **Endpoint**: `GET /wallpapers`
-- **Description**: Retrieve a paginated list of wallpapers with optional filtering.
-- **Query Parameters**:
-  - `page`: Page number (default 1)
-  - `pageSize`: Items per page (default 20)
-  - `keyword`: Search term (optional, for title/tags)
-  - `category`: Main category key (e.g., 'type', 'color')
-  - `subCategory`: Sub-category label (e.g., 'landscape', 'red')
-  - `sort`: Sort order ('latest', 'hot', 'download')
-- **Response Data**:
+- **Params**: `page`, `size`, `category`, `sort`
+- **Response**:
   ```json
   {
-    "list": [
+    "items": [
       {
-        "id": 101,
-        "title": "Cyberpunk City",
-        "author": "ArtistX",
-        "thumb": "https://images.unsplash.com/...", // Thumbnail URL
-        "url": "https://images.unsplash.com/...",   // Full HD URL
-        "resolution": "4K",
-        "width": 3840,
-        "height": 2160,
-        "previewVideoUrl": null, // Optional, for live wallpapers
-        "likes": 120,
-        "favorites": 45,
-        "views": 1024
+        "id": 1,
+        "title": "Landscape",
+        "thumbUrl": "...",
+        "url": "...",
+        "likes": 10,
+        "favorites": 5,
+        "liked": false,     // Interaction State
+        "favorited": false  // Interaction State
       }
     ],
-    "total": 100,
-    "page": 1,
-    "pageSize": 20
+    "total": 100
   }
   ```
 
-### 3.2 Get Wallpaper Detail
-- **Endpoint**: `GET /wallpapers/{id}`
-- **Description**: Get detailed information for a specific wallpaper.
-- **Response Data**: Same object structure as in the list, potentially with more details like `tags`, `createTime`, etc.
-
-### 3.3 Like Wallpaper
-- **Endpoint**: `POST /wallpapers/{id}/like`
-- **Headers**: `Authorization: Bearer <token>`
-- **Description**: Toggle like status for a wallpaper.
-- **Response Data**: `{ "liked": true, "count": 121 }`
-
-### 3.4 Favorite Wallpaper
-- **Endpoint**: `POST /wallpapers/{id}/favorite`
-- **Headers**: `Authorization: Bearer <token>`
-- **Description**: Add/Remove wallpaper from user's favorites.
-- **Response Data**: `{ "favorited": true }`
+### 3.2 Actions
+- **Like**: `POST /wallpapers/{id}/like`
+- **Favorite**: `POST /wallpapers/{id}/favorite`
 
 ---
 
-## 4. Category Module
+## 4. Community Module (Forum)
 
-### 4.1 Get Category Tree
-- **Endpoint**: `GET /categories`
-- **Description**: Return the structure for the navigation menu.
-- **Response Data**:
-  ```json
-  [
-    {
-      "key": "hot",
-      "label": "昨日热门",
-      "children": ["最新", "推荐的", "昨日热门", "近三天热门", "上周热门", "上月热门", "近半年热门", "去年热榜"]
-    },
-    {
-      "key": "type",
-      "label": "壁纸种类",
-      "children": ["插画", "二次元", "风景", "极简", "赛博朋克", "像素风", "3D渲染"]
-    },
-    {
-      "key": "class",
-      "label": "壁纸分类",
-      "children": ["人物", "动物", "植物", "建筑", "美食", "运动", "科技"]
-    },
-    {
-      "key": "ratio",
-      "label": "分辨率",
-      "children": ["4K", "8K", "1080P", "2K", "超宽屏", "手机竖屏"]
-    },
-    {
-      "key": "color",
-      "label": "颜色分类",
-      "children": ["红色", "橙色", "黄色", "绿色", "青色", "蓝色", "紫色", "黑白"]
-    }
-  ]
-  ```
-
----
-
-## 5. File Upload (Admin)
-
-### 5.1 Upload Image
-- **Endpoint**: `POST /admin/upload`
-- **Headers**: `Content-Type: multipart/form-data`, `Authorization: Bearer <token>`
-- **Request Body**: `file` (Binary)
-- **Response Data**:
+### 4.1 Get Posts
+- **Endpoint**: `GET /community/posts`
+- **Params**: `page`, `size`, `sort` ('latest', 'popular'), `q` (keyword), `includeCounts` (bool)
+- **Response**:
   ```json
   {
-    "url": "https://your-storage-service.com/uploads/image-123.jpg",
-    "filename": "image-123.jpg"
+    "items": [
+      {
+        "id": 101,
+        "title": "My Setup",
+        "content": "...",
+        "images": ["url1", "url2"],
+        "author": { "id": 5, "username": "...", "avatarUrl": "..." },
+        "likes": 20,
+        "commentsCount": 5,
+        "liked": true,      // Crucial for UI consistency
+        "favorited": false
+      }
+    ],
+    "total": 50
   }
   ```
 
-## 6. Implementation Notes for Spring Boot
+### 4.2 Get Single Post
+- **Endpoint**: `GET /community/posts/{id}`
+- **Response**: Detailed Post Object (same fields as item above).
 
-- **Entity Classes**:
-  - `User`: id, username, password (hashed), email, avatar, role.
-  - `Wallpaper`: id, title, description, url, thumbUrl, resolution, width, height, views, likes, favorites, uploaderId.
-  - `Category`: (Optional, can be hardcoded or DB-driven) key, label, parentKey.
-  - `UserLike`: userId, wallpaperId.
-  - `UserFavorite`: userId, wallpaperId.
+### 4.3 Create Post
+- **Endpoint**: `POST /community/posts`
+- **Body**: `{ "title": "...", "content": "...", "images": ["url1"], "tags": ["..."] }`
 
-- **Recommended Tech Stack**:
-  - Spring Boot 3.x
-  - Spring Security + JWT
-  - MyBatis Plus or Spring Data JPA
-  - MySQL / PostgreSQL
-  - Redis (for caching hot wallpapers/categories)
-  - MinIO / AWS S3 (for file storage)
+### 4.4 Interactions
+- **Like**: `POST /community/posts/{id}/like` -> Returns `{ "liked": true, "likes": 21 }`
+- **Favorite**: `POST /community/posts/{id}/favorite` -> Returns `{ "favorited": true }`
+- **Comment**: `POST /community/posts/{id}/comments` -> Body `{ "content": "..." }`
 
+### 4.5 Get Comments
+- **Endpoint**: `GET /community/posts/{id}/comments`
+- **Response**: `{ "items": [ { "id": 1, "content": "...", "author": {...}, "createdAt": "..." } ], "total": 10 }`
+
+---
+
+## 5. Upload Module
+
+### 5.1 General Upload
+- **Endpoint**: `POST /upload`
+- **Content-Type**: `multipart/form-data`
+- **Param**: `file`
+- **Response**:
+  ```json
+  {
+    "url": "https://oss.../file.jpg",
+    "filename": "file.jpg",
+    "size": 1024
+  }
+  ```
+- **Constraints**: 
+  - Avatar: < 2MB, JPG/PNG.
+  - Wallpaper/Post Image: < 10MB.
+
+---
+
+## 6. Follow Module (Future)
+
+- **Follow**: `POST /users/{id}/follow`
+- **Unfollow**: `DELETE /users/{id}/follow`
+- **Followers**: `GET /users/{id}/followers`

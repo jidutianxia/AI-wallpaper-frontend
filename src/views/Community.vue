@@ -8,16 +8,19 @@
       <div class="grid">
         <aside class="left">
           <el-card class="profile-card">
-            <div class="profile-top" :class="{ clickable: isAuthenticated }" @click="isAuthenticated ? goProfile(userStore.info?.id) : null">
+            <div class="profile-top" :class="{ clickable: isAuthenticated }">
               <template v-if="isAuthenticated">
-                <img :src="avatarUrl" class="avatar-lg" />
-                <div class="creator"><div class="creator-name">{{ displayName }}</div><div class="creator-desc">{{ signature }}</div></div>
-                <el-button class="publish-btn" type="primary" round @click="handlePublishClick">发布</el-button>
+                <img :src="avatarUrl" class="avatar-lg" @click="goProfile(userStore.info?.id)" />
+                <div class="creator">
+                  <div class="creator-name" @click="goProfile(userStore.info?.id)">{{ displayName }}</div>
+                  <div class="creator-desc">{{ signature }}</div>
+                </div>
+                <el-button class="publish-btn" type="primary" round @click.stop="handlePublishClick">发布</el-button>
               </template>
               <template v-else>
                 <div class="avatar-lg placeholder"><el-icon><User /></el-icon></div>
                 <div class="creator"><div class="creator-name">请先登录</div><div class="creator-desc">登录后可发布内容</div></div>
-                <el-button class="publish-btn" type="primary" round :disabled="true" @click="handlePublishClick">发布</el-button>
+                <el-button class="publish-btn" type="primary" round :disabled="true" @click.stop="handlePublishClick">发布</el-button>
               </template>
             </div>
             <div class="stats-grid">
@@ -140,7 +143,7 @@ const recentUsersSource = ref([])
 const recentUsers = computed(() => recentUsersSource.value)
 const loadHot = async () => {
   try {
-    const hot = await getCommunityPosts({ page: 1, size: 5, sort: 'popular' })
+    const hot = await getCommunityPosts({ page: 1, size: 5, sort: 'popular', includeCounts: true })
     hotPostsSource.value = hot.items || []
   } catch {}
 }
@@ -151,37 +154,27 @@ loadHot(); loadRecentUsers()
 
 // 持久化到本地，供详情页读取
 const loading = ref(false)
-// 本地交互持久化，避免返回列表时数据回到初始值
-const interactions = ref({})
-const interactionKey = computed(() => `community_interactions_${userStore.info?.id || 'anon'}`)
-const loadInteractions = () => { try { interactions.value = JSON.parse(localStorage.getItem(interactionKey.value) || '{}') } catch { interactions.value = {} } }
-const saveInteractions = () => { try { localStorage.setItem(interactionKey.value, JSON.stringify(interactions.value)) } catch {} }
+
 const applyInteractions = () => {
-  posts.value = (posts.value || []).map(p => {
-    const it = interactions.value[p.id]
-    if (it) {
-      // 仅在后端未提供用户态时作为兜底，不覆盖近实时计数
-      if (typeof p.liked === 'undefined') p.liked = it.liked
-      if (typeof p.favorited === 'undefined') p.favorited = it.favorited
-    }
-    // 归一化，避免空值导致显示异常
-    p.liked = !!p.liked
-    p.favorited = !!p.favorited
-    p.likes = Number(p.likes || 0)
-    p.commentsCount = Number(p.commentsCount || 0)
-    return p
-  })
-}
+    posts.value = (posts.value || []).map(p => {
+      p.liked = !!p.liked
+      p.favorited = !!p.favorited
+      // Ensure likes/comments are Numbers. If null/undefined, default to 0.
+      p.likes = typeof p.likes === 'number' ? p.likes : 0
+      p.commentsCount = typeof p.commentsCount === 'number' ? p.commentsCount : 0
+      return p
+    })
+  }
+
 const loadPosts = async () => {
   loading.value = true
   try {
-    const list = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest' })
+    const list = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest', includeCounts: true })
     posts.value = list.items || []
     applyInteractions()
   } finally { loading.value = false }
 }
 loadPosts()
-loadInteractions();
 
 const loadMyStats = async () => {
   if (!isAuthenticated.value) { myStat.value = { posts: 0, likes: 0, comments: 0 }; return }
@@ -223,23 +216,24 @@ watch([pagedPosts, loading], async () => {
 
 const toggleLike = async (p) => {
   const prev = { liked: p.liked, likes: p.likes }
+  // Optimistic update
   p.liked = !p.liked
   p.likes = (prev.likes || 0) + (p.liked ? 1 : -1)
+  
   try {
     const r = await likeCommunityPost(p.id)
     if (r && typeof r === 'object') {
+      // Backend should return the definitive state
       if (typeof r.liked !== 'undefined') p.liked = !!r.liked
       if (typeof r.likes !== 'undefined') p.likes = r.likes
     }
-    interactions.value[p.id] = { liked: p.liked, favorited: p.favorited }
-    saveInteractions()
     ElMessage.success(p.liked ? '点赞成功' : '已取消点赞')
   } catch {
+    // Revert on error
     p.liked = prev.liked; p.likes = prev.likes; ElMessage.error('点赞失败')
   }
 }
 
-const commentCount = (p) => (p.comments?.length ?? p.commentsCount ?? 0)
 const addComment = async (p) => {
   const v = (p.newComment || '').trim()
   if (!v) return
@@ -247,7 +241,9 @@ const addComment = async (p) => {
     await commentCommunityPost(p.id, v)
     p.comments = p.comments || []
     p.comments.push({ content: v, createdAt: new Date().toISOString(), author: userStore.info })
+    p.commentsCount = (p.commentsCount || 0) + 1
     p.newComment = ''
+    ElMessage.success('评论发布成功')
   } catch { ElMessage.error('评论失败') }
 }
 
@@ -258,18 +254,23 @@ const openComments = async (p) => {
     try {
       const res = await getCommunityPostComments(p.id, { page: 1, size: 10 })
       p.comments = res.items || []
+      // Update count if server returns a total count
+      if (typeof res.total !== 'undefined') p.commentsCount = res.total
     } catch {}
   }
 }
 
+const commentCount = (p) => p.commentsCount || p.comments?.length || 0
+
 const toggleFavorite = async (p) => {
   const prev = p.favorited
+  // Optimistic update
   p.favorited = !p.favorited
   try {
     const r = await favoriteCommunityPost(p.id)
-    if (r && typeof r === 'object' && typeof r.favorited !== 'undefined') p.favorited = !!r.favorited
-    interactions.value[p.id] = { liked: p.liked, favorited: p.favorited }
-    saveInteractions()
+    if (r && typeof r === 'object' && typeof r.favorited !== 'undefined') {
+      p.favorited = !!r.favorited
+    }
     ElMessage.success(p.favorited ? '已收藏' : '已取消收藏')
   } catch { p.favorited = prev; ElMessage.error('收藏失败') }
 }
@@ -308,6 +309,16 @@ const goProfile = (uid) => {
 }
 
 const currentAvatar = 'https://i.pravatar.cc/80?u=community'
+
+watch(() => userStore.info?.id, async () => { await loadPosts(); })
+import { getCommunityPost } from '@/api/wallpaper'
+const refreshPost = async (id) => {
+  try {
+    const fresh = await getCommunityPost(id)
+    const idx = posts.value.findIndex(x => String(x.id) === String(id))
+    if (idx >= 0) { posts.value[idx] = { ...posts.value[idx], ...fresh }; applyInteractions() }
+  } catch {}
+}
 </script>
 
 <style scoped>
@@ -398,3 +409,11 @@ const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 .image:hover { transform: scale(1.02); transition: transform .2s ease; }
 </style>
 watch(() => userStore.info?.id, async () => { loadInteractions(); await loadPosts(); })
+import { getCommunityPost } from '@/api/wallpaper'
+const refreshPost = async (id) => {
+  try {
+    const fresh = await getCommunityPost(id)
+    const idx = posts.value.findIndex(x => String(x.id) === String(id))
+    if (idx >= 0) { posts.value[idx] = { ...posts.value[idx], ...fresh }; applyInteractions() }
+  } catch {}
+}

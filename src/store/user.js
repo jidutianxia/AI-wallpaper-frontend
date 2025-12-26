@@ -36,6 +36,7 @@ export const useUserStore = defineStore('user', {
         localStorage.setItem('token', this.token)
         await this.fetchUser()
         this.isLoggedIn = true
+        try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'login' } })) } catch {}
         return data
       } catch (error) {
         throw error
@@ -68,10 +69,20 @@ export const useUserStore = defineStore('user', {
       this.info = null
       this.isLoggedIn = false
       localStorage.removeItem('token')
+      try {
+        const keys = Object.keys(localStorage)
+        keys.forEach(k => {
+          if (k.startsWith('community_interactions_')) localStorage.removeItem(k)
+        })
+      } catch {}
+      try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'logout' } })) } catch {}
     },
     
     async initAuth() {
       if (this.token) {
+        // 如果有 token，先标记为“已登录”（但 info 可能为空）
+        // 这可以防止路由守卫在 fetchUser 完成前就拦截
+        this.isLoggedIn = true 
         try {
           await this.fetchUser()
         } catch (error) {

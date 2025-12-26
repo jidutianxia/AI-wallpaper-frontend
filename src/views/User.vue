@@ -7,8 +7,8 @@
           {{ userStore.info?.username?.charAt(0).toUpperCase() }}
         </el-avatar>
         <div class="profile-info">
-          <h2>{{ userStore.info?.username || '游客' }}</h2>
-          <p>{{ userStore.info?.email }}</p>
+          <h2>{{ userStore.info?.nickname || userStore.info?.username || '游客' }}</h2>
+          <p>{{ userStore.info?.bio || '这个人很懒，什么都没写' }}</p>
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-number">{{ userStats.favorites }}</span>
@@ -34,10 +34,10 @@
     
     <!-- 标签页 -->
     <el-tabs v-model="activeTab" class="user-tabs">
-      <el-tab-pane label="我的收藏" name="favorites">
-        <div class="wallpaper-grid" v-loading="loading.favorites">
+      <el-tab-pane label="我的偏爱壁纸" name="wallpaperFavorites">
+        <div class="wallpaper-grid" v-loading="loading.wallpaperFavorites">
           <UnifiedCard 
-            v-for="w in favorites" 
+            v-for="w in wallpaperFavorites" 
             :key="w.id" 
             :title="w.title" 
             :cover="w.thumbUrl || w.url" 
@@ -47,11 +47,11 @@
             :favorites="w.favorites"
           />
         </div>
-        <div v-if="!loading.favorites && favorites.length === 0" class="empty-state">
+        <div v-if="!loading.wallpaperFavorites && wallpaperFavorites.length === 0" class="empty-state">
           <el-empty description="还没有收藏任何壁纸" />
         </div>
       </el-tab-pane>
-      
+
       <el-tab-pane label="我的点赞（帖子）" name="likes">
         <div class="wallpaper-grid" v-loading="loading.likes">
           <UnifiedCard 
@@ -62,6 +62,44 @@
             :subtitle="p.author?.username || ''" 
             :to="`/community/post/${p.id}`" 
             :likes="p.likes"
+            :no-actions="true"
+          />
+        </div>
+        <div v-if="!loading.likes && likes.length === 0" class="empty-state">
+          <el-empty description="还没有点赞任何帖子" />
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="我的收藏（帖子）" name="favorites">
+        <div class="wallpaper-grid" v-loading="loading.favorites">
+          <UnifiedCard 
+            v-for="p in favorites" 
+            :key="p.id" 
+            :title="p.title" 
+            :cover="p.images?.[0] || p.cover" 
+            :subtitle="p.author?.username || ''" 
+            :to="`/community/post/${p.id}`" 
+            :likes="p.likes" 
+            :favorites="p.favorites"
+            :no-actions="true"
+          />
+        </div>
+        <div v-if="!loading.favorites && favorites.length === 0" class="empty-state">
+          <el-empty description="还没有收藏任何帖子" />
+        </div>
+      </el-tab-pane>
+      
+      <el-tab-pane label="我的上传" name="uploads" v-if="userStore.info?.role === 'admin'">
+        <div class="wallpaper-grid" v-loading="loading.likes">
+          <UnifiedCard 
+            v-for="p in likes" 
+            :key="p.id" 
+            :title="p.title" 
+            :cover="p.images?.[0]" 
+            :subtitle="p.author?.username || ''" 
+            :to="`/community/post/${p.id}`" 
+            :likes="p.likes"
+            :no-actions="true"
           />
         </div>
         <div v-if="!loading.likes && likes.length === 0" class="empty-state">
@@ -111,7 +149,10 @@
     <el-dialog v-model="showEditDialog" title="编辑资料" width="400px">
       <el-form :model="editForm" label-width="80px">
         <el-form-item label="用户名">
-          <el-input v-model="editForm.username" />
+          <el-input v-model="editForm.username" disabled placeholder="用户名不可修改" />
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="editForm.nickname" placeholder="设置昵称" />
         </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="editForm.email" />
@@ -187,7 +228,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, Download, Edit, Delete, Plus, UploadFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, getUserFavorites, getUserLikes } from '@/api/wallpaper'
+import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, getMyFavorites, getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites } from '@/api/wallpaper'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import request from '@/api/wallpaper'
 
@@ -195,7 +236,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 响应式数据
-const activeTab = ref('favorites')
+const activeTab = ref('wallpaperFavorites')
 const showEditDialog = ref(false)
 const showUploadDialog = ref(false)
 const saving = ref(false)
@@ -211,12 +252,14 @@ const userStats = reactive({
 // 加载状态
 const loading = reactive({
   favorites: false,
+  wallpaperFavorites: false,
   likes: false,
   uploads: false
 })
 
 // 数据列表
 const favorites = ref([])
+const wallpaperFavorites = ref([])
 const likes = ref([])
 const uploads = ref([])
 const categories = ref([])
@@ -224,6 +267,7 @@ const categories = ref([])
 // 编辑表单
 const editForm = reactive({
   username: '',
+  nickname: '',
   email: '',
   avatarUrl: ''
 })
@@ -236,32 +280,54 @@ const uploadForm = reactive({
   file: null
 })
 
-// 获取用户收藏
+// 获取统计数据
+const fetchUserStats = async () => {
+  try {
+    const stats = await getUserStats()
+    if (stats) {
+      // 优先使用后端返回的字段
+      // favoriteCount: 收藏数 (帖子 + 壁纸 或 单指某一项，取决于后端定义，前端暂时展示总和)
+      // likeCount: 点赞数
+      // receivedLikes: 获得的赞 (暂时没展示在头部)
+      userStats.favorites = stats.favoriteCount ?? stats.favoritesCount ?? stats.favorites ?? 0
+      userStats.likes = stats.likeCount ?? stats.likesCount ?? stats.likes ?? 0
+      userStats.downloads = stats.downloads ?? stats.downloadsCount ?? 0
+    } else {
+      // 降级：如果 stats 为空，从 store 或本地计算
+      userStats.favorites = favorites.value.length
+      userStats.likes = likes.value.length
+    }
+  } catch (error) {
+    // 降级：如果接口失败，从列表长度获取
+    userStats.favorites = favorites.value.length
+    userStats.likes = likes.value.length
+  }
+}
+
+// 获取用户收藏 (帖子)
 const fetchFavorites = async () => {
   loading.favorites = true
   try {
-    const response = await getUserFavorites({ page: 1, size: 20 })
-    favorites.value = response.items || []
-    userStats.favorites = favorites.value.length
+    const response = await getMyPostFavorites()
+    favorites.value = Array.isArray(response) ? response : (response.items || [])
+    if (userStats.favorites === 0) userStats.favorites = response.total || favorites.value.length
   } catch (error) {
-    // 模拟数据
-    favorites.value = [
-      {
-        id: 1,
-        title: '收藏的风景',
-        thumbUrl: 'https://via.placeholder.com/300x200/4CAF50/white?text=Favorite1',
-        favoriteTime: '2024-01-15'
-      },
-      {
-        id: 2,
-        title: '收藏的抽象',
-        thumbUrl: 'https://via.placeholder.com/300x200/FF9800/white?text=Favorite2',
-        favoriteTime: '2024-01-10'
-      }
-    ]
-    userStats.favorites = favorites.value.length
+    favorites.value = []
   } finally {
     loading.favorites = false
+  }
+}
+
+// 获取用户偏爱壁纸
+const fetchWallpaperFavorites = async () => {
+  loading.wallpaperFavorites = true
+  try {
+    const response = await getMyWallpaperFavorites()
+    wallpaperFavorites.value = Array.isArray(response) ? response : (response.items || [])
+  } catch (error) {
+    wallpaperFavorites.value = []
+  } finally {
+    loading.wallpaperFavorites = false
   }
 }
 
@@ -269,20 +335,11 @@ const fetchFavorites = async () => {
 const fetchLikes = async () => {
   loading.likes = true
   try {
-    const response = await getUserLikes({ page: 1, size: 20 })
-    likes.value = response.items || []
-    userStats.likes = likes.value.length
+    const response = await getUserLikes({ page: 1, size: 50 })
+    likes.value = Array.isArray(response) ? response : (response.items || [])
+    if (userStats.likes === 0) userStats.likes = response.total || likes.value.length
   } catch (error) {
-    // 模拟数据
-    likes.value = [
-      {
-        id: 3,
-        title: '点赞的城市',
-        thumbUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&h=200&fit=crop&crop=center',
-        likeTime: '2024-01-12'
-      }
-    ]
-    userStats.likes = likes.value.length
+    likes.value = []
   } finally {
     loading.likes = false
   }
@@ -298,14 +355,7 @@ const fetchUploads = async () => {
     uploads.value = response.data || []
   } catch (error) {
     // 模拟数据
-    uploads.value = [
-      {
-        id: 4,
-        title: '我上传的壁纸',
-        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
-        status: 'approved'
-      }
-    ]
+    uploads.value = []
   } finally {
     loading.uploads = false
   }
@@ -393,12 +443,20 @@ const deleteWallpaper = async (wallpaper) => {
 const saveProfile = async () => {
   saving.value = true
   try {
-    await request.put('/auth/me', { username: editForm.username, email: editForm.email, avatarUrl: editForm.avatarUrl })
+    const payload = { 
+      email: editForm.email, 
+      avatarUrl: editForm.avatarUrl 
+    }
+    if (editForm.nickname) payload.nickname = editForm.nickname
+    
+    await request.put('/auth/me', payload)
     await userStore.fetchUser()
+    try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'profile-updated' } })) } catch {}
     showEditDialog.value = false
     ElMessage.success('保存成功')
   } catch (error) {
-    ElMessage.error('保存失败')
+    const msg = error.response?.data?.message || error.message || '保存失败'
+    ElMessage.error(msg)
   } finally {
     saving.value = false
   }
@@ -409,7 +467,8 @@ const uploadAvatar = async (opt) => {
   try {
     const fd = new FormData(); fd.append('file', opt.file)
     const res = await request.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    editForm.avatarUrl = res.url
+    const url = res?.data?.data?.url || res?.data?.url || res?.url
+    if (url) editForm.avatarUrl = url
     ElMessage.success('头像上传成功')
     opt.onSuccess && opt.onSuccess(res)
   } catch (e) {
@@ -499,6 +558,9 @@ watch(activeTab, (newTab) => {
     case 'favorites':
       if (favorites.value.length === 0) fetchFavorites()
       break
+    case 'wallpaperFavorites':
+      if (wallpaperFavorites.value.length === 0) fetchWallpaperFavorites()
+      break
     case 'likes':
       if (likes.value.length === 0) fetchLikes()
       break
@@ -513,6 +575,7 @@ watch(() => userStore.info, (newInfo) => {
   if (newInfo) {
     Object.assign(editForm, {
       username: newInfo.username || '',
+      nickname: newInfo.nickname || '',
       email: newInfo.email || '',
       avatarUrl: newInfo.avatarUrl || ''
     })
@@ -520,16 +583,36 @@ watch(() => userStore.info, (newInfo) => {
 }, { immediate: true })
 
 // 组件挂载
-onMounted(() => {
-  if (!userStore.isAuthenticated) {
+onMounted(async () => {
+  // 如果没有 token，直接跳转
+  if (!userStore.token) {
     ElMessage.warning('请先登录')
     router.push('/')
     return
   }
   
+  // 如果有 token 但未认证（可能是刷新页面），尝试重新获取用户信息
+  if (!userStore.isAuthenticated) {
+    try {
+      await userStore.initAuth()
+    } catch (e) {
+      // initAuth 失败会自动 logout，这里只需要判断如果最终还是没认证
+    }
+  }
+
+  // 二次检查
+  if (!userStore.isAuthenticated) {
+    // 只有在确定没有任何 info 的情况下才跳转，避免误杀
+    if (!userStore.info) {
+      ElMessage.warning('登录已过期，请重新登录')
+      router.push('/')
+      return
+    }
+  }
+  
   fetchCategories()
-  fetchFavorites()
-  fetchLikes()
+  fetchUserStats()
+  fetchWallpaperFavorites() // Default tab
 })
 </script>
 
@@ -547,6 +630,7 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   margin-bottom: 30px;
 }
+.dark .user-profile { background: #1f2937; border: 1px solid #374151; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
 
 .profile-header {
   display: flex;
@@ -569,12 +653,14 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 600;
 }
+.dark .profile-info h2 { color: #e5e7eb; }
 
 .profile-info p {
   margin: 0;
   color: #666;
   font-size: 16px;
 }
+.dark .profile-info p { color: #cbd5e1; }
 
 .profile-stats {
   display: flex;
@@ -593,11 +679,13 @@ onMounted(() => {
   color: #409eff;
   margin-bottom: 5px;
 }
+.dark .stat-number { color: #93c5fd; }
 
 .stat-label {
   color: #666;
   font-size: 14px;
 }
+.dark .stat-label { color: #9ca3af; }
 
 .profile-actions {
   display: flex;
@@ -626,6 +714,7 @@ onMounted(() => {
   transition: all 0.3s ease;
   cursor: pointer;
 }
+.dark .wallpaper-item { background: #111827; }
 
 .wallpaper-item:hover {
   transform: translateY(-5px);
@@ -656,6 +745,7 @@ onMounted(() => {
   align-items: flex-end;
   padding: 20px;
 }
+.dark .wallpaper-overlay { background: linear-gradient(to bottom, transparent 0%, rgba(17,24,39,0.85) 100%); }
 
 .wallpaper-item:hover .wallpaper-overlay {
   opacity: 1;

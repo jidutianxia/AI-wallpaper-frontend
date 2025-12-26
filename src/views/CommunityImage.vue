@@ -14,49 +14,45 @@
           </div>
         </div>
         <div class="side-info" v-if="post">
-          <div class="info-header">
-            <h1 class="info-title">{{ post.title }}</h1>
-            <div class="info-stats">
-              <span class="stat-item"><el-icon><Star /></el-icon> {{ post.likes || 0 }} 点赞</span>
-              <span class="stat-item"><el-icon><Calendar /></el-icon> {{ formatDate(post.createdAt) }}</span>
-            </div>
-            <div class="info-actions">
-              <el-button type="primary" size="large" :icon="Download" @click="download">下载图片</el-button>
-              <el-button :type="imageMeta.liked ? 'danger' : 'default'" size="large" :icon="Star" @click="toggleImageLike">{{ imageMeta.liked ? '已点赞' : '点赞' }} ({{ imageMeta.likes }})</el-button>
-              <el-button :type="imageMeta.favorited ? 'warning' : 'default'" size="large" @click="toggleImageFavorite">{{ imageMeta.favorited ? '已收藏' : '收藏' }}</el-button>
-              <el-button size="large" @click="shareImage"><svg viewBox="0 0 24 24" class="btn-icon plane-svg" aria-hidden="true"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg> 分享图片</el-button>
-            </div>
-          </div>
-          <div class="info-section">
-            <h3>基本信息</h3>
-            <div class="info-grid">
-              <div class="info-item"><label>分辨率:</label><span>{{ imageMeta.width }} × {{ imageMeta.height }}</span></div>
-              <div class="info-item"><label>文件大小:</label><span>{{ formatFileSize(imageMeta.fileSize) }}</span></div>
-              <div class="info-item"><label>格式:</label><span>{{ imageMeta.format || 'JPG' }}</span></div>
-            </div>
-          </div>
-          <div class="info-section">
-            <h3>统计</h3>
-            <div class="info-grid">
-              <div class="info-item"><label>浏览:</label><span>{{ imageMeta.views ?? 0 }}</span></div>
-              <div class="info-item"><label>下载:</label><span>{{ imageMeta.downloads ?? 0 }}</span></div>
-            </div>
-          </div>
-          <div class="info-section" v-if="post.tags && post.tags.length">
-            <h3>标签</h3>
-            <div class="tags">
-              <el-tag v-for="t in post.tags" :key="t" class="tag-item">{{ t }}</el-tag>
-            </div>
-          </div>
-          <div class="info-section" v-if="post.author">
-            <h3>作者</h3>
-            <div class="uploader-info" @click="goProfile(post.author.id)" style="cursor:pointer">
-              <el-avatar :src="post.author.avatarUrl" :size="40">{{ post.author.username?.[0] }}</el-avatar>
-              <div class="uploader-details">
-                <div class="uploader-name">{{ post.author.username }}</div>
+            <div class="info-header">
+              <h1 class="info-title">{{ post.title }}</h1>
+              <div class="info-stats">
+                <span class="stat-item"><el-icon><Star /></el-icon> {{ imageMeta.likes ?? post.likes ?? 0 }} 点赞</span>
+                <span class="stat-item"><el-icon><Calendar /></el-icon> {{ formatDate(post.createdAt) }}</span>
+              </div>
+              <div class="info-actions">
+                <el-button type="primary" size="large" :icon="Download" @click="download">下载原图</el-button>
+                <el-button :type="imageMeta.liked ? 'danger' : 'default'" size="large" :icon="Star" @click="toggleImageLike">{{ imageMeta.liked ? '已点赞' : '点赞' }} ({{ imageMeta.likes }})</el-button>
+                <el-button :type="imageMeta.favorited ? 'warning' : 'default'" size="large" @click="toggleImageFavorite">{{ imageMeta.favorited ? '已收藏' : '收藏' }}</el-button>
+                <el-button size="large" @click="shareImage"><svg viewBox="0 0 24 24" class="btn-icon plane-svg" aria-hidden="true"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg> 分享</el-button>
               </div>
             </div>
-          </div>
+            <div class="info-section">
+              <h3>图片信息</h3>
+              <div class="info-grid">
+                <div class="info-item"><label>分辨率:</label><span>{{ imageMeta.width }} × {{ imageMeta.height }}</span></div>
+                <div class="info-item"><label>文件大小:</label><span>{{ formatFileSize(imageMeta.fileSize) }}</span></div>
+                <div class="info-item"><label>格式:</label><span>{{ imageMeta.format || 'JPG' }}</span></div>
+                <div class="info-item"><label>浏览:</label><span>{{ imageMeta.views ?? 0 }}</span></div>
+                <div class="info-item"><label>下载:</label><span>{{ imageMeta.downloads ?? 0 }}</span></div>
+              </div>
+            </div>
+            <div class="info-section" v-if="post.tags && post.tags.length">
+              <h3>标签</h3>
+              <div class="tags">
+                <el-tag v-for="t in post.tags" :key="t" class="tag-item">{{ t }}</el-tag>
+              </div>
+            </div>
+            <div class="info-section" v-if="post.author">
+              <h3>发布者</h3>
+              <div class="uploader-info" @click="goProfile(post.author.id)" style="cursor:pointer">
+                <el-avatar :src="post.author.avatarUrl" :size="40">{{ post.author.username?.[0] }}</el-avatar>
+                <div class="uploader-details">
+                  <div class="uploader-name">{{ post.author.username }}</div>
+                  <div class="uploader-desc">查看TA的主页</div>
+                </div>
+              </div>
+            </div>
           <div class="info-section">
             <h3>评论</h3>
             <div class="comments" v-if="loadingComments"><el-skeleton animated :rows="3" /></div>
