@@ -29,15 +29,6 @@
               >
                 {{ wallpaper.isLiked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
               </el-button>
-              <el-button 
-                :type="wallpaper.isFavorited ? 'warning' : 'default'"
-                size="large"
-                :icon="Star"
-                @click="toggleFavorite"
-                :loading="favoriteLoading"
-              >
-                {{ wallpaper.isFavorited ? '已收藏' : '收藏' }}
-              </el-button>
             </div>
           </div>
         </div>
@@ -93,6 +84,8 @@
                 v-for="tag in wallpaper.tags" 
                 :key="tag"
                 class="tag-item"
+                effect="plain"
+                round
                 @click="searchByTag(tag)"
               >
                 {{ tag }}
@@ -285,25 +278,6 @@ const toggleLike = async () => {
   }
 }
 
-// 切换收藏
-const toggleFavorite = async () => {
-  if (!userStore.isAuthenticated) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  
-  favoriteLoading.value = true
-  try {
-    await favoriteWallpaper(wallpaper.value.id)
-    wallpaper.value.isFavorited = !wallpaper.value.isFavorited
-    ElMessage.success(wallpaper.value.isFavorited ? '收藏成功' : '取消收藏')
-  } catch (error) {
-    ElMessage.error('操作失败')
-  } finally {
-    favoriteLoading.value = false
-  }
-}
-
 // 下载壁纸
 const downloadWallpaper = () => {
   const link = document.createElement('a')
@@ -385,8 +359,8 @@ onMounted(() => {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  background: #f8f9fa;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: var(--app-bg-hover);
+  box-shadow: var(--app-shadow-card);
 }
 
 .wallpaper-image {
@@ -423,11 +397,12 @@ onMounted(() => {
 }
 
 .wallpaper-info {
-  background: white;
+  background: var(--app-bg-card);
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-card);
   height: fit-content;
+  border: 1px solid var(--app-border);
 }
 
 .info-header {
@@ -438,7 +413,7 @@ onMounted(() => {
   margin: 0 0 15px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #333;
+  color: var(--app-text-main);
   line-height: 1.3;
 }
 
@@ -452,7 +427,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: var(--app-text-secondary);
   font-size: 14px;
 }
 
@@ -468,7 +443,7 @@ onMounted(() => {
   margin: 0 0 15px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--app-text-main);
 }
 
 .info-grid {
@@ -481,7 +456,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .info-item:last-child {
@@ -490,7 +465,10 @@ onMounted(() => {
 
 .info-item label {
   font-weight: 500;
-  color: #666;
+  color: var(--app-text-secondary);
+}
+.info-item span {
+  color: var(--app-text-main);
 }
 
 .tags {
@@ -502,17 +480,25 @@ onMounted(() => {
 .tag-item {
   cursor: pointer;
   transition: all 0.3s ease;
+  background: var(--app-accent-bg-soft);
+  border-color: var(--app-accent-border);
+  color: var(--app-text-secondary);
+  --el-tag-bg-color: var(--app-accent-bg-soft);
+  --el-tag-border-color: var(--app-accent-border);
+  --el-tag-text-color: var(--app-text-secondary);
 }
 
 .tag-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-sm);
+  color: var(--app-color-primary);
+  border-color: var(--app-color-primary);
 }
 
 .description {
   margin: 0;
   line-height: 1.6;
-  color: #666;
+  color: var(--app-text-secondary);
 }
 
 .uploader-info {
@@ -527,27 +513,28 @@ onMounted(() => {
 
 .uploader-name {
   font-weight: 600;
-  color: #333;
+  color: var(--app-text-main);
   margin-bottom: 4px;
 }
 
 .uploader-stats {
   font-size: 14px;
-  color: #666;
+  color: var(--app-text-secondary);
 }
 
 .related-section {
-  background: white;
+  background: var(--app-bg-card);
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-card);
+  border: 1px solid var(--app-border);
 }
 
 .related-section h2 {
   margin: 0 0 20px 0;
   font-size: 24px;
   font-weight: 600;
-  color: #333;
+  color: var(--app-text-main);
 }
 
 .related-grid {
@@ -559,14 +546,15 @@ onMounted(() => {
 .related-item {
   border-radius: 8px;
   overflow: hidden;
-  background: #f8f9fa;
+  background: var(--app-bg-hover);
   cursor: pointer;
   transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .related-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .related-item img {
@@ -583,7 +571,7 @@ onMounted(() => {
   margin: 0 0 8px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--app-text-main);
   line-height: 1.4;
 }
 
@@ -591,7 +579,7 @@ onMounted(() => {
   display: flex;
   gap: 15px;
   font-size: 12px;
-  color: #666;
+  color: var(--app-text-secondary);
 }
 
 .related-stats span {

@@ -4,11 +4,10 @@
     <section class="featured-section">
       <div class="container">
         <div class="wallpapers-grid">
-          <WallpaperCard
+          <UnifiedCard
             v-for="wallpaper in featuredWallpapers"
             :key="wallpaper.id"
             :data="mapCard(wallpaper)"
-            @preview="() => goToDetail(wallpaper.id)"
           />
         </div>
         
@@ -26,7 +25,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Star, Download, Picture, Camera, Brush, Monitor, Phone } from '@element-plus/icons-vue'
-import WallpaperCard from '@/components/WallpaperCard.vue'
+import UnifiedCard from '@/components/UnifiedCard.vue'
 
 const router = useRouter()
 
@@ -133,7 +132,9 @@ const mapCard = (w) => ({
   title: w.title,
   thumb: w.thumbUrl,
   url: w.url || w.thumbUrl,
-  resolution: w.resolution
+  resolution: w.resolution,
+  likes: w.likes,
+  author: w.author
 })
 
 const heroUrl = ref('https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1920&q=80&auto=format&fit=crop')
@@ -220,7 +221,7 @@ const heroStyle = computed(() => ({
 
 .hero-btn-outline:hover {
   background: white;
-  color: #667eea;
+  color: var(--app-color-primary);
 }
 
 /* 移除旧占位动画样式 */
@@ -239,9 +240,9 @@ const heroStyle = computed(() => ({
   font-size: 2.5rem;
   font-weight: 600;
   margin-bottom: 3rem;
-  color: #2c3e50;
+  color: var(--app-text-main);
 }
-.dark .section-title { color: #e5e7eb; }
+/* Removed dark override */
 
 .categories-grid {
   display: grid;

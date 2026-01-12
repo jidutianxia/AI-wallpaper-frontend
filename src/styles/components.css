@@ -1,0 +1,127 @@
+/* Component Classes & Utilities */
+
+/* Unified focus ring */
+.cat-pill:focus-visible,
+.el-button:focus-visible,
+.hot-list li:focus-visible,
+.users .user:focus-visible,
+.nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--app-focus-ring);
+  border-radius: var(--radius-md);
+}
+
+/* Pill button for actions */
+.pill-btn {
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
+              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box !important;
+  border: 1px solid transparent !important;
+  color: var(--app-text-secondary);
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.dark .pill-btn {
+  color: var(--app-text-main);
+}
+
+.pill-btn .btn-icon { width: 16px; height: 16px; margin-right: 6px; }
+.pill-btn span, .pill-btn svg, .pill-btn .el-icon { color: inherit; fill: currentColor; }
+
+/* Variant overrides */
+.pill-btn.el-button--primary {
+  background: linear-gradient(var(--app-color-primary), var(--app-color-primary)) padding-box,
+              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box !important;
+  color: #fff !important;
+}
+.pill-btn.el-button--warning {
+  /* Keeping warning behavior but mapping color if needed, or stick to default warning var */
+  background: linear-gradient(var(--el-color-warning), var(--el-color-warning)) padding-box,
+              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box !important;
+  color: #fff !important;
+}
+
+/* Glassmorphism & Pills */
+.glass {
+  background: rgba(30,41,59,.6); /* Keep semi-transparent for glass effect, maybe map to a var if we want theme specific glass */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow-card);
+}
+
+.glow {
+  position: relative;
+}
+.glow::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(12px circle, rgba(255,168,255,.45), rgba(255,168,255,0));
+  filter: blur(6px);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-main);
+  transition: all .18s ease;
+}
+.pill:hover { transform: translateY(-2px); box-shadow: var(--app-shadow-hover); }
+
+/* Animations */
+.fade-enter-active, .fade-leave-active { transition: opacity .18s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.slide-down-enter-active { transition: all .22s ease; }
+.slide-down-enter-from { opacity: 0; transform: translateY(-8px); }
+.slide-down-leave-active { transition: all .18s ease; }
+.slide-down-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.fade-list-enter-active, .fade-list-leave-active { transition: all .22s ease; }
+.fade-list-enter-from { opacity: 0; transform: translateY(8px); }
+.fade-list-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, rgba(148,163,184,.12) 25%, rgba(148,163,184,.08) 37%, rgba(148,163,184,.12) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Decorative accents */
+.border-gradient {
+  border: 1px solid transparent;
+  background-image: linear-gradient(#0000,#0000), linear-gradient(120deg, rgba(147,197,253,.6), rgba(244,114,182,.6));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.ring-ambient::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(300px circle at 80% 20%, rgba(244,114,182,.15), transparent 60%);
+  filter: blur(6px);
+  pointer-events: none;
+}

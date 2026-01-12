@@ -5,24 +5,12 @@ import { ElMessage } from 'element-plus'
 import { Search, Menu, Sunny, Moon, Top, Setting, Bell, User } from '@element-plus/icons-vue'
 import { getUserReceivedComments, getUserReceivedLikes } from '@/api/wallpaper'
 import { useUserStore } from '@/store/user'
-// removed useDark to fully control initial theme synchronously
+import { useTheme } from '@/composables/useTheme'
 import { ClickOutside as vClickOutside } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
-
-// early theme guard to prevent flash
-try {
-  const saved = localStorage.getItem('theme')
-  const html = document.documentElement
-  if (saved === 'dark') html.classList.add('dark')
-  else if (saved === 'light') html.classList.remove('dark')
-  else {
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) { html.classList.add('dark'); localStorage.setItem('theme','dark') }
-    else { html.classList.remove('dark'); localStorage.setItem('theme','light') }
-  }
-} catch {}
+const { isDark, toggleTheme, initTheme } = useTheme()
 
 // 搜索相关
 const searchKeyword = ref('')
@@ -133,6 +121,7 @@ const handleLogout = () => {
 
 // 初始化用户状态
 onMounted(() => {
+  initTheme()
   userStore.initAuth()
   const handleAuthRequired = () => { showLoginDialog.value = true }
   window.addEventListener('auth-required', handleAuthRequired)
@@ -145,14 +134,6 @@ onMounted(() => {
   }
   window.addEventListener('auth-changed', handleAuthChanged)
   ;(window).__authChangedHandler = handleAuthChanged
-})
-
-// Initialize based on what index.html set on documentElement to ensure consistency
-const isDark = ref(document.documentElement.classList.contains('dark'))
-const toggleTheme = () => { isDark.value = !isDark.value }
-watch(isDark, (v) => {
-  document.documentElement.classList.toggle('dark', v)
-  try { localStorage.setItem('theme', v ? 'dark' : 'light') } catch {}
 })
 
 const scrollToTop = () => {
@@ -397,7 +378,8 @@ watch(showNotifyDialog, async (open) => {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: var(--app-text-main);
+  background-color: var(--app-bg-base);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -631,13 +613,9 @@ watch(showNotifyDialog, async (open) => {
 
 .theme-switch { margin-left: 12px; }
 
-/* Dark Mode */
-:root.dark .navbar {
-  background-color: rgba(11,18,32,0.8);
-  border-bottom-color: rgba(255,255,255,0.08);
-}
-:root.dark .nav-link { color: #cbd5e1; }
-:root.dark .nav-link:hover { color: #93c5fd; }
+/* Dark Mode - Navbar override removed, variables handle it */
+:root.dark .nav-link { color: var(--app-text-secondary); }
+:root.dark .nav-link:hover { color: var(--app-color-primary); }
 
 /* Custom Login Dialog Buttons */
 .login-btn-group {
@@ -734,12 +712,13 @@ watch(showNotifyDialog, async (open) => {
 
 /* Footer Styles */
 .footer {
-  background: #2c3e50;
-  color: white;
+  background: var(--app-bg-card);
+  color: var(--app-text-main);
   padding: 3rem 0 1rem;
   margin-top: 4rem;
+  border-top: 1px solid var(--app-border);
 }
-.dark .footer { background: #111827; }
+/* Removed dark override */
 
 .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
 
@@ -793,100 +772,28 @@ watch(showNotifyDialog, async (open) => {
   .nav-center.expanded .search-input { width: 100%; }
   .main-cats { display: none; } /* Hide cats on mobile or adapt */
 }
-</style>
 
-<style>
-/* Dark Dialog Overrides (Global) */
-:root.dark .el-overlay {
-  background-color: rgba(10, 15, 26, 0.9);
-  /* backdrop-filter: blur(4px); Removed to prevent flickering */
-  transform: translateZ(0); /* Force GPU layer to isolate from background */
-}
-:root.dark .el-dialog {
-  background: #1f2937;
-  color: #e5e7eb;
-  border: 1px solid #374151;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-:root.dark .el-dialog.notify-dialog { background:#1f2937; border-color:#374151; }
+/* Notify Styles moved from global */
 .notify-container { display: grid; grid-template-columns: 160px 1fr; gap: 12px; }
 .notify-nav { display: grid; gap: 8px; }
-.notify-item { height: 36px; border-radius: 18px; background: rgba(255,255,255,.7); border: 1px solid rgba(148,163,184,.22); color:#1f2937; }
-.notify-item.active { background: #2563eb; color:#fff; border-color:#2563eb; }
-.dark .notify-item { background: rgba(31,41,55,.85); color:#e5e7eb; border-color:#374151; }
-.dark .notify-item.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.notify-item { 
+  height: 36px; 
+  border-radius: 18px; 
+  background: var(--app-bg-card); 
+  border: 1px solid var(--app-border); 
+  color: var(--app-text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.notify-item:hover { border-color: var(--app-color-primary); }
+.notify-item.active { 
+  background: var(--app-color-primary); 
+  color: #fff; 
+  border-color: var(--app-color-primary); 
+}
 .notify-card { margin-bottom: 8px; }
 .notify-title { font-weight: 600; }
 .notify-time { font-size: 12px; opacity: .8; }
-:root.dark .login-dialog .auth-banner { background: rgba(59,130,246,.15); }
-:root.dark .login-dialog .banner-icon { color:#93c5fd; }
-:root.dark .el-dialog__title { color: #e5e7eb; font-weight: 600; }
-:root.dark .el-dialog__headerbtn { top: 0; right: 0; padding: 16px; }
-:root.dark .el-dialog__headerbtn .el-dialog__close { color: #9ca3af; }
-:root.dark .el-dialog__headerbtn:hover .el-dialog__close { color: #fff; }
-:root.dark .el-input__wrapper {
-  background: #111827;
-  border: 1px solid #374151;
-  box-shadow: none !important;
-  padding: 8px 12px;
-}
-:root.dark .el-input__wrapper.is-focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 1px #60a5fa !important;
-}
-:root.dark .el-input__inner { color: #e5e7eb; }
-:root.dark .el-form-item__label { color: #d1d5db; }
-
-/* Dark overrides for common Element Plus components */
-:root.dark .el-select__wrapper {
-  background: #111827;
-  border-color: #374151;
-  color: #e5e7eb;
-}
-:root.dark .el-select__placeholder { color: #9ca3af; }
-:root.dark .el-select__caret { color: #9ca3af; }
-:root.dark .el-select__popper .el-select-dropdown {
-  background: #111827;
-  border-color: #374151;
-  color: #e5e7eb;
-}
-:root.dark .el-select-dropdown__item.is-hover { background: #1f2937; }
-
-:root.dark .el-pagination {
-  --ep-bg: #1f2937;
-  --ep-fg: #e5e7eb;
-}
-:root.dark .el-pagination .el-pager li,
-:root.dark .el-pagination button {
-  background: #1f2937;
-  border: 1px solid #374151;
-  color: #e5e7eb;
-}
-:root.dark .el-pagination .el-pager li.is-active {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
-}
-
-:root.dark .el-card {
-  background: #1f2937;
-  border-color: #374151;
-  color: #e5e7eb;
-}
-
-:root.dark .el-tabs__item { color: #cbd5e1; }
-:root.dark .el-tabs__item.is-active { color: #93c5fd; }
-:root.dark .el-tabs__nav-wrap::after { background: #374151; }
-
-:root.dark .el-checkbox .el-checkbox__inner {
-  background: #111827;
-  border-color: #374151;
-}
-:root.dark .el-checkbox__input.is-checked .el-checkbox__inner,
-:root.dark .el-checkbox__input.is-indeterminate .el-checkbox__inner {
-  background: #2563eb;
-  border-color: #2563eb;
-}
-:root.dark .el-checkbox__label { color: #e5e7eb; }
 </style>
+
+

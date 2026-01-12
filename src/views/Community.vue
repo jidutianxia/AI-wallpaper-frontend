@@ -32,7 +32,7 @@
         </aside>
         <main class="center">
           <div class="filters">
-            <el-input v-model="q" placeholder="搜索标题或内容" class="filter-input" />
+            <el-input v-model="q" placeholder="搜索标题或内容" class="filter-input" prefix-icon="Search" />
             <el-select v-model="tag" placeholder="按标签筛选" class="filter-select" clearable>
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
@@ -49,15 +49,33 @@
               <div class="post-header">
                 <div class="author" @click="goProfile(p.author?.id)"><img :src="p.author?.avatarUrl" class="avatar" /><span class="name">{{ p.author?.username || '匿名' }}</span></div>
                 <h4 class="title" @click="goPost(p.id)">{{ p.title }}</h4>
-                <div class="tags"><el-tag v-for="t in p.tags" :key="t" size="small">{{ t }}</el-tag></div>
+                <div class="tags"><el-tag v-for="t in p.tags" :key="t" size="small" class="post-tag">{{ t }}</el-tag></div>
               </div>
               <p class="content" @click="goPost(p.id)">{{ p.content }}</p>
               <div class="images"><img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" /></div>
               <div class="post-actions">
-                <el-button aria-label="点赞" size="small" :type="p.liked ? 'primary' : undefined" @click="toggleLike(p)"><svg viewBox="0 0 24 24" class="btn-icon thumb-svg" aria-hidden="true"><path d="M2 21h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H2v11zM22 9h-6.31l.95-4.57A2 2 0 0 0 14.69 2L9 8v11h9a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z" fill="currentColor"/></svg> 点赞 {{ p.likes ?? 0 }}</el-button>
-                <el-button aria-label="收藏" size="small" :type="p.favorited ? 'warning' : ''" @click="toggleFavorite(p)">{{ p.favorited ? '★' : '☆' }} 收藏</el-button>
-                <el-button aria-label="分享" size="small" @click="sharePost(p)"><svg viewBox="0 0 24 24" class="btn-icon plane-svg" aria-hidden="true"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg> 分享</el-button>
-                <el-button aria-label="评论" size="small" class="pill-btn" @click="openComments(p)"><el-icon class="btn-icon"><ChatLineSquare /></el-icon> 评论 {{ commentCount(p) }}</el-button>
+                <el-button link size="small" :class="{ 'liked': p.liked }" @click="toggleLike(p)">
+                  <el-icon :size="20" class="action-icon">
+                    <svg v-if="p.liked" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M923 283.6a260.04 260.04 0 0 0-56.9-82.8 264.4 264.4 0 0 0-84-55.5A260 260 0 0 0 679.7 125c-49.3 0-97.4 13.5-139.2 39-10 6.1-19.5 12.8-28.5 20.1-9-7.3-18.5-14-28.5-20.1-41.8-25.5-89.9-39-139.2-39-35.5 0-69.9 6.8-102.4 20.3-31.4 13-59.7 31.7-84 55.5a258.44 258.44 0 0 0-56.9 82.8c-13.9 32.3-21 66.6-21 101.9 0 33.3 6.8 68 20.3 103.3 11.3 29.5 27.5 60.1 48.2 91 32.8 48.9 77.9 99.9 133.9 151.6 92.8 85.7 184.7 144.9 188.6 147.3l23.7 15.2c10.5 6.7 24 6.7 34.5 0l23.7-15.2c3.9-2.5 95.7-61.6 188.6-147.3 56-51.7 101.1-102.7 133.9-151.6 20.7-30.9 37-61.5 48.2-91 13.5-35.3 20.3-70 20.3-103.3.1-35.3-7-69.6-20.9-101.9z"/></svg>
+                    <svg v-else viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M699.6 148.8c-76.8 0-146.4 40.8-187.6 102.4C470.4 189.6 401.2 148.8 324 148.8 194.8 148.8 90 253.6 90 382.8c0 178 184.4 330 384.4 468.4 12.8 8.8 29.2 8.8 42 0C739.2 702.4 934 544.4 934 382.8c-0.4-129.2-105.2-234-234.4-234z m0-64c164.4 0 298.4 133.6 298.4 298 0 205.6-224.4 394-472.4 559.6-9.2 6-21.2 6-30.4 0C247.2 776.8 26 588.4 26 382.8 26 218.4 160 84.8 324.4 84.8c92 0 174.4 42 228.4 107.2 54-65.2 136.4-107.2 228.4-107.2z" transform="scale(0.9) translate(50,50)"/></svg>
+                  </el-icon>
+                  <span class="count">{{ p.likes ?? 0 }}</span>
+                </el-button>
+                <el-button link size="small" :class="{ 'favorited': p.favorited }" @click="toggleFavorite(p)">
+                  <el-icon :size="20" class="action-icon">
+                    <StarFilled v-if="p.favorited" />
+                    <Star v-else />
+                  </el-icon>
+                  <span class="count">{{ p.favorites ?? 0 }}</span>
+                </el-button>
+                <el-button link size="small" @click="sharePost(p)">
+                  <el-icon :size="18" class="action-icon"><Share /></el-icon>
+                  <span class="count">分享</span>
+                </el-button>
+                <el-button link size="small" @click="openComments(p)">
+                  <el-icon :size="18" class="action-icon"><ChatLineSquare /></el-icon>
+                  <span class="count">{{ commentCount(p) }}</span>
+                </el-button>
               </div>
               <div v-if="p.showComment" class="comments">
                 <CommentItem v-for="(c,i) in (p.comments||[])" :key="i" :comment="c" />
@@ -80,7 +98,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, EditPen, StarFilled, ChatLineSquare, User } from '@element-plus/icons-vue'
+import { Plus, EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments } from '@/api/wallpaper'
 import CommentItem from '@/components/CommentItem.vue'
@@ -118,7 +136,7 @@ const posts = ref([])
 const userStore = useUserStore()
 const isAuthenticated = computed(() => userStore.isAuthenticated)
 const displayName = computed(() => userStore.info?.nickname || userStore.info?.username || '请先登录')
-const signature = computed(() => userStore.info?.bio || '登录后可发布内容')
+const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '登录后可发布内容')
 const avatarUrl = computed(() => userStore.info?.avatarUrl || 'https://i.pravatar.cc/80?u=user')
 const q = ref('')
 const tag = ref('')
@@ -159,8 +177,9 @@ const applyInteractions = () => {
     posts.value = (posts.value || []).map(p => {
       p.liked = !!p.liked
       p.favorited = !!p.favorited
-      // Ensure likes/comments are Numbers. If null/undefined, default to 0.
+      // Ensure likes/comments/favorites are Numbers. If null/undefined, default to 0.
       p.likes = typeof p.likes === 'number' ? p.likes : 0
+      p.favorites = typeof p.favorites === 'number' ? p.favorites : 0
       p.commentsCount = typeof p.commentsCount === 'number' ? p.commentsCount : 0
       return p
     })
@@ -263,16 +282,18 @@ const openComments = async (p) => {
 const commentCount = (p) => p.commentsCount || p.comments?.length || 0
 
 const toggleFavorite = async (p) => {
-  const prev = p.favorited
+  const prev = { favorited: p.favorited, favorites: p.favorites }
   // Optimistic update
   p.favorited = !p.favorited
+  p.favorites = (prev.favorites || 0) + (p.favorited ? 1 : -1)
   try {
     const r = await favoriteCommunityPost(p.id)
-    if (r && typeof r === 'object' && typeof r.favorited !== 'undefined') {
-      p.favorited = !!r.favorited
+    if (r && typeof r === 'object') {
+       if (typeof r.favorited !== 'undefined') p.favorited = !!r.favorited
+       if (typeof r.favorites !== 'undefined') p.favorites = r.favorites
     }
     ElMessage.success(p.favorited ? '已收藏' : '已取消收藏')
-  } catch { p.favorited = prev; ElMessage.error('收藏失败') }
+  } catch { p.favorited = prev.favorited; p.favorites = prev.favorites; ElMessage.error('收藏失败') }
 }
 
 const sharePost = async (p) => {
@@ -321,99 +342,202 @@ const refreshPost = async (id) => {
 }
 </script>
 
+
+
 <style scoped>
 .community { padding: 2rem 0; }
 .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
 .header { margin-bottom: 1rem; }
 .grid { display: grid; grid-template-columns: 280px 1fr 300px; gap: 16px; align-items: start; }
-.profile-card { background: linear-gradient(180deg, rgba(147,197,253,.08), rgba(147,197,253,0)); border: 1px solid rgba(148,163,184,.18); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
-.profile-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding-bottom: 8px; }
-.profile-top.clickable { cursor: pointer; }
-.avatar-lg { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
-.avatar-lg.placeholder { display:flex; align-items:center; justify-content:center; background:#f5f7fa; color:#9aa0a6; }
-.creator-name { font-weight: 600; }
-.creator-desc { font-size: 12px; opacity: .8; }
-.publish-btn { box-shadow: 0 6px 18px rgba(64,158,255,.35); }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 8px; }
-.stat-item { display: grid; justify-items: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,.6); }
-.stat-icon { font-size: 18px; opacity: .8; }
-.thumb-svg { width: 18px; height: 18px; color: #9aa0a6; }
-.plane-svg { width: 16px; height: 16px; color: #9aa0a6; }
-.btn-icon { width: 16px; height: 16px; margin-right: 4px; }
-.stat-val { font-size: 1.2rem; font-weight: 700; }
-.stat-label { font-size: 12px; opacity: .8; }
-.dark .community :deep(.el-card) { background:#1f2937; border-color:#374151; color:#e5e7eb; }
-.dark .community .profile-card { background:#1f2937; border-color:#374151; }
-.dark .community .stat-item { background: rgba(31,41,55,.6); color:#e5e7eb; }
-.dark .community .thumb-svg { color:#9ca3af; }
-.profile-card { background: linear-gradient(180deg, rgba(147,197,253,.08), rgba(147,197,253,0)); border: 1px solid rgba(148,163,184,.18); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
-.profile-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding-bottom: 8px; }
-.avatar-lg { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
-.creator-name { font-weight: 600; }
-.creator-desc { font-size: 12px; opacity: .8; }
-.publish-btn { box-shadow: 0 6px 18px rgba(64,158,255,.35); }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 8px; }
-.stat-item { display: grid; justify-items: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,.6); }
-.stat-icon { font-size: 18px; opacity: .8; }
-.stat-val { font-size: 1.2rem; font-weight: 700; }
-.stat-label { font-size: 12px; opacity: .8; }
-.filters { display: flex; gap: 12px; margin-bottom: 12px; }
-.filter-input { flex: 1; }
-.filter-select { width: 160px; }
-.composer { margin-bottom: 2rem; }
-.stats { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px; }
-.stat { display: grid; justify-items: center; padding: 8px 0; border-radius: 8px; }
-.num { font-size: 1.4rem; font-weight: 700; }
-.label { opacity: 0.8; }
-.upload { margin-top: 0.5rem; }
-.actions { display: flex; gap: 12px; justify-content: flex-end; }
-.posts { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.post-header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
-.author { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-.name { font-size: 0.9rem; opacity: 0.9; }
-.images { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-.image { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; }
-.post-actions { display: flex; gap: 8px; margin-top: 8px; }
-.comments { margin-top: 8px; display: grid; gap: 8px; }
-.comment-editor { display: flex; gap: 8px; }
-.pagination { display: flex; justify-content: center; margin-top: 12px; }
-.right .hot-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
-.users { display: grid; gap: 10px; }
-.user { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.uinfo { display: grid; }
-.hot, .recent { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
-.dark .hot, .dark .recent { background: linear-gradient(#1f2937,#1f2937) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
-.hot h4, .recent h4 { margin: 0 0 8px 0; }
-.hot-list li { padding: 6px 12px; border-radius: 999px; background: rgba(147,197,253,.18); border: 1px solid rgba(147,197,253,.35); color:#1f2937; transition: transform .2s ease, box-shadow .2s ease; }
-.hot-list li:hover { transform: translateX(2px); box-shadow: 0 8px 20px rgba(37,99,235,.15); }
-.dark .hot-list li { background: rgba(30,64,175,.28); border-color: rgba(59,130,246,.4); color:#e5e7eb; }
-.users .user { padding: 6px 10px; border-radius: 999px; background: rgba(147,197,253,.12); border: 1px solid rgba(147,197,253,.28); transition: transform .2s ease, box-shadow .2s ease; }
-.users .user:hover { transform: translateX(2px); box-shadow: 0 8px 20px rgba(37,99,235,.15); }
-.dark .users .user { background: rgba(30,64,175,.22); border-color: rgba(59,130,246,.35); }
-@media (max-width: 768px) {
-  .grid { grid-template-columns: 1fr; }
-  .images { grid-template-columns: repeat(2, 1fr); }
+
+/* Profile Card */
+.profile-card {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  color: var(--app-text-main);
+  --el-card-bg-color: var(--app-bg-card);
+  --el-card-border-color: var(--app-border);
 }
-.post { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; transition: transform .2s ease, box-shadow .2s ease; }
-.dark .post { background: linear-gradient(#1f2937,#1f2937) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
-/* in-view animation */
-.post { opacity: 0; transform: translateY(6px); }
-.post.in-view { opacity: 1; transform: translateY(0); transition: opacity .35s ease, transform .35s ease; }
+.profile-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--app-border);
+  margin-bottom: 16px;
+}
+.profile-top.clickable { cursor: pointer; }
+
+.avatar-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;
+  border: 2px solid var(--app-border);
+  box-shadow: var(--app-shadow-sm);
+}
+.avatar-lg.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-bg-hover);
+  color: var(--app-text-secondary);
+  font-size: 32px;
+}
+.creator-name { font-weight: 600; font-size: 1.1rem; color: var(--app-text-main); margin-bottom: 4px; }
+.creator-desc { font-size: 0.85rem; color: var(--app-text-secondary); margin-bottom: 12px; }
+.publish-btn { width: 100%; }
+
+/* Stats Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--app-bg-hover);
+  transition: background 0.2s;
+}
+.stat-item:hover { background: var(--app-accent-bg-soft); }
+.stat-icon { font-size: 18px; color: var(--app-text-secondary); margin-bottom: 4px; }
+.stat-val { font-weight: 700; font-size: 1.1rem; color: var(--app-text-main); }
+.stat-label { font-size: 0.75rem; color: var(--app-text-secondary); }
+
+/* Filters */
+.filters { 
+  display: flex; 
+  gap: 12px; 
+  margin-bottom: 16px; 
+  background: var(--app-bg-card);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+}
+.filter-input { flex: 1; }
+/* Force rounded pills for search inputs */
+.filter-input :deep(.el-input__wrapper) { 
+  background: var(--app-bg-card) !important; 
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  border-radius: 999px;
+  padding-left: 16px;
+}
+.filter-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
+}
+.filter-input :deep(.el-input__inner) { color: var(--app-text-main) !important; }
+
+.filter-select { width: 160px; }
+.filter-select :deep(.el-select__wrapper),
+.filter-select :deep(.el-input__wrapper) { 
+  background: var(--app-bg-card) !important; 
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  border-radius: 999px;
+}
+
+
+/* Posts */
+.posts { display: flex; flex-direction: column; gap: 16px; }
+.post {
+  border-radius: 12px;
+  /* Double gradient for border effect */
+  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
+              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box;
+  border: 1px solid transparent;
+  color: var(--app-text-main);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.post:hover { transform: translateY(-2px); box-shadow: var(--app-shadow-card); }
+
+.post-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.author { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.author .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.author .name { font-weight: 500; font-size: 0.95rem; color: var(--app-text-main); }
+
+.title { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; cursor: pointer; color: var(--app-text-main); transition: color 0.2s; }
+.title:hover { color: var(--app-color-primary); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.post-tag {
+  border-radius: 999px;
+  background: var(--app-accent-bg-soft);
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-text-secondary);
+  --el-tag-bg-color: var(--app-accent-bg-soft);
+  --el-tag-border-color: var(--app-accent-border);
+  --el-tag-text-color: var(--app-text-secondary);
+}
+
+.content { margin-bottom: 12px; color: var(--app-text-main); line-height: 1.6; cursor: pointer; opacity: 0.9; }
+
+.images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.image { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; cursor: zoom-in; transition: transform 0.2s; }
+.image:hover { transform: scale(1.02); }
+
+.post-actions { display: flex; gap: 16px; border-top: 1px solid var(--app-border); padding-top: 12px; }
+.post-actions .el-button { color: var(--app-text-secondary); }
+.post-actions .el-button:hover { color: var(--app-color-primary); }
+.post-actions .el-button.liked { color: #f56c6c; }
+.post-actions .el-button.favorited { color: #e6a23c; }
+.action-icon { vertical-align: middle; margin-right: 4px; }
+
+/* Right Sidebar */
+.right { display: flex; flex-direction: column; gap: 16px; }
+.hot, .recent {
+  border-radius: 12px;
+  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
+              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box;
+  border: 1px solid transparent;
+  color: var(--app-text-main);
+}
+.hot h4, .recent h4 { margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; }
+
+.hot-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.hot-list li {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--app-accent-bg-soft);
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hot-list li:hover { transform: translateX(4px); background: var(--app-bg-hover); box-shadow: var(--app-shadow-sm); }
+
+.users { display: flex; flex-direction: column; gap: 10px; }
+.user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--app-accent-bg-soft);
+  border: 1px solid var(--app-accent-border);
+  cursor: pointer;
+  transition: transform 0.2s;
+  color: var(--app-text-main);
+}
+.user:hover { transform: translateX(4px); background: var(--app-bg-hover); }
+.user .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.user .uinfo { flex: 1; min-width: 0; }
+.user .uname { font-weight: 500; font-size: 0.9rem; color: var(--app-text-main); margin-bottom: 2px; }
+.user .uextra { font-size: 0.75rem; color: var(--app-text-secondary); }
+
+/* Animation */
+.post { opacity: 0; transform: translateY(10px); }
+.post.in-view { opacity: 1; transform: translateY(0); transition: opacity .4s ease, transform .4s ease; }
 .fade-list-enter-active, .fade-list-leave-active { transition: opacity .25s ease; }
 .fade-list-enter-from, .fade-list-leave-to { opacity: 0; }
-.post:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.12); }
-.dark .post:hover { box-shadow: 0 10px 24px rgba(0,0,0,.35); }
-:deep(.el-tag) { border-radius: 999px; padding: 0 10px; background: rgba(147,197,253,.18); border: 1px solid rgba(147,197,253,.35); color: #1f2937; }
-.dark :deep(.el-tag) { background: rgba(30,64,175,.28); border-color: rgba(59,130,246,.4); color: #e5e7eb; }
-.image:hover { transform: scale(1.02); transition: transform .2s ease; }
-</style>
-watch(() => userStore.info?.id, async () => { loadInteractions(); await loadPosts(); })
-import { getCommunityPost } from '@/api/wallpaper'
-const refreshPost = async (id) => {
-  try {
-    const fresh = await getCommunityPost(id)
-    const idx = posts.value.findIndex(x => String(x.id) === String(id))
-    if (idx >= 0) { posts.value[idx] = { ...posts.value[idx], ...fresh }; applyInteractions() }
-  } catch {}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .images { grid-template-columns: repeat(2, 1fr); }
+  .left, .right { display: none; }
 }
+</style>

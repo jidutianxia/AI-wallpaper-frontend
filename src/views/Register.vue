@@ -52,9 +52,15 @@ const goLogin = () => { router.push('/'); window.dispatchEvent(new CustomEvent('
 <style scoped>
 .register { padding: 2rem 0; }
 .container { max-width: 560px; margin: 0 auto; padding: 0 2rem; }
-.panel { box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
-.panel { border-radius: var(--radius-lg); box-shadow: var(--shadow-3); border: 1px solid var(--border); background: var(--card-bg); }
-.title { margin-bottom: 1rem; }
+.panel {
+  border-radius: 16px;
+  box-shadow: var(--app-shadow-card);
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-card);
+  --el-card-bg-color: var(--app-bg-card);
+  --el-card-border-color: var(--app-border);
+}
+.title { margin-bottom: 1rem; color: var(--app-text-main); }
 .actions { display: flex; gap: 12px; justify-content: flex-end; }
-.actions :deep(.el-button) { border-radius: var(--radius-sm); box-shadow: var(--shadow-1); }
+.actions :deep(.el-button) { border-radius: 8px; box-shadow: var(--app-shadow-card); }
 </style>

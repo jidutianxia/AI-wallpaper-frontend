@@ -8,9 +8,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        surface: {
-          DEFAULT: '#0b1220',
-          light: '#111827'
+        // Map Tailwind colors to our CSS variables for consistency
+        primary: 'var(--app-color-primary)',
+        surface: 'var(--app-bg-surface)',
+        card: 'var(--app-bg-card)',
+        border: 'var(--app-border)',
+        text: {
+          main: 'var(--app-text-main)',
+          secondary: 'var(--app-text-secondary)'
         }
       }
     },

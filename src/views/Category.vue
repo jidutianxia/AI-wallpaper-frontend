@@ -50,12 +50,10 @@
     
     <!-- 壁纸网格 -->
     <div class="wallpaper-grid" v-loading="loading">
-      <WallpaperCard
+      <UnifiedCard
         v-for="wallpaper in wallpapers"
         :key="wallpaper.id"
         :data="toCard(wallpaper)"
-        @preview="() => viewDetail(wallpaper.id)"
-        @like="toggleLike(wallpaper)"
       />
     </div>
     
@@ -76,7 +74,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Star, Download } from '@element-plus/icons-vue'
-import WallpaperCard from '@/components/WallpaperCard.vue'
+import UnifiedCard from '@/components/UnifiedCard.vue'
 import { getWallpapers, getCategories, likeWallpaper } from '@/api/wallpaper'
 import { useUserStore } from '@/store/user'
 
@@ -289,6 +287,18 @@ onMounted(() => {
     fetchWallpapers()
   })
 })
+
+const toCard = (w) => ({
+  id: w.id,
+  title: w.title,
+  thumb: w.thumbUrl,
+  url: w.url || w.thumbUrl,
+  resolution: w.resolution,
+  previewVideoUrl: w.previewVideoUrl,
+  likes: w.likes,
+  liked: w.isLiked,
+  author: w.author
+})
 </script>
 
 <style scoped>
@@ -337,12 +347,22 @@ onMounted(() => {
 .tile-text span { font-size: .8rem; opacity: .85; }
 
 .filters {
-  background: #ffffff;
+  background: var(--app-bg-card);
   padding: 1.5rem;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-card);
+  border: 1px solid var(--app-border);
 }
+.filters :deep(.el-input__wrapper),
+.filters :deep(.el-select__wrapper) { 
+  background: var(--app-bg-card) !important; 
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  border-radius: 999px;
+}
+.filters :deep(.el-input__inner) { color: var(--app-text-main) !important; }
+.filters :deep(.el-checkbox) { color: var(--app-text-main); }
+
 
 .wallpaper-grid {
   display: grid;
@@ -481,18 +501,5 @@ onMounted(() => {
     margin: 1.5rem 0;
   }
 }
-.dark .filters { background: #1e293b; box-shadow: none; }
-.dark .wallpaper-item { background: #1e293b; box-shadow: none; }
-.dark .category-header h1 { color: #e5e7eb; }
-.dark .category-header p { color: #cbd5e1; }
-.dark .wallpaper-info h3 { color: #e5e7eb; }
-.dark .wallpaper-stats { color: #cbd5e1; }
+/* Removed manual dark overrides, handled by vars */
 </style>
-const toCard = (w) => ({
-  id: w.id,
-  title: w.title,
-  thumb: w.thumbUrl,
-  url: w.url || w.thumbUrl,
-  resolution: w.resolution,
-  previewVideoUrl: w.previewVideoUrl
-})

@@ -45,11 +45,11 @@ const copyLink = async () => {
 </script>
 
 <style scoped>
-.item-card { position: relative; border-radius: 12px; overflow: hidden; background: #f8f9fa; cursor: pointer; transition: all .3s ease; }
-.item-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,.15); }
+.item-card { position: relative; border-radius: 12px; overflow: hidden; background: var(--app-bg-card); cursor: pointer; transition: all .3s ease; }
+.item-card:hover { transform: translateY(-5px); box-shadow: var(--app-shadow-hover); }
 .item-card img { width: 100%; height: 200px; object-fit: cover; }
 .badges { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; z-index: 2; }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.85); color: #374151; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: var(--app-bg-base); color: var(--app-text-main); font-size: 12px; box-shadow: var(--app-shadow-sm); }
 .badge .icon { width: 14px; height: 14px; }
 .badge .star { font-size: 12px; }
 .overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 16px; background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.7) 100%); opacity: 0; transition: opacity .3s ease; }

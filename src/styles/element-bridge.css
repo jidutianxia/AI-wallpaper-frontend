@@ -1,0 +1,252 @@
+/* 
+  THE BRIDGE - Standardized Theme System
+  Maps Element Plus CSS Variables to our Semantic App Variables.
+  Includes global overrides for Teleported components (Dialogs, Poppers).
+*/
+
+:root {
+  /* --- Primary Color Mapping --- */
+  --el-color-primary: var(--app-color-primary);
+  --el-color-primary-light-3: var(--app-color-primary); /* Simplified for now */
+  --el-color-primary-light-5: var(--app-color-primary);
+  --el-color-primary-light-7: var(--app-color-primary);
+  --el-color-primary-light-8: var(--app-color-primary);
+  --el-color-primary-light-9: var(--app-color-primary);
+  --el-color-primary-dark-2: var(--app-color-primary);
+
+  /* --- Backgrounds --- */
+  --el-bg-color: var(--app-bg-base);
+  --el-bg-color-overlay: var(--app-bg-card);
+  --el-bg-color-page: var(--app-bg-base);
+  
+  /* --- Text --- */
+  --el-text-color-primary: var(--app-text-main);
+  --el-text-color-regular: var(--app-text-main);
+  --el-text-color-secondary: var(--app-text-secondary);
+  --el-text-color-placeholder: var(--app-text-secondary);
+  
+  /* --- Borders --- */
+  --el-border-color: var(--app-border);
+  --el-border-color-light: var(--app-border);
+  --el-border-color-lighter: var(--app-border);
+  --el-border-color-extra-light: var(--app-border);
+  
+  /* --- Component Specifics (Global Variables) --- */
+  --el-card-bg-color: var(--app-bg-card);
+  --el-dialog-bg-color: var(--app-bg-card);
+  --el-drawer-bg-color: var(--app-bg-card);
+  
+  /* Tags */
+  --el-tag-bg-color: var(--app-accent-bg-soft);
+  --el-tag-text-color: var(--app-text-main);
+  --el-tag-border-color: var(--app-accent-border);
+  
+  /* Buttons */
+  --el-button-bg-color: var(--app-bg-card);
+  --el-button-text-color: var(--app-text-main);
+  --el-button-border-color: var(--app-border);
+  --el-button-hover-bg-color: var(--app-bg-hover);
+  --el-button-hover-text-color: var(--app-color-primary);
+  --el-button-hover-border-color: var(--app-color-primary);
+  
+  /* Inputs */
+  --el-input-bg-color: var(--app-bg-card);
+  --el-input-text-color: var(--app-text-main);
+  --el-input-border-color: var(--app-border);
+  --el-input-placeholder-color: var(--app-text-secondary);
+  --el-fill-color-blank: var(--app-bg-card);
+}
+
+/* --- Global Teleported Component Overrides --- */
+/* These elements are often attached to body, so scoped styles don't reach them. */
+
+/* Select Dropdowns / Poppers */
+.el-select-dropdown,
+.el-popper,
+.el-dropdown-menu,
+.el-picker-panel,
+.el-autocomplete-suggestion {
+  background-color: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+}
+
+.el-select-dropdown__item {
+  color: var(--app-text-main) !important;
+}
+
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover {
+  background-color: var(--app-bg-hover) !important;
+  color: var(--app-color-primary) !important;
+}
+
+.el-select-dropdown__item.selected {
+  color: var(--app-color-primary) !important;
+  font-weight: 600;
+  background-color: transparent !important; /* Avoid double background */
+}
+
+/* Popper Arrow */
+.el-popper__arrow::before {
+  background-color: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+}
+
+/* Select Input Wrapper (Fix for Selects) */
+.el-select__wrapper, 
+.el-input__wrapper {
+  background-color: var(--app-bg-card) !important;
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+}
+.el-select__wrapper:hover,
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--app-text-secondary) inset !important;
+}
+.el-select__wrapper.is-focused,
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
+}
+
+/* Global Tag Style Override for better contrast */
+.el-tag {
+  border-color: transparent !important;
+}
+.el-tag--primary {
+  background-color: rgba(64, 158, 255, 0.15) !important;
+  color: #409eff !important;
+}
+.el-tag--success {
+  background-color: rgba(103, 194, 58, 0.15) !important;
+  color: #67c23a !important;
+}
+.el-tag--info {
+  background-color: var(--app-bg-hover) !important;
+  color: var(--app-text-secondary) !important;
+}
+.el-tag--warning {
+  background-color: rgba(230, 162, 60, 0.15) !important;
+  color: #e6a23c !important;
+}
+.el-tag--danger {
+  background-color: rgba(245, 108, 108, 0.15) !important;
+  color: #f56c6c !important;
+}
+
+/* Dialogs */
+.el-dialog {
+  background-color: var(--app-bg-card) !important;
+  border: 1px solid var(--app-border);
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--app-border);
+  margin-right: 0 !important;
+  padding-bottom: 20px;
+}
+
+.el-dialog__title {
+  color: var(--app-text-main) !important;
+}
+
+.el-dialog__body {
+  color: var(--app-text-main) !important;
+  padding: 24px !important;
+}
+
+.el-dialog__footer {
+  border-top: 1px solid var(--app-border);
+  padding-top: 20px !important;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  color: var(--app-text-secondary) !important;
+}
+
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--app-color-primary) !important;
+}
+
+/* Inputs (Global Override for robustness) */
+.el-input__wrapper {
+  background-color: var(--app-bg-card) !important;
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  border-radius: 8px; /* Softer corners */
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
+}
+
+.el-input__inner {
+  color: var(--app-text-main) !important;
+}
+
+/* Textarea */
+.el-textarea__inner {
+  background-color: var(--app-bg-card) !important;
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  color: var(--app-text-main) !important;
+  border-radius: 8px;
+}
+
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
+}
+
+/* Pagination */
+.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+  background-color: var(--app-color-primary) !important;
+}
+
+.el-pagination.is-background .el-pager li {
+  background-color: var(--app-bg-card) !important;
+  color: var(--app-text-main) !important;
+  border: 1px solid var(--app-border);
+}
+
+/* Message Box */
+.el-message-box {
+  background-color: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+}
+
+.el-message-box__title,
+.el-message-box__content {
+  color: var(--app-text-main) !important;
+}
+
+/* Buttons (Default Type) */
+.el-button--default {
+  background-color: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text-main) !important;
+}
+
+.el-button--default:hover {
+  background-color: var(--app-bg-hover) !important;
+  border-color: var(--app-color-primary) !important;
+  color: var(--app-color-primary) !important;
+}
+
+/* Primary Button */
+.el-button--primary {
+  background-color: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+  color: white !important;
+}
+
+/* Checkbox & Radio */
+.el-checkbox, .el-radio {
+  color: var(--app-text-main) !important;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--app-color-primary) !important;
+  border-color: var(--app-color-primary) !important;
+}
+
+.el-checkbox__inner, .el-radio__inner {
+  background-color: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+}

@@ -50,11 +50,10 @@
     
     <!-- 壁纸列表 -->
     <div class="wallpaper-grid" v-loading="loading">
-      <WallpaperCard
+      <UnifiedCard
         v-for="wallpaper in wallpapers"
         :key="wallpaper.id"
         :data="toCard(wallpaper)"
-        @preview="() => viewDetail(wallpaper.id)"
       />
       <div ref="sentinel" class="h-1"></div>
     </div>
@@ -84,7 +83,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getWallpapers, getCategories } from '@/api/wallpaper'
-import WallpaperCard from '@/components/WallpaperCard.vue'
+import UnifiedCard from '@/components/UnifiedCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,6 +168,7 @@ const fetchCategories = async () => {
     const freq = tags.reduce((m, t) => (m[t] = (m[t]||0)+1, m), {})
     const counts = Object.values(freq)
     const max = counts.length ? Math.max(...counts) : 1
+    const min = counts.length ? Math.min(...counts) : 1
     tagCloud.value = Object.entries(freq).map(([name, count]) => ({ name, weight: 12 + Math.round(8 * (count/max)) }))
   } catch (error) {
     // 模拟分类数据
@@ -267,13 +267,23 @@ const applyTag = (name) => {
   router.push({ path: '/search', query: { ...route.query, tag: name } })
 }
 
-const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url || w.thumbUrl, resolution: w.resolution, previewVideoUrl: w.previewVideoUrl })
+const toCard = (w) => ({
+  id: w.id,
+  title: w.title,
+  thumb: w.thumbUrl,
+  url: w.url || w.thumbUrl,
+  resolution: w.resolution,
+  previewVideoUrl: w.previewVideoUrl,
+  likes: w.likes,
+  author: w.author
+})
 </script>
 
 <style scoped>
 .search {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 20px;
 }
 
 .search-header {
@@ -282,25 +292,27 @@ const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url
 }
 
 .search-header h1 {
-  color: #2c3e50;
+  color: var(--app-text-main);
   margin-bottom: 0.5rem;
 }
 
 .search-header p {
-  color: #606266;
+  color: var(--app-text-secondary);
   font-size: 1.1rem;
 }
 
 .filters {
-  background: #f8f9fa;
+  background: var(--app-bg-card);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow-card);
 }
 
 .tag-cloud { text-align: center; margin: 1rem 0 2rem; }
-.tag-cloud .tag { display: inline-block; margin: 6px 10px; color: #409eff; cursor: pointer; }
-.tag-cloud .tag:hover { text-decoration: underline; }
+.tag-cloud .tag { display: inline-block; margin: 6px 10px; color: var(--app-color-primary); cursor: pointer; transition: color 0.2s; }
+.tag-cloud .tag:hover { text-decoration: underline; color: var(--app-text-main); }
 
 .wallpaper-grid {
   display: grid;
@@ -318,6 +330,7 @@ const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url
 .no-results {
   text-align: center;
   padding: 3rem;
+  color: var(--app-text-secondary);
 }
 
 @media (max-width: 768px) {
@@ -361,22 +374,6 @@ const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url
     gap: 12px;
   }
   
-  .wallpaper-item img {
-    height: 150px;
-  }
-  
-  .wallpaper-info {
-    padding: 12px;
-  }
-  
-  .wallpaper-info h3 {
-    font-size: 0.9rem;
-  }
-  
-  .wallpaper-stats {
-    font-size: 0.8rem;
-  }
-  
   .pagination {
     margin-top: 1.5rem;
   }
@@ -404,18 +401,6 @@ const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url
     gap: 16px;
   }
   
-  .wallpaper-item img {
-    height: 200px;
-  }
-  
-  .wallpaper-info h3 {
-    font-size: 1rem;
-  }
-  
-  .wallpaper-stats {
-    font-size: 0.85rem;
-  }
-  
   .pagination .el-pagination {
     flex-wrap: wrap;
   }
@@ -424,10 +409,4 @@ const toCard = (w) => ({ id: w.id, title: w.title, thumb: w.thumbUrl, url: w.url
     padding: 2rem 1rem;
   }
 }
-.dark .filters { background: #1e293b; }
-.dark .wallpaper-item { background: #1e293b; box-shadow: none; }
-.dark .search-header h1 { color: #e5e7eb; }
-.dark .search-header p { color: #cbd5e1; }
-.dark .wallpaper-info h3 { color: #e5e7eb; }
-.dark .wallpaper-stats { color: #cbd5e1; }
 </style>

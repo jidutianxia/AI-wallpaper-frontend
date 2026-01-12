@@ -37,9 +37,7 @@ const goProfile = (uid) => {
 .comment-item { display: flex; gap: 10px; padding: 8px 0; cursor: pointer; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 .content { flex: 1; }
-.meta { display: flex; gap: 8px; font-size: 12px; color: #909399; }
-.name { font-weight: 600; color: #606266; }
-.text { margin-top: 4px; line-height: 1.6; }
-.dark .name { color: #e5e7eb; }
-.dark .meta { color: #9ca3af; }
+.meta { display: flex; gap: 8px; font-size: 12px; color: var(--app-text-secondary); }
+.name { font-weight: 600; color: var(--app-text-main); }
+.text { margin-top: 4px; line-height: 1.6; color: var(--app-text-main); }
 </style>

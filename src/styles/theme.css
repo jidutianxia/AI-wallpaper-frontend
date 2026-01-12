@@ -1,0 +1,49 @@
+@import './tokens.css';
+
+:root {
+  /* Semantic Colors - LIGHT DEFAULT */
+  --app-color-primary: var(--color-blue-400);
+  --app-bg-base: var(--color-white);
+  --app-bg-card: var(--color-white);
+  --app-text-main: var(--color-gray-800);
+  --app-text-secondary: var(--color-gray-500);
+  --app-border: rgba(148,163,184,.22);
+  
+  --app-brand-gradient-start: var(--color-blue-300);
+  --app-brand-gradient-end: var(--color-purple-300);
+  
+  --app-shadow-card: var(--shadow-sm);
+  --app-shadow-hover: var(--shadow-md);
+  
+  --app-focus-ring: var(--color-blue-200);
+  
+  /* Helper for gradients */
+  --app-bg-gradient-1: #eef2ff;
+  --app-bg-gradient-2: #f8fafc;
+  --app-bg-gradient-3: #ffffff;
+}
+
+:root.dark {
+  /* Semantic Colors - DARK MODE */
+  --app-color-primary: var(--color-blue-300);
+  --app-bg-base: var(--color-dark-bg);
+  --app-bg-card: var(--color-dark-card);
+  --app-text-main: var(--color-gray-200);
+  --app-text-secondary: var(--color-gray-400);
+  --app-border: var(--color-dark-border);
+  
+  --app-brand-gradient-start: var(--color-blue-500);
+  --app-brand-gradient-end: var(--color-purple-400);
+  
+  --app-shadow-card: var(--shadow-dark-md); /* Darker shadows in dark mode */
+  --app-shadow-hover: var(--shadow-dark-lg);
+
+  /* Accents (Soft backgrounds for tags, active states) */
+  --app-accent-bg-soft: rgba(30,64,175,.28);
+  --app-accent-border: rgba(59,130,246,.4);
+  --app-accent-text: var(--color-white);
+  
+  --app-bg-gradient-1: #1a2438;
+  --app-bg-gradient-2: #0b1220;
+  --app-bg-gradient-3: #0a0f1a;
+}

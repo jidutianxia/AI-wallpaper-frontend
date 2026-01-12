@@ -46,6 +46,9 @@ export const getCategories = () => request.get('/categories').then(unwrap)
 export const uploadWallpaper = (formData) => request.post('/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
+export const uploadCommunityImage = (formData) => request.post('/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+})
 
 export const getMyWallpaperFavorites = () => request.get('/wallpapers/my/favorites').then(unwrap)
 export const getMyFavorites = () => request.get('/community/my/favorites').then(unwrap) // Changed to point to community favorites
@@ -57,6 +60,8 @@ export const getCommunityPost = (id) => request.get(`/community/posts/${id}`).th
 export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(unwrap)
 export const getCommunityPostComments = (id, params) => request.get(`/community/posts/${id}/comments`, { params }).then(unwrap)
 export const createCommunityPost = (payload) => request.post('/community/posts', payload).then(unwrap)
+export const updateCommunityPost = (id, payload) => request.put(`/community/posts/${id}`, payload).then(unwrap)
+export const deleteCommunityPost = (id) => request.delete(`/community/posts/${id}`).then(unwrap)
 export const likeCommunityPost = (id) => request.post(`/community/posts/${id}/like`).then(unwrap)
 export const commentCommunityPost = (id, content) => request.post(`/community/posts/${id}/comments`, { content }).then(unwrap)
 export const getMyCommunityPosts = (params) => request.get('/community/my/posts', { params }).then(unwrap)
@@ -83,6 +88,7 @@ export const getCommunityPostImageMeta = (postId, index) => request.get(`/commun
 export const likeCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/like`).then(unwrap)
 export const favoriteCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/favorite`).then(unwrap)
 export const downloadCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/download`).then(unwrap)
+export const submitWallpaperFromPost = (payload) => request.post('/wallpapers/submit-from-post', payload).then(unwrap)
 
 // Follow system APIs
 export const followUser = (userId) => request.post(`/users/${userId}/follow`).then(unwrap)

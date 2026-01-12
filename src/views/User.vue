@@ -8,32 +8,66 @@
         </el-avatar>
         <div class="profile-info">
           <h2>{{ userStore.info?.nickname || userStore.info?.username || '游客' }}</h2>
-          <p>{{ userStore.info?.bio || '这个人很懒，什么都没写' }}</p>
+          <p>{{ userStore.info?.signature || userStore.info?.bio || '这个人很懒，什么都没写' }}</p>
           <div class="profile-stats">
+            <div class="stat-item">
+              <span class="stat-number">{{ userStats.posts }}</span>
+              <span class="stat-label">发布</span>
+            </div>
             <div class="stat-item">
               <span class="stat-number">{{ userStats.favorites }}</span>
               <span class="stat-label">收藏</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ userStats.likes }}</span>
-              <span class="stat-label">点赞</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number">{{ userStats.downloads }}</span>
-              <span class="stat-label">下载</span>
+              <span class="stat-label">获赞</span>
             </div>
           </div>
         </div>
       </div>
       
       <div class="profile-actions" v-if="userStore.isAuthenticated">
-        <el-button @click="showEditDialog = true">编辑资料</el-button>
-        <el-button @click="showUploadDialog = true" type="primary" v-if="userStore.info?.role === 'admin'">上传壁纸</el-button>
+        <el-button @click="showEditDialog = true" class="action-btn">编辑资料</el-button>
+        <el-button @click="showUploadDialog = true" type="primary" v-if="userStore.info?.role === 'admin'" class="action-btn">上传壁纸</el-button>
       </div>
     </div>
     
     <!-- 标签页 -->
     <el-tabs v-model="activeTab" class="user-tabs">
+      <el-tab-pane label="发布的作品" name="posts">
+        <div class="posts-list" v-loading="loading.posts">
+          <div v-for="p in posts" :key="p.id" class="post-card">
+            <div class="post-header">
+              <div class="author">
+                <img :src="p.author?.avatarUrl || userStore.info?.avatarUrl" class="avatar-sm" />
+                <span class="name">{{ p.author?.username || userStore.info?.username }}</span>
+                <span class="time">{{ formatDate(p.createdAt) }}</span>
+              </div>
+              <div class="post-manage">
+                <el-button link type="primary" :icon="Edit" @click="openEditPost(p)">编辑</el-button>
+                <el-button link type="danger" :icon="Delete" @click="deletePost(p)">删除</el-button>
+              </div>
+            </div>
+            <h4 class="post-title" @click="router.push(`/community/post/${p.id}`)">{{ p.title }}</h4>
+            <p class="post-content" @click="router.push(`/community/post/${p.id}`)">{{ p.content }}</p>
+            <div class="post-images" v-if="p.images && p.images.length">
+              <img v-for="(img, idx) in p.images.slice(0, 4)" :key="idx" :src="img" class="post-img" />
+            </div>
+            <div class="post-footer">
+              <span class="tag" v-for="t in p.tags" :key="t">#{{ t }}</span>
+              <div class="stats">
+                <span><el-icon><Star /></el-icon> {{ p.likes || 0 }}</span>
+                <span><el-icon><ChatLineSquare /></el-icon> {{ p.commentsCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="!loading.posts && posts.length === 0" class="empty-state">
+          <el-empty description="还没有发布任何作品" />
+          <el-button type="primary" @click="router.push('/community/compose')">去发布</el-button>
+        </div>
+      </el-tab-pane>
+
       <el-tab-pane label="我的偏爱壁纸" name="wallpaperFavorites">
         <div class="wallpaper-grid" v-loading="loading.wallpaperFavorites">
           <UnifiedCard 
@@ -90,28 +124,11 @@
       </el-tab-pane>
       
       <el-tab-pane label="我的上传" name="uploads" v-if="userStore.info?.role === 'admin'">
-        <div class="wallpaper-grid" v-loading="loading.likes">
-          <UnifiedCard 
-            v-for="p in likes" 
-            :key="p.id" 
-            :title="p.title" 
-            :cover="p.images?.[0]" 
-            :subtitle="p.author?.username || ''" 
-            :to="`/community/post/${p.id}`" 
-            :likes="p.likes"
-            :no-actions="true"
-          />
-        </div>
-        <div v-if="!loading.likes && likes.length === 0" class="empty-state">
-          <el-empty description="还没有点赞任何帖子" />
-        </div>
-      </el-tab-pane>
-      
-      <el-tab-pane label="我的上传" name="uploads" v-if="userStore.info?.role === 'admin'">
         <div class="wallpaper-grid" v-loading="loading.uploads">
           <div 
             v-for="wallpaper in uploads" 
             :key="wallpaper.id" 
+            :title="wallpaper.title"
             class="wallpaper-item"
             @click="viewDetail(wallpaper.id)"
           >
@@ -154,6 +171,9 @@
         <el-form-item label="昵称">
           <el-input v-model="editForm.nickname" placeholder="设置昵称" />
         </el-form-item>
+        <el-form-item label="个性签名">
+          <el-input v-model="editForm.signature" placeholder="一句话介绍自己" type="textarea" :rows="2" />
+        </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="editForm.email" />
         </el-form-item>
@@ -175,6 +195,29 @@
       </template>
     </el-dialog>
     
+    <!-- 编辑帖子对话框 -->
+    <el-dialog v-model="showEditPostDialog" title="编辑作品" width="500px">
+      <el-form :model="editPostForm" label-width="80px">
+        <el-form-item label="标题">
+          <el-input v-model="editPostForm.title" />
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input type="textarea" v-model="editPostForm.content" rows="4" />
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-input v-model="editPostForm.tags" placeholder="用逗号分隔多个标签" />
+        </el-form-item>
+        <!-- 暂时简化图片编辑，只支持文本修改，如需图片修改需更复杂的逻辑 -->
+        <el-form-item label="提示">
+          <span style="color:#999; font-size:12px;">暂时只支持编辑文本内容</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditPostDialog = false">取消</el-button>
+        <el-button type="primary" @click="savePost" :loading="savingPost">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 上传壁纸对话框 -->
     <el-dialog v-model="showUploadDialog" title="上传壁纸" width="500px">
       <el-form :model="uploadForm" label-width="80px">
@@ -226,9 +269,13 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, Download, Edit, Delete, Plus, UploadFilled } from '@element-plus/icons-vue'
+import { Star, Download, Edit, Delete, Plus, UploadFilled, ChatLineSquare } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, getMyFavorites, getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites } from '@/api/wallpaper'
+import { 
+  getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, 
+  getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites,
+  getMyCommunityPosts, deleteCommunityPost, updateCommunityPost 
+} from '@/api/wallpaper'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import request from '@/api/wallpaper'
 
@@ -236,14 +283,17 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 响应式数据
-const activeTab = ref('wallpaperFavorites')
+const activeTab = ref('posts') // 默认显示发布的作品
 const showEditDialog = ref(false)
 const showUploadDialog = ref(false)
+const showEditPostDialog = ref(false)
 const saving = ref(false)
+const savingPost = ref(false)
 const uploading = ref(false)
 
 // 用户统计
 const userStats = reactive({
+  posts: 0,
   favorites: 0,
   likes: 0,
   downloads: 0
@@ -251,6 +301,7 @@ const userStats = reactive({
 
 // 加载状态
 const loading = reactive({
+  posts: false,
   favorites: false,
   wallpaperFavorites: false,
   likes: false,
@@ -258,6 +309,7 @@ const loading = reactive({
 })
 
 // 数据列表
+const posts = ref([])
 const favorites = ref([])
 const wallpaperFavorites = ref([])
 const likes = ref([])
@@ -268,8 +320,17 @@ const categories = ref([])
 const editForm = reactive({
   username: '',
   nickname: '',
+  signature: '',
   email: '',
   avatarUrl: ''
+})
+
+// 编辑帖子表单
+const editPostForm = reactive({
+  id: null,
+  title: '',
+  content: '',
+  tags: ''
 })
 
 // 上传表单
@@ -285,22 +346,29 @@ const fetchUserStats = async () => {
   try {
     const stats = await getUserStats()
     if (stats) {
-      // 优先使用后端返回的字段
-      // favoriteCount: 收藏数 (帖子 + 壁纸 或 单指某一项，取决于后端定义，前端暂时展示总和)
-      // likeCount: 点赞数
-      // receivedLikes: 获得的赞 (暂时没展示在头部)
-      userStats.favorites = stats.favoriteCount ?? stats.favoritesCount ?? stats.favorites ?? 0
-      userStats.likes = stats.likeCount ?? stats.likesCount ?? stats.likes ?? 0
-      userStats.downloads = stats.downloads ?? stats.downloadsCount ?? 0
-    } else {
-      // 降级：如果 stats 为空，从 store 或本地计算
-      userStats.favorites = favorites.value.length
-      userStats.likes = likes.value.length
+      userStats.posts = stats.postCount ?? 0
+      userStats.favorites = stats.favoriteCount ?? stats.favoritesCount ?? 0
+      userStats.likes = stats.likeCount ?? stats.likesCount ?? 0
+      userStats.downloads = stats.downloads ?? 0
     }
   } catch (error) {
-    // 降级：如果接口失败，从列表长度获取
+    userStats.posts = posts.value.length
     userStats.favorites = favorites.value.length
     userStats.likes = likes.value.length
+  }
+}
+
+// 获取我发布的作品
+const fetchMyPosts = async () => {
+  loading.posts = true
+  try {
+    const response = await getMyCommunityPosts({ page: 1, size: 50 })
+    posts.value = Array.isArray(response) ? response : (response.items || [])
+    if (userStats.posts === 0) userStats.posts = response.total || posts.value.length
+  } catch (error) {
+    posts.value = []
+  } finally {
+    loading.posts = false
   }
 }
 
@@ -310,7 +378,6 @@ const fetchFavorites = async () => {
   try {
     const response = await getMyPostFavorites()
     favorites.value = Array.isArray(response) ? response : (response.items || [])
-    if (userStats.favorites === 0) userStats.favorites = response.total || favorites.value.length
   } catch (error) {
     favorites.value = []
   } finally {
@@ -337,7 +404,6 @@ const fetchLikes = async () => {
   try {
     const response = await getUserLikes({ page: 1, size: 50 })
     likes.value = Array.isArray(response) ? response : (response.items || [])
-    if (userStats.likes === 0) userStats.likes = response.total || likes.value.length
   } catch (error) {
     likes.value = []
   } finally {
@@ -354,7 +420,6 @@ const fetchUploads = async () => {
     const response = await request.get('/user/uploads')
     uploads.value = response.data || []
   } catch (error) {
-    // 模拟数据
     uploads.value = []
   } finally {
     loading.uploads = false
@@ -367,57 +432,13 @@ const fetchCategories = async () => {
     const response = await getCategories()
     categories.value = response || []
   } catch (error) {
-    categories.value = [
-      { id: 1, name: '风景' },
-      { id: 2, name: '抽象' },
-      { id: 3, name: '动漫' },
-      { id: 4, name: '游戏' }
-    ]
+    categories.value = []
   }
 }
 
 // 查看详情
 const viewDetail = (id) => {
   router.push(`/detail/${id}`)
-}
-
-// 移除收藏
-const removeFavorite = async (wallpaper) => {
-  try {
-    await favoriteWallpaper(wallpaper.id)
-    favorites.value = favorites.value.filter(item => item.id !== wallpaper.id)
-    userStats.favorites--
-    ElMessage.success('已取消收藏')
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-// 切换点赞
-const toggleLike = async (wallpaper) => {
-  try {
-    await likeWallpaper(wallpaper.id)
-    likes.value = likes.value.filter(item => item.id !== wallpaper.id)
-    userStats.likes--
-    ElMessage.success('已取消点赞')
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-// 下载壁纸
-const downloadWallpaper = (wallpaper) => {
-  const link = document.createElement('a')
-  link.href = wallpaper.url || wallpaper.thumbUrl
-  link.download = `${wallpaper.title}.jpg`
-  link.click()
-  userStats.downloads++
-  ElMessage.success('开始下载')
-}
-
-// 编辑壁纸
-const editWallpaper = (wallpaper) => {
-  ElMessage.info('编辑功能开发中...')
 }
 
 // 删除壁纸
@@ -433,9 +454,55 @@ const deleteWallpaper = async (wallpaper) => {
     uploads.value = uploads.value.filter(item => item.id !== wallpaper.id)
     ElMessage.success('删除成功')
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+    if (error !== 'cancel') ElMessage.error('删除失败')
+  }
+}
+
+// 打开编辑帖子
+const openEditPost = (post) => {
+  editPostForm.id = post.id
+  editPostForm.title = post.title
+  editPostForm.content = post.content
+  editPostForm.tags = (post.tags || []).join(',')
+  showEditPostDialog.value = true
+}
+
+// 保存帖子
+const savePost = async () => {
+  if (!editPostForm.title) return ElMessage.warning('标题不能为空')
+  
+  savingPost.value = true
+  try {
+    const payload = {
+      title: editPostForm.title,
+      content: editPostForm.content,
+      tags: editPostForm.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean)
     }
+    await updateCommunityPost(editPostForm.id, payload)
+    ElMessage.success('更新成功')
+    showEditPostDialog.value = false
+    fetchMyPosts()
+  } catch (error) {
+    ElMessage.error('更新失败')
+  } finally {
+    savingPost.value = false
+  }
+}
+
+// 删除帖子
+const deletePost = async (post) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个作品吗？此操作不可恢复', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteCommunityPost(post.id)
+    ElMessage.success('删除成功')
+    posts.value = posts.value.filter(p => p.id !== post.id)
+    userStats.posts = Math.max(0, userStats.posts - 1)
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('删除失败')
   }
 }
 
@@ -448,6 +515,7 @@ const saveProfile = async () => {
       avatarUrl: editForm.avatarUrl 
     }
     if (editForm.nickname) payload.nickname = editForm.nickname
+    if (editForm.signature) payload.signature = editForm.signature
     
     await request.put('/auth/me', payload)
     await userStore.fetchUser()
@@ -549,12 +617,16 @@ const submitUpload = async () => {
 
 // 格式化日期
 const formatDate = (dateString) => {
+  if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
 // 监听标签页切换
 watch(activeTab, (newTab) => {
   switch (newTab) {
+    case 'posts':
+      if (posts.value.length === 0) fetchMyPosts()
+      break
     case 'favorites':
       if (favorites.value.length === 0) fetchFavorites()
       break
@@ -576,6 +648,7 @@ watch(() => userStore.info, (newInfo) => {
     Object.assign(editForm, {
       username: newInfo.username || '',
       nickname: newInfo.nickname || '',
+      signature: newInfo.signature || newInfo.bio || '',
       email: newInfo.email || '',
       avatarUrl: newInfo.avatarUrl || ''
     })
@@ -596,23 +669,20 @@ onMounted(async () => {
     try {
       await userStore.initAuth()
     } catch (e) {
-      // initAuth 失败会自动 logout，这里只需要判断如果最终还是没认证
+      // initAuth 失败会自动 logout
     }
   }
 
   // 二次检查
-  if (!userStore.isAuthenticated) {
-    // 只有在确定没有任何 info 的情况下才跳转，避免误杀
-    if (!userStore.info) {
-      ElMessage.warning('登录已过期，请重新登录')
-      router.push('/')
-      return
-    }
+  if (!userStore.isAuthenticated && !userStore.info) {
+    ElMessage.warning('登录已过期，请重新登录')
+    router.push('/')
+    return
   }
   
   fetchCategories()
   fetchUserStats()
-  fetchWallpaperFavorites() // Default tab
+  fetchMyPosts() // Default tab
 })
 </script>
 
@@ -624,13 +694,13 @@ onMounted(async () => {
 }
 
 .user-profile {
-  background: white;
+  background: var(--app-bg-card);
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--app-shadow-card);
   margin-bottom: 30px;
+  border: 1px solid var(--app-border);
 }
-.dark .user-profile { background: #1f2937; border: 1px solid #374151; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
 
 .profile-header {
   display: flex;
@@ -644,23 +714,22 @@ onMounted(async () => {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #f0f0f0;
+  border: 4px solid var(--app-bg-base);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .profile-info h2 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: var(--app-text-main);
   font-size: 28px;
   font-weight: 600;
 }
-.dark .profile-info h2 { color: #e5e7eb; }
 
 .profile-info p {
   margin: 0;
-  color: #666;
+  color: var(--app-text-secondary);
   font-size: 16px;
 }
-.dark .profile-info p { color: #cbd5e1; }
 
 .profile-stats {
   display: flex;
@@ -676,27 +745,34 @@ onMounted(async () => {
   display: block;
   font-size: 32px;
   font-weight: 700;
-  color: #409eff;
+  color: var(--app-color-primary);
   margin-bottom: 5px;
 }
-.dark .stat-number { color: #93c5fd; }
 
 .stat-label {
-  color: #666;
+  color: var(--app-text-secondary);
   font-size: 14px;
 }
-.dark .stat-label { color: #9ca3af; }
 
 .profile-actions {
   display: flex;
   gap: 15px;
 }
 
-.user-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+.action-btn {
+  border-radius: 999px;
+  padding: 8px 24px;
+  height: auto;
+}
+.action-btn:not(.el-button--primary) {
+  background: var(--app-bg-base);
+  border-color: var(--app-border);
+  color: var(--app-text-main);
+}
+.action-btn:not(.el-button--primary):hover {
+  border-color: var(--app-color-primary);
+  color: var(--app-color-primary);
+  background: var(--app-bg-hover);
 }
 
 .wallpaper-grid {
@@ -710,15 +786,14 @@ onMounted(async () => {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  background: #f8f9fa;
+  background: var(--app-bg-hover);
   transition: all 0.3s ease;
   cursor: pointer;
+  border: 1px solid transparent;
 }
-.dark .wallpaper-item { background: #111827; }
-
 .wallpaper-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--app-shadow-hover);
 }
 
 .wallpaper-item img {
@@ -745,7 +820,8 @@ onMounted(async () => {
   align-items: flex-end;
   padding: 20px;
 }
-.dark .wallpaper-overlay { background: linear-gradient(to bottom, transparent 0%, rgba(17,24,39,0.85) 100%); }
+/* Ensure overlay text is always white regardless of theme */
+.wallpaper-overlay h3, .wallpaper-overlay p { color: white; }
 
 .wallpaper-item:hover .wallpaper-overlay {
   opacity: 1;
@@ -761,277 +837,164 @@ onMounted(async () => {
   padding: 15px;
 }
 
-.wallpaper-info h4 {
+.wallpaper-info h3 {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: white;
   line-height: 1.4;
 }
-
-.wallpaper-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #666;
-  font-size: 14px;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-approved {
-  background: #f0f9ff;
-  color: #0369a1;
-}
-
-.status-pending {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.status-rejected {
-  background: #fee2e2;
-  color: #dc2626;
-}
+.wallpaper-info p { color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem; }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #666;
-}
-
-.empty-state .el-icon {
-  font-size: 64px;
-  color: #ddd;
-  margin-bottom: 20px;
-}
-
-.empty-state h3 {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #999;
-}
-
-.empty-state p {
-  margin: 0;
-  color: #ccc;
+  color: var(--app-text-secondary);
 }
 
 .upload-area {
-  border: 2px dashed #dcdfe6;
+  border: 2px dashed var(--app-border);
   border-radius: 8px;
   padding: 40px;
   text-align: center;
   transition: border-color 0.3s ease;
+  background: var(--app-bg-card);
 }
 
-.upload-area:hover {
-  border-color: #409eff;
+/* Dialog Dark Mode */
+:deep(.el-dialog) { background: var(--app-bg-card); }
+:deep(.el-dialog__title) { color: var(--app-text-main); }
+:deep(.el-dialog__body) { color: var(--app-text-main); }
+:deep(.el-input__wrapper) { background: var(--app-bg-base); box-shadow: 0 0 0 1px var(--app-border) inset; }
+:deep(.el-input__inner) { color: var(--app-text-main); }
+:deep(.el-textarea__inner) { background: var(--app-bg-base); box-shadow: 0 0 0 1px var(--app-border) inset; color: var(--app-text-main); }
+:deep(.el-form-item__label) { color: var(--app-text-main); }
+
+/* Post Card Styles */
+.posts-list {
+  display: grid;
+  gap: 20px;
+  padding: 10px;
 }
 
-.upload-icon {
-  font-size: 48px;
-  color: #c0c4cc;
-  margin-bottom: 16px;
+.post-card {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--app-bg-card);
+  transition: all 0.3s ease;
+  color: var(--app-text-main);
 }
 
-.upload-text {
-  color: #606266;
+.post-card:hover {
+  box-shadow: var(--app-shadow-hover);
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  font-weight: 600;
   font-size: 14px;
+  color: var(--app-text-main);
 }
 
-.upload-hint {
-  color: #909399;
+.time {
   font-size: 12px;
-  margin-top: 8px;
+  color: var(--app-text-secondary);
+}
+
+.post-title {
+  font-size: 18px;
+  margin: 0 0 8px 0;
+  color: var(--app-text-main);
+  cursor: pointer;
+}
+.post-title:hover { color: var(--app-color-primary); }
+
+.post-content {
+  color: var(--app-text-main);
+  font-size: 14px;
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.post-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.post-img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.tag {
+  color: var(--app-color-primary);
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+.stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .user {
-    padding: 12px;
-  }
-  
-  .user-profile {
-    padding: 16px;
-  }
-  
-  .profile-header {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-  }
-  
-  .profile-info h2 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-  }
-  
-  .profile-info p {
-    font-size: 14px;
-  }
-  
-  .profile-stats {
-    justify-content: center;
-    gap: 24px;
-    margin-bottom: 20px;
-  }
-  
-  .stat-number {
-    font-size: 24px;
-  }
-  
-  .stat-label {
-    font-size: 12px;
-  }
-  
-  .profile-actions {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .profile-actions .el-button {
-    font-size: 14px;
-  }
-  
-  .user-tabs {
-    margin-top: 16px;
-  }
-  
-  .wallpaper-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 12px;
-  }
-  
-  .wallpaper-item img {
-    height: 150px;
-  }
-  
-  .wallpaper-overlay {
-    padding: 12px;
-    opacity: 1;
-    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
-  }
-  
-  .wallpaper-actions {
-    gap: 6px;
-  }
-  
-  .wallpaper-actions .el-button {
-    width: 28px;
-    height: 28px;
-  }
-  
-  .wallpaper-info h3 {
-    font-size: 0.9rem;
-    color: white;
-  }
-  
-  .wallpaper-info p {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.8);
-  }
-  
-  .empty-state {
-    padding: 40px 16px;
-  }
-  
-  .upload-area {
-    padding: 24px;
-  }
-  
-  .upload-icon {
-    font-size: 36px;
-  }
+  .user { padding: 12px; }
+  .user-profile { padding: 16px; }
+  .profile-header { flex-direction: column; text-align: center; gap: 16px; }
+  .profile-info h2 { font-size: 1.5rem; margin-bottom: 8px; }
+  .profile-stats { justify-content: center; gap: 24px; }
+  .wallpaper-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
+  .wallpaper-item img { height: 150px; }
+  .post-images { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 480px) {
-  .user {
-    padding: 8px;
-  }
-  
-  .user-profile {
-    padding: 12px;
-  }
-  
-  .profile-header .el-avatar {
-    width: 60px !important;
-    height: 60px !important;
-  }
-  
-  .profile-info h2 {
-    font-size: 1.3rem;
-  }
-  
-  .profile-stats {
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .stat-number {
-    font-size: 20px;
-  }
-  
-  .stat-label {
-    font-size: 11px;
-  }
-  
-  .profile-actions {
-    gap: 6px;
-  }
-  
-  .profile-actions .el-button {
-    font-size: 12px;
-    padding: 8px 12px;
-  }
-  
-  .wallpaper-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 8px;
-  }
-  
-  .wallpaper-item img {
-    height: 200px;
-  }
-  
-  .wallpaper-overlay {
-    padding: 16px;
-  }
-  
-  .wallpaper-info h3 {
-    font-size: 1rem;
-  }
-  
-  .wallpaper-info p {
-    font-size: 0.85rem;
-  }
-  
-  .empty-state {
-    padding: 32px 12px;
-  }
-  
-  .upload-area {
-    padding: 20px;
-  }
-  
-  .upload-icon {
-    font-size: 32px;
-  }
-  
-  .upload-text {
-    font-size: 13px;
-  }
-  
-  .upload-hint {
-    font-size: 11px;
-  }
+  .user { padding: 8px; }
+  .wallpaper-grid { grid-template-columns: 1fr; }
+  .wallpaper-item img { height: 200px; }
 }
 </style>
