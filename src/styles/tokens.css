@@ -1,41 +1,68 @@
 :root {
-  /* Brand Colors */
-  --color-blue-400: #409eff;
-  --color-blue-300: #93c5fd;
-  --color-blue-500: #3b82f6;
-  --color-blue-200: #60A5FA;
-  --color-purple-300: #f0abfc;
-  --color-purple-400: #a78bfa;
-  --color-indigo-500: #646cff;
-  --color-indigo-600: #535bf2;
+  /* Brand Colors - Apple/Zhefeng Style */
+  --color-brand-blue-light: #0071E3; /* Classic Apple Blue */
+  --color-brand-purple-light: #6E48FF; /* Gradient End */
+  --color-brand-purple-dark: #5E5CE6; /* Dark Mode Primary */
+  
+  /* Gradient Colors */
+  --color-gradient-light-start: #A374FF;
+  --color-gradient-light-end: #6E48FF;
+  --color-gradient-dark-start: #5E5CE6;
+  --color-gradient-dark-end: #4745BC;
 
-  /* Neutrals - Light */
-  --color-white: #ffffff;
-  --color-gray-50: #f8fafc;
-  --color-gray-100: #eef2ff;
-  --color-gray-200: #e5e7eb;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #606266;
-  --color-gray-700: #374151;
-  --color-gray-800: #213547; /* Original light text */
-  --color-gray-900: #1a1a1a;
+  /* Functional Colors */
+  --color-success-text: #34C759; /* Apple Green */
+  --color-success-bg: rgba(52, 199, 89, 0.1);
+  --color-warning: #FF9F0A; /* Apple Orange */
+  --color-error: #FF3B30; /* Apple Red */
+  
+  /* Neutrals - Light Mode (Zhefeng Style) */
+  --color-light-bg-page: #F5F7F9; /* Very Light Grey Blue */
+  --color-light-bg-card: #FFFFFF; /* Pure White */
+  --color-light-text-main: #1D1D1F; /* Deep Grey */
+  --color-light-text-sub: #6E6E73; /* Zhefeng Grey */
+  --color-light-border: rgba(0,0,0,0.05); /* Very subtle */
+  --color-light-input: #E8E8ED; /* Search box */
 
-  /* Neutrals - Dark */
-  --color-dark-bg: #0b1220;
-  --color-dark-card: #1f2937;
-  --color-dark-input: #111827;
-  --color-dark-border: #374151;
-
+  /* Neutrals - Dark Mode (Deep Space & Breathing) */
+  --color-dark-bg-page: #141416; /* Starry Night */
+  --color-dark-bg-card: #18181C; /* Updated to Deep Grey Blue per request */
+  --color-dark-bg-card-nested: #121214; /* Darker nested background */
+  --color-dark-text-main: #F5F5F7; /* Soft White */
+  --color-dark-text-header: #F8FAFC; /* Brighter Header */
+  --color-dark-text-sub: #94A3B8; /* Mid Blue-Grey for details */
+  --color-dark-border: rgba(255,255,255,0.08); /* Highlight Border */
+  --color-dark-input: #2C2C2E;
+  
+  /* Special Action Colors */
+  --color-orange-gradient-start: #F4B04E;
+  --color-orange-gradient-end: #E6912C;
+  --color-orange-text: #3D1F00; /* Dark Brown Text for Contrast */
+  --color-orange-shadow: rgba(230, 145, 44, 0.2);
+  
+  --color-purple-action: #6366F1;
+  --color-purple-glow: rgba(99, 102, 241, 0.4);
+  
+  /* Ambient Light (Diffusion) */
+  --color-ambient-purple: rgba(100, 70, 255, 0.05);
+  
   /* Shadows */
-  --shadow-sm: 0 2px 10px rgba(0,0,0,.08);
-  --shadow-md: 0 8px 20px rgba(0,0,0,.12);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,.18);
-  --shadow-dark-sm: 0 2px 10px rgba(0,0,0,.18);
-  --shadow-dark-md: 0 8px 20px rgba(0,0,0,.28);
-  --shadow-dark-lg: 0 12px 32px rgba(0,0,0,.38);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
+  --shadow-blue-glow: 0 4px 14px 0 rgba(0,122,255,0.3); /* Adjusted for 007AFF */
+  
+  --shadow-dark-sm: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-dark-md: 0 8px 24px rgba(0,0,0,0.6);
+  --shadow-dark-lg: 0 16px 48px rgba(0,0,0,0.8);
+  
+  /* Inner Glow for Dark Mode Cards */
+  --shadow-inner-highlight: inset 0 1px 0 0 rgba(255,255,255,0.08);
 
-  /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Radius - Modern Large Rounded */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px; /* Optimized for images */
+  --radius-lg: 24px; /* Primary Card Radius */
+  --radius-full: 9999px;
 }

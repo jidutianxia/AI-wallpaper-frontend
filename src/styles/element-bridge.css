@@ -60,16 +60,20 @@
 /* --- Global Teleported Component Overrides --- */
 /* These elements are often attached to body, so scoped styles don't reach them. */
 
-/* Select Dropdowns / Poppers */
+/* 1. Popups & Dropdowns */
 .el-select-dropdown,
 .el-popper,
 .el-dropdown-menu,
 .el-picker-panel,
-.el-autocomplete-suggestion {
+.el-autocomplete-suggestion,
+.el-popover,
+.el-notification {
   background-color: var(--app-bg-card) !important;
   border-color: var(--app-border) !important;
+  color: var(--app-text-main) !important;
 }
 
+/* 2. Select Items */
 .el-select-dropdown__item {
   color: var(--app-text-main) !important;
 }
@@ -83,31 +87,52 @@
 .el-select-dropdown__item.selected {
   color: var(--app-color-primary) !important;
   font-weight: 600;
-  background-color: transparent !important; /* Avoid double background */
+  background-color: transparent !important;
 }
 
-/* Popper Arrow */
+/* 3. Popper Arrow */
 .el-popper__arrow::before {
   background-color: var(--app-bg-card) !important;
   border-color: var(--app-border) !important;
 }
 
-/* Select Input Wrapper (Fix for Selects) */
+/* 4. Notification Specifics */
+.el-notification__title {
+  color: var(--app-text-main) !important;
+}
+.el-notification__content {
+  color: var(--app-text-secondary) !important;
+}
+.el-notification__closeBtn {
+  color: var(--app-text-secondary) !important;
+}
+
+/* 5. Inputs & Select Wrappers */
 .el-select__wrapper, 
-.el-input__wrapper {
+.el-input__wrapper,
+.el-textarea__inner {
   background-color: var(--app-bg-card) !important;
   box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  color: var(--app-text-main) !important;
 }
+
 .el-select__wrapper:hover,
-.el-input__wrapper:hover {
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
   box-shadow: 0 0 0 1px var(--app-text-secondary) inset !important;
 }
+
 .el-select__wrapper.is-focused,
-.el-input__wrapper.is-focus {
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
   box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
 }
 
-/* Global Tag Style Override for better contrast */
+.el-input__inner {
+  color: var(--app-text-main) !important;
+}
+
+/* 6. Tags (Contrast Fix) */
 .el-tag {
   border-color: transparent !important;
 }
@@ -132,7 +157,7 @@
   color: #f56c6c !important;
 }
 
-/* Dialogs */
+/* 7. Dialogs */
 .el-dialog {
   background-color: var(--app-bg-card) !important;
   border: 1px solid var(--app-border);
@@ -166,45 +191,7 @@
   color: var(--app-color-primary) !important;
 }
 
-/* Inputs (Global Override for robustness) */
-.el-input__wrapper {
-  background-color: var(--app-bg-card) !important;
-  box-shadow: 0 0 0 1px var(--app-border) inset !important;
-  border-radius: 8px; /* Softer corners */
-}
-
-.el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
-}
-
-.el-input__inner {
-  color: var(--app-text-main) !important;
-}
-
-/* Textarea */
-.el-textarea__inner {
-  background-color: var(--app-bg-card) !important;
-  box-shadow: 0 0 0 1px var(--app-border) inset !important;
-  color: var(--app-text-main) !important;
-  border-radius: 8px;
-}
-
-.el-textarea__inner:focus {
-  box-shadow: 0 0 0 1px var(--app-color-primary) inset !important;
-}
-
-/* Pagination */
-.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
-  background-color: var(--app-color-primary) !important;
-}
-
-.el-pagination.is-background .el-pager li {
-  background-color: var(--app-bg-card) !important;
-  color: var(--app-text-main) !important;
-  border: 1px solid var(--app-border);
-}
-
-/* Message Box */
+/* 8. Message Box */
 .el-message-box {
   background-color: var(--app-bg-card) !important;
   border-color: var(--app-border) !important;
@@ -215,27 +202,229 @@
   color: var(--app-text-main) !important;
 }
 
-/* Buttons (Default Type) */
-.el-button--default {
-  background-color: var(--app-bg-card) !important;
-  border-color: var(--app-border) !important;
-  color: var(--app-text-main) !important;
+/* 9. Pagination */
+.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+  background-color: var(--app-color-primary) !important;
 }
 
-.el-button--default:hover {
-  background-color: var(--app-bg-hover) !important;
-  border-color: var(--app-color-primary) !important;
-  color: var(--app-color-primary) !important;
+.el-pagination.is-background .el-pager li {
+  background-color: var(--app-bg-card) !important;
+  color: var(--app-text-main) !important;
+  border: 1px solid var(--app-border);
+}
+
+/* 10. Buttons */
+.el-button {
+  font-weight: 500;
+  border-radius: var(--app-radius-button) !important; /* Pill / Large Radius */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.el-button:active {
+  transform: scale(0.96);
+}
+
+/* Size Adjustments - Taller and Rounder */
+.el-button--large {
+  height: 48px !important;
+  padding: 0 28px !important;
+  font-size: 17px !important;
+}
+.el-button--default:not(.el-button--large):not(.el-button--small) {
+  height: 38px !important;
+  padding: 0 20px !important;
+  font-size: 15px !important;
+}
+.el-button--small {
+  height: 28px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
 }
 
 /* Primary Button */
 .el-button--primary {
-  background-color: var(--app-color-primary) !important;
-  border-color: var(--app-color-primary) !important;
+  background-color: var(--app-btn-primary-bg) !important;
+  border-color: var(--app-btn-primary-bg) !important;
+  color: var(--app-btn-primary-text) !important;
+  border: none !important;
+  box-shadow: var(--app-btn-primary-shadow); /* Light: Glow, Dark: Border */
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background-color: var(--app-btn-primary-hover-bg) !important;
+  border-color: var(--app-btn-primary-hover-bg) !important;
+}
+
+/* Dark Mode Glow for Primary - handled via var --app-btn-primary-glow in theme if needed specific overrides */
+:root.dark .el-button--primary:hover {
+  box-shadow: 0 0 20px var(--app-btn-primary-glow) !important;
+}
+
+/* Secondary Button */
+.el-button--default {
+  background-color: var(--app-btn-secondary-bg) !important;
+  border-color: transparent !important;
+  color: var(--app-btn-secondary-text) !important;
+}
+
+.el-button--default:hover {
+  background-color: var(--app-btn-secondary-hover-bg) !important;
+}
+
+/* Special Button Variants */
+.btn-gradient-orange {
+  background: var(--app-btn-collect-bg) !important;
+  border: none !important;
+  color: var(--app-btn-collect-text) !important;
+  box-shadow: var(--app-btn-collect-shadow) !important;
+  font-weight: 600 !important;
+}
+.btn-gradient-orange:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Nested Items & Publisher Card */
+.card-nested {
+  background-color: var(--app-bg-nested-card) !important;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  transition: all 0.3s ease;
+}
+.card-nested:hover {
+  box-shadow: var(--app-nested-glow);
+}
+
+.btn-purple-soft {
+  background-color: var(--app-btn-download-bg) !important;
+  border: none !important;
+  color: var(--app-btn-download-text) !important;
+}
+.btn-purple-soft:hover {
+  background-color: var(--color-purple-action) !important; /* Full opacity on hover */
+}
+
+/* Adaptive Ghost Button */
+.btn-ghost-grey {
+  background-color: rgba(0, 0, 0, 0.05) !important; /* Light Mode Default */
+  border: 1px solid transparent !important;
+  color: var(--app-text-main) !important;
+}
+:root.dark .btn-ghost-grey {
+  background-color: rgba(255, 255, 255, 0.05) !important; /* Dark Mode Override */
   color: white !important;
 }
 
-/* Checkbox & Radio */
+.btn-ghost-grey:hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+:root.dark .btn-ghost-grey:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+/* Card & Glassmorphism Overrides */
+.el-card, .el-dialog, .el-drawer, .el-message-box {
+  background-color: var(--app-bg-card) !important;
+  backdrop-filter: var(--app-backdrop-blur);
+  -webkit-backdrop-filter: var(--app-backdrop-blur);
+  border-radius: var(--app-radius-card) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-card) !important;
+}
+
+/* Remove gradient border or decorative lines in light mode if present */
+/* The user asked to remove "gradient color lines" in light mode */
+/* Assuming this refers to any residual border gradients, but our cards use standard borders. */
+/* Just ensuring border is clean. */
+
+:root.dark .el-card, 
+:root.dark .el-dialog, 
+:root.dark .el-drawer, 
+:root.dark .el-message-box {
+  box-shadow: var(--app-shadow-card), var(--app-card-inner-glow) !important; /* Add inner glow for depth in dark */
+  border: 1px solid var(--app-border) !important; /* Keep subtle border in dark */
+}
+
+.el-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: var(--app-shadow-hover) !important;
+  transform: translateY(-2px);
+}
+:root.dark .el-card:hover {
+  box-shadow: var(--app-shadow-hover), var(--app-card-inner-glow) !important;
+}
+
+/* Typography Enhancements */
+body, .el-button, .el-input__inner, .el-textarea__inner {
+  letter-spacing: 0.02em; /* Added breathing room */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.01em; /* Tighter headings */
+}
+
+/* Dialog Specifics */
+.el-dialog {
+  border-radius: var(--app-radius-card) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--app-border);
+  margin-right: 0 !important;
+  padding: 24px !important;
+}
+
+/* Input Roundedness */
+.el-input__wrapper, .el-textarea__inner {
+  border-radius: var(--app-radius-input) !important;
+}
+
+/* Ghost Button (Custom Class or mapped if needed) */
+.el-button.is-ghost, .ghost-btn {
+  background-color: transparent !important;
+  border: 1px solid var(--app-btn-ghost-border) !important;
+  color: var(--app-btn-ghost-text) !important;
+}
+
+.el-button.is-ghost:hover, .ghost-btn:hover {
+  background-color: var(--app-btn-ghost-hover-bg) !important;
+  color: var(--app-btn-ghost-hover-text) !important;
+  border-color: var(--app-btn-ghost-hover-text) !important; /* Optional: border highlight */
+}
+
+/* Text Button */
+.el-button.is-link, .el-button--text {
+  background: transparent !important;
+  border: none !important;
+  color: var(--app-btn-text-color) !important;
+}
+
+.el-button.is-link:hover, .el-button--text:hover {
+  color: var(--app-btn-text-hover-color) !important;
+}
+
+/* Success Button (Using functional colors) */
+.el-button--success {
+  background-color: var(--app-success-bg) !important;
+  border-color: var(--app-success-bg) !important;
+  color: var(--app-success-text) !important;
+}
+
+/* Gradient Button (Emphasis) - Custom class */
+.btn-emphasis {
+  background: linear-gradient(135deg, var(--app-brand-gradient-start) 0%, var(--app-brand-gradient-end) 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* 11. Checkbox & Radio */
 .el-checkbox, .el-radio {
   color: var(--app-text-main) !important;
 }
@@ -249,4 +438,18 @@
 .el-checkbox__inner, .el-radio__inner {
   background-color: var(--app-bg-card) !important;
   border-color: var(--app-border) !important;
+}
+
+/* 12. Drawers */
+.el-drawer {
+  background-color: var(--app-bg-card) !important;
+}
+.el-drawer__header {
+  color: var(--app-text-main) !important;
+  border-bottom: 1px solid var(--app-border);
+  margin-bottom: 0 !important;
+  padding-bottom: 20px;
+}
+.el-drawer__body {
+  color: var(--app-text-main) !important;
 }

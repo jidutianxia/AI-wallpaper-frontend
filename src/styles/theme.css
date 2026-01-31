@@ -1,49 +1,122 @@
 @import './tokens.css';
 
 :root {
-  /* Semantic Colors - LIGHT DEFAULT */
-  --app-color-primary: var(--color-blue-400);
-  --app-bg-base: var(--color-white);
-  --app-bg-card: var(--color-white);
-  --app-text-main: var(--color-gray-800);
-  --app-text-secondary: var(--color-gray-500);
-  --app-border: rgba(148,163,184,.22);
+  /* Semantic Colors - LIGHT MODE (Zhefeng Style) */
+  --app-color-primary: #007AFF; /* Bright Blue */
+  --app-bg-base: var(--color-light-bg-page);
+  --app-bg-card: var(--color-light-bg-card);
+  --app-backdrop-blur: none; /* Removed blur for pure white cards in light mode as requested, or subtle */
   
-  --app-brand-gradient-start: var(--color-blue-300);
-  --app-brand-gradient-end: var(--color-purple-300);
+  --app-text-main: var(--color-light-text-main);
+  --app-text-secondary: var(--color-light-text-sub);
+  --app-border: var(--color-light-border);
+  
+  /* Button Semantics - Light */
+  --app-btn-primary-bg: #007AFF;
+  --app-btn-primary-text: #FFFFFF;
+  --app-btn-primary-hover-bg: #0062CC;
+  --app-btn-primary-active-bg: #0056B3;
+  --app-btn-primary-shadow: var(--shadow-blue-glow);
+
+  /* Special Detail Page Buttons (Mapped from Tokens) */
+  --app-btn-collect-bg: linear-gradient(135deg, var(--color-orange-gradient-start), var(--color-orange-gradient-end));
+  --app-btn-collect-text: #FFFFFF; /* Light Mode default white */
+  --app-btn-collect-shadow: 0 8px 20px var(--color-orange-shadow);
+  
+  --app-btn-download-bg: rgba(99, 102, 241, 0.9); /* Purple with opacity */
+  --app-btn-download-text: #FFFFFF;
+  
+  --app-bg-nested-card: #F9FAFB; /* Light mode nested */
+  --app-nested-glow: none;
+
+  --app-btn-secondary-bg: rgba(0,0,0,0.05);
+  --app-btn-secondary-text: var(--color-light-text-main);
+  --app-btn-secondary-hover-bg: rgba(0,0,0,0.08);
+  
+  --app-btn-ghost-border: var(--color-light-border);
+  --app-btn-ghost-text: var(--color-light-text-sub);
+  --app-btn-ghost-hover-bg: rgba(0,0,0,0.03);
+  --app-btn-ghost-hover-text: #007AFF;
+
+  --app-btn-text-color: var(--color-light-text-sub);
+  --app-btn-text-hover-color: #007AFF;
+
+  --app-brand-gradient-start: var(--color-gradient-light-start);
+  --app-brand-gradient-end: var(--color-gradient-light-end);
   
   --app-shadow-card: var(--shadow-sm);
   --app-shadow-hover: var(--shadow-md);
   
-  --app-focus-ring: var(--color-blue-200);
+  /* Radius Semantics */
+  --app-radius-card: var(--radius-lg);
+  --app-radius-button: 9999px; 
+  --app-radius-input: var(--radius-sm);
   
-  /* Helper for gradients */
-  --app-bg-gradient-1: #eef2ff;
-  --app-bg-gradient-2: #f8fafc;
-  --app-bg-gradient-3: #ffffff;
+  /* Helper for gradients (Subtle backgrounds) */
+  --app-bg-gradient-1: #F5F5F7;
+  --app-bg-gradient-2: #FFFFFF;
+  --app-bg-gradient-3: #F0F0F2;
 }
 
 :root.dark {
-  /* Semantic Colors - DARK MODE */
-  --app-color-primary: var(--color-blue-300);
-  --app-bg-base: var(--color-dark-bg);
-  --app-bg-card: var(--color-dark-card);
-  --app-text-main: var(--color-gray-200);
-  --app-text-secondary: var(--color-gray-400);
-  --app-border: var(--color-dark-border);
+  /* Semantic Colors - DARK MODE (Breathing Deep Space) */
+  --app-color-primary: #5E5CE6; /* Deep Blue Purple */
+  --app-bg-base: var(--color-dark-bg-page);
+  --app-bg-card: var(--color-dark-bg-card); /* #1C1C1E */
+  --app-backdrop-blur: blur(20px); /* Enable blur for dark mode cards */
   
-  --app-brand-gradient-start: var(--color-blue-500);
-  --app-brand-gradient-end: var(--color-purple-400);
+  --app-text-main: var(--color-dark-text-main);
+  --app-text-secondary: var(--color-dark-text-sub);
+  --app-border: var(--color-dark-border); /* 1px rgba(255,255,255,0.08) */
   
-  --app-shadow-card: var(--shadow-dark-md); /* Darker shadows in dark mode */
-  --app-shadow-hover: var(--shadow-dark-lg);
+  /* Button Semantics - Dark */
+  --app-btn-primary-bg: #5E5CE6;
+  --app-btn-primary-text: #FFFFFF;
+  --app-btn-primary-hover-bg: #4745BC;
+  --app-btn-primary-active-bg: #3A3899;
+  --app-btn-primary-glow: rgba(94, 92, 230, 0.4); 
+  --app-btn-primary-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset; 
 
-  /* Accents (Soft backgrounds for tags, active states) */
-  --app-accent-bg-soft: rgba(30,64,175,.28);
-  --app-accent-border: rgba(59,130,246,.4);
-  --app-accent-text: var(--color-white);
+  /* Special Detail Page Buttons (Mapped from Tokens) */
+  --app-btn-collect-bg: linear-gradient(135deg, var(--color-orange-gradient-start), var(--color-orange-gradient-end));
+  --app-btn-collect-text: var(--color-orange-text); /* Dark Mode specific brown text */
+  --app-btn-collect-shadow: 0 8px 20px var(--color-orange-shadow);
   
-  --app-bg-gradient-1: #1a2438;
-  --app-bg-gradient-2: #0b1220;
-  --app-bg-gradient-3: #0a0f1a;
+  --app-btn-download-bg: rgba(99, 102, 241, 0.9); /* Purple with opacity */
+  --app-btn-download-text: #FFFFFF;
+  
+  --app-bg-nested-card: var(--color-dark-bg-card-nested);
+  --app-nested-glow: 0 0 20px var(--color-purple-glow);
+
+  --app-btn-secondary-bg: rgba(255,255,255,0.1);
+  --app-btn-secondary-text: var(--color-dark-text-main);
+  --app-btn-secondary-hover-bg: rgba(255,255,255,0.15);
+
+  --app-btn-ghost-border: var(--color-dark-border);
+  --app-btn-ghost-text: var(--color-dark-text-sub);
+  --app-btn-ghost-hover-bg: rgba(255,255,255,0.05);
+  --app-btn-ghost-hover-text: #FFFFFF;
+ 
+  --app-btn-text-color: var(--color-dark-text-sub);
+  --app-btn-text-hover-color: #5E5CE6;
+ 
+  /* Functional Colors */
+  --app-success-bg: var(--color-success-bg);
+  --app-success-text: var(--color-success-text);
+ 
+  --app-brand-gradient-start: var(--color-gradient-dark-start);
+  --app-brand-gradient-end: var(--color-gradient-dark-end);
+   
+  --app-shadow-card: var(--shadow-dark-md);
+  --app-shadow-hover: var(--shadow-dark-lg);
+  --app-card-inner-glow: var(--shadow-inner-highlight); /* New: Inner Glow */
+
+  /* Accents */
+  --app-accent-bg-soft: rgba(94, 92, 230, 0.2);
+  --app-accent-border: rgba(94, 92, 230, 0.4);
+  --app-accent-text: #FFFFFF;
+  
+  --app-bg-gradient-1: #0A0A0C;
+  --app-bg-gradient-2: #141416;
+  --app-bg-gradient-3: #0F0F11;
 }

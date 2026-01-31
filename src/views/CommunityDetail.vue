@@ -56,7 +56,7 @@
         <CommentItem v-for="(c, i) in post.comments || []" :key="i" :comment="c" />
         <div class="editor">
           <el-input v-model="newComment" placeholder="写下评论" />
-          <el-button class="pill-btn" type="primary" size="small" aria-label="发布评论" @click="submitComment">发布</el-button>
+          <el-button class="pill-btn" type="primary" size="small" aria-label="发送评论" @click="submitComment">发送</el-button>
         </div>
       </div>
     </div>
@@ -69,7 +69,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeftBold, Star, StarFilled, Share, ChatLineSquare } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostComments, likeCommunityPost, commentCommunityPost, favoriteCommunityPost } from '@/api/wallpaper'
+import { getCommunityPost, getCommunityPostComments, likeCommunityPost, commentCommunityPost, favoriteCommunityPost } from '@/api'
 import { useUserStore } from '@/store/user'
 import CommentItem from '@/components/CommentItem.vue'
 
@@ -139,8 +139,8 @@ const shareDetail = async () => {
 <style scoped>
 .post-detail { padding: 2rem 0; }
 .container { max-width: 1000px; margin: 0 auto; padding: 0 2rem; }
-.container { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(#ffffff,#ffffff) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
-.dark .container { background: linear-gradient(#1f2937,#1f2937) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
+.container { border: 1px solid transparent; border-radius: 12px; background: linear-gradient(var(--app-bg-card),var(--app-bg-card)) padding-box, linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end)) border-box; }
+/* .dark .container removed - handled by var(--app-bg-card) */
 .header { display: grid; gap: 12px; }
 .author { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
@@ -171,9 +171,16 @@ const shareDetail = async () => {
 .action-icon { vertical-align: middle; }
 .count { margin-left: 6px; font-weight: 500; }
 .comments { margin-top: 16px; display: grid; gap: 8px; }
-.editor { display: flex; gap: 8px; }
-.editor :deep(.el-input__wrapper) { background: var(--app-bg-base); box-shadow: 0 0 0 1px var(--app-border) inset; }
-.editor :deep(.el-input__inner) { color: var(--app-text-main); }
+.editor { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+.comment-input { flex: 1; }
+.comment-input :deep(.el-input__wrapper) { 
+  background: var(--app-bg-base); 
+  box-shadow: 0 0 0 1px var(--app-border) inset; 
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+.comment-input :deep(.el-input__inner) { color: var(--app-text-main); height: 24px; }
+.send-btn { border-radius: 999px; padding: 8px 24px; height: 40px; }
 .empty { text-align: center; padding: 40px; opacity: 0.7; color: var(--app-text-secondary); }
 .topbar { display:flex; gap:8px; margin-bottom:12px; }
 .topbar :deep(.el-button) { background: var(--app-bg-card); border-color: var(--app-border); color: var(--app-text-main); }

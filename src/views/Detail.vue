@@ -10,27 +10,6 @@
             class="wallpaper-image"
             @click="previewImage"
           />
-          <div class="wallpaper-overlay">
-            <div class="overlay-actions">
-              <el-button 
-                type="primary" 
-                size="large" 
-                :icon="Download" 
-                @click="downloadWallpaper"
-              >
-                下载壁纸
-              </el-button>
-              <el-button 
-                :type="wallpaper.isLiked ? 'danger' : 'default'"
-                size="large"
-                :icon="Star"
-                @click="toggleLike"
-                :loading="likeLoading"
-              >
-                {{ wallpaper.isLiked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
-              </el-button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -38,6 +17,38 @@
       <div class="wallpaper-info">
         <div class="info-header">
           <h1 class="wallpaper-title">{{ wallpaper.title }}</h1>
+          
+          <!-- New Action Area (Moved from overlay) -->
+          <div class="action-area">
+             <el-button 
+                class="btn-gradient-orange" 
+                size="large" 
+                :icon="Star"
+                @click="toggleLike"
+                :loading="likeLoading"
+              >
+                {{ wallpaper.isLiked ? '已收录' : '收录为壁纸' }}
+              </el-button>
+              
+              <div class="secondary-actions">
+                <el-button 
+                  class="btn-purple-soft" 
+                  size="large" 
+                  :icon="Download" 
+                  @click="downloadWallpaper"
+                >
+                  下载原图
+                </el-button>
+                <el-button 
+                  class="btn-ghost-grey"
+                  size="large"
+                  :icon="View"
+                >
+                  喜欢 ({{ wallpaper.likes }})
+                </el-button>
+              </div>
+          </div>
+
           <div class="wallpaper-stats">
             <span class="stat-item">
               <el-icon><View /></el-icon>
@@ -60,15 +71,15 @@
             <div class="info-grid">
               <div class="info-item">
                 <label>分辨率:</label>
-                <span>{{ wallpaper.width }} × {{ wallpaper.height }}</span>
+                <span class="detail-value">{{ wallpaper.width }} × {{ wallpaper.height }}</span>
               </div>
               <div class="info-item">
                 <label>文件大小:</label>
-                <span>{{ formatFileSize(wallpaper.fileSize) }}</span>
+                <span class="detail-value">{{ formatFileSize(wallpaper.fileSize) }}</span>
               </div>
               <div class="info-item">
                 <label>格式:</label>
-                <span>{{ wallpaper.format || 'JPG' }}</span>
+                <span class="detail-value">{{ wallpaper.format || 'JPG' }}</span>
               </div>
               <div class="info-item">
                 <label>分类:</label>
@@ -99,8 +110,8 @@
           </div>
 
           <div class="info-section" v-if="wallpaper.uploader">
-            <h3>上传者</h3>
-            <div class="uploader-info">
+            <h3>发布者</h3>
+            <div class="uploader-info card-nested">
               <el-avatar :src="wallpaper.uploader.avatar" :size="40">
                 {{ wallpaper.uploader.username?.[0] }}
               </el-avatar>
@@ -164,7 +175,7 @@ import {
   Calendar 
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getWallpaper, likeWallpaper, favoriteWallpaper, getWallpapers } from '@/api/wallpaper'
+import { getWallpaper, likeWallpaper, favoriteWallpaper, getWallpapers } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -375,25 +386,50 @@ onMounted(() => {
   transform: scale(1.02);
 }
 
-.wallpaper-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
-  padding: 30px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.wallpaper-container:hover .wallpaper-overlay {
-  opacity: 1;
-}
-
-.overlay-actions {
+/* Action Area Styles */
+.action-area {
+  margin: 20px 0;
   display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-gradient-orange {
+  width: 100%;
+  height: 48px !important;
+  font-size: 16px !important;
+}
+
+.secondary-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.secondary-actions .el-button {
+  flex: 1;
+}
+
+/* Typography Overrides */
+.wallpaper-title {
+  color: var(--app-text-header);
+}
+
+.detail-value {
+  color: var(--app-text-sub);
+  font-family: monospace; /* For numbers/data */
+}
+
+/* Nested Card for Publisher */
+.card-nested {
+  background-color: var(--app-bg-nested-card);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+}
+
+.uploader-info.card-nested {
+  /* Ensure overrides are applied */
+  background-color: var(--app-bg-nested-card);
 }
 
 .wallpaper-info {

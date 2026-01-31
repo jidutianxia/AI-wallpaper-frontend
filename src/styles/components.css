@@ -49,11 +49,34 @@
 
 /* Glassmorphism & Pills */
 .glass {
-  background: rgba(30,41,59,.6); /* Keep semi-transparent for glass effect, maybe map to a var if we want theme specific glass */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--app-bg-card);
+  backdrop-filter: var(--app-backdrop-blur);
+  -webkit-backdrop-filter: var(--app-backdrop-blur);
   border: 1px solid var(--app-border);
   box-shadow: var(--app-shadow-card);
+}
+
+.avatar-glow {
+  position: relative;
+  z-index: 1;
+}
+.avatar-glow::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 110%;
+  height: 110%;
+  border-radius: 50%;
+  background: var(--app-color-primary);
+  opacity: 0.4;
+  filter: blur(12px);
+  z-index: -1;
+  pointer-events: none;
+}
+:root.dark .avatar-glow::before {
+  opacity: 0.6; /* Stronger glow in dark mode */
 }
 
 .glow {

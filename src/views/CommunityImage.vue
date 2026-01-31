@@ -103,7 +103,7 @@
         </div>
       </div>
 
-      <el-dialog v-model="preview" :show-close="false" :close-on-click-modal="true" class="preview-dialog" width="90%">
+      <el-dialog v-model="previewVisible" :show-close="false" :close-on-click-modal="true" class="preview-dialog" width="90%">
         <img :src="imageUrl" class="preview-image" @load="onImageLoad" />
       </el-dialog>
       
@@ -141,7 +141,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Download, ArrowLeftBold, Star, StarFilled, Calendar, ArrowRight } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostImageMeta, likeCommunityPostImage, favoriteCommunityPostImage, downloadCommunityPostImage, getCommunityPostComments, commentCommunityPost, submitWallpaperFromPost, getCategories } from '@/api/wallpaper'
+import { getCommunityPost, getCommunityPostImageMeta, likeCommunityPostImage, favoriteCommunityPostImage, downloadCommunityPostImage, getCommunityPostComments, commentCommunityPost, submitWallpaperFromPost, getCategories } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
 import { useUserStore } from '@/store/user'
 
@@ -155,6 +155,8 @@ const imageMeta = ref({ width: 0, height: 0, fileSize: null, format: '', views: 
 const comments = ref([])
 const loadingComments = ref(true)
 const newComment = ref('')
+const previewVisible = ref(false)
+const onImageLoad = () => {}
 
 // Submission modal state
 const submitDialogVisible = ref(false)
@@ -327,7 +329,7 @@ const submitComment = async () => {
   position: sticky;
   top: 20px;
 }
-.dark .side-info { background: #1f2937; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #374151; }
+.dark .side-info { background: #06162c; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #374151; }
 
 .info-header { margin-bottom: 24px; border-bottom: 1px solid #f0f0f0; padding-bottom: 20px; }
 .dark .info-header { border-bottom-color: #374151; }

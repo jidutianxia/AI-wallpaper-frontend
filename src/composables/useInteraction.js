@@ -7,7 +7,7 @@ import {
   favoriteCommunityPost,
   likeCommunityPostImage,
   favoriteCommunityPostImage
-} from '@/api/wallpaper'
+} from '@/api'
 import { useUserStore } from '@/store/user'
 
 /**

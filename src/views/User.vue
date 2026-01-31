@@ -93,6 +93,8 @@
             :key="p.id" 
             :title="p.title" 
             :cover="p.images?.[0]" 
+            :images="p.images || []"
+            :image-count="p.images?.length || 0"
             :subtitle="p.author?.username || ''" 
             :to="`/community/post/${p.id}`" 
             :likes="p.likes"
@@ -111,6 +113,8 @@
             :key="p.id" 
             :title="p.title" 
             :cover="p.images?.[0] || p.cover" 
+            :images="p.images || (p.cover ? [p.cover] : [])"
+            :image-count="p.images?.length || (p.cover ? 1 : 0)"
             :subtitle="p.author?.username || ''" 
             :to="`/community/post/${p.id}`" 
             :likes="p.likes" 
@@ -275,9 +279,9 @@ import {
   getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, 
   getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites,
   getMyCommunityPosts, deleteCommunityPost, updateCommunityPost 
-} from '@/api/wallpaper'
+} from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
-import request from '@/api/wallpaper'
+import request from '@/api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -861,14 +865,7 @@ onMounted(async () => {
   background: var(--app-bg-card);
 }
 
-/* Dialog Dark Mode */
-:deep(.el-dialog) { background: var(--app-bg-card); }
-:deep(.el-dialog__title) { color: var(--app-text-main); }
-:deep(.el-dialog__body) { color: var(--app-text-main); }
-:deep(.el-input__wrapper) { background: var(--app-bg-base); box-shadow: 0 0 0 1px var(--app-border) inset; }
-:deep(.el-input__inner) { color: var(--app-text-main); }
-:deep(.el-textarea__inner) { background: var(--app-bg-base); box-shadow: 0 0 0 1px var(--app-border) inset; color: var(--app-text-main); }
-:deep(.el-form-item__label) { color: var(--app-text-main); }
+/* Dialog Dark Mode - Handled globally by element-bridge.css */
 
 /* Post Card Styles */
 .posts-list {

@@ -318,6 +318,11 @@ const heroStyle = computed(() => ({
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .hero-center {
+    padding: 0 1rem;
+    min-height: 40vh; /* Increase height for better spacing on mobile */
+  }
+
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
@@ -325,12 +330,36 @@ const heroStyle = computed(() => ({
   }
   
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2rem; /* Smaller title on mobile */
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+    padding: 0 1rem; /* Prevent text touching edges */
+  }
+
+  .hero-search {
+    width: 100%;
+    padding: 0 0.5rem; /* Add side padding */
   }
   
+  .hero-search-input :deep(.el-input__wrapper) {
+    padding: 10px 16px; /* Slightly smaller input on mobile */
+  }
+
   .hero-buttons {
     justify-content: center;
     gap: 12px;
+    flex-direction: column; /* Stack buttons */
+    width: 100%;
+    max-width: 280px; /* Limit width */
+    margin-top: 1rem;
+  }
+
+  .hero-btn, .hero-btn-outline {
+    width: 100%;
+    justify-content: center;
   }
   
   .section-header {

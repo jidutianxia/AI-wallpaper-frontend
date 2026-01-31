@@ -2,7 +2,12 @@
   <div class="compose">
     <div class="container">
       <el-card class="composer">
-        <h2 class="title">发布分享</h2>
+        <div class="composer-header">
+          <el-button circle text @click="goBack">
+            <el-icon><ArrowLeft /></el-icon>
+          </el-button>
+          <h2 class="title">发布分享</h2>
+        </div>
         <el-form :model="form" label-width="80px">
           <el-form-item label="标题">
             <el-input v-model="form.title" maxlength="80" show-word-limit placeholder="请输入标题" />
@@ -57,7 +62,11 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
-import { uploadCommunityImage, createCommunityPost, getCategories } from '@/api/wallpaper'
+import { uploadCommunityImage, createCommunityPost, getCategories } from '@/api'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const goBack = () => router.push('/community')
 
 const form = ref({ title: '', content: '', tags: [], images: [] })
 const fileList = ref([]) // Manually manage file list for custom rendering
@@ -163,8 +172,23 @@ const reset = () => {
 <style scoped>
 .compose { padding: 2rem 0; }
 .container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
-.composer { padding: 1rem; }
-.title { margin-bottom: 1rem; }
+.composer { 
+  padding: 1rem; 
+  background-color: var(--app-bg-card); 
+  border-color: var(--app-border);
+  color: var(--app-text-main);
+  --el-card-bg-color: var(--app-bg-card);
+}
+.composer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--app-border);
+  padding-bottom: 16px;
+}
+.title { margin: 0; font-size: 1.5rem; font-weight: 600; color: var(--app-text-main); }
+
 .upload { margin-top: 0.5rem; }
 .actions { display: flex; gap: 12px; justify-content: flex-end; }
 .custom-file-preview {
@@ -209,6 +233,4 @@ const reset = () => {
   overflow: visible !important; 
   margin-bottom: 80px !important; /* Reserve space for form */
 }
-.dark :deep(.el-card.composer) { background:#1f2937; border-color:#374151; color:#e5e7eb; }
-.dark .title { color:#e5e7eb; }
 </style>

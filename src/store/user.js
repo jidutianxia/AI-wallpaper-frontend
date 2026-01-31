@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import request from '@/api/wallpaper'
+import request from '@/api'
 
 export const useUserStore = defineStore('user', {
   state: () => ({

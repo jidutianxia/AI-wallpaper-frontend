@@ -94,7 +94,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, getFollowState, followUser, unfollowUser, getFollowersCount } from '@/api/wallpaper'
+import { getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, getFollowState, followUser, unfollowUser, getFollowersCount } from '@/api'
 import { useUserStore } from '@/store/user'
 
 const route = useRoute()

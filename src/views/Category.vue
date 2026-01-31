@@ -75,7 +75,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Star, Download } from '@element-plus/icons-vue'
 import UnifiedCard from '@/components/UnifiedCard.vue'
-import { getWallpapers, getCategories, likeWallpaper } from '@/api/wallpaper'
+import { getWallpapers, getCategories, likeWallpaper } from '@/api'
 import { useUserStore } from '@/store/user'
 
 const route = useRoute()
@@ -354,14 +354,13 @@ const toCard = (w) => ({
   box-shadow: var(--app-shadow-card);
   border: 1px solid var(--app-border);
 }
+
+/* Shape overrides only - Colors handled by element-bridge.css */
 .filters :deep(.el-input__wrapper),
 .filters :deep(.el-select__wrapper) { 
-  background: var(--app-bg-card) !important; 
-  box-shadow: 0 0 0 1px var(--app-border) inset !important;
   border-radius: 999px;
 }
-.filters :deep(.el-input__inner) { color: var(--app-text-main) !important; }
-.filters :deep(.el-checkbox) { color: var(--app-text-main); }
+
 
 
 .wallpaper-grid {

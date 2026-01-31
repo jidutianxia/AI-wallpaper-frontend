@@ -82,7 +82,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getWallpapers, getCategories } from '@/api/wallpaper'
+import { getWallpapers, getCategories } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 
 const route = useRoute()

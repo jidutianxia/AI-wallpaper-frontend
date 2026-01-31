@@ -25,7 +25,12 @@
             </div>
             <div class="stats-grid">
               <div class="stat-item"><el-icon class="stat-icon"><EditPen /></el-icon><div class="stat-val">{{ isAuthenticated ? myStat.posts : 0 }}</div><div class="stat-label">发布</div></div>
-              <div class="stat-item"><span class="stat-icon"><svg viewBox="0 0 24 24" class="thumb-svg" aria-hidden="true"><path d="M2 21h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H2v11zM22 9h-6.31l.95-4.57A2 2 0 0 0 14.69 2L9 8v11h9a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z" fill="currentColor"/></svg></span><div class="stat-val">{{ isAuthenticated ? myStat.likes : 0 }}</div><div class="stat-label">获赞</div></div>
+              <div class="stat-item">
+                <el-icon class="stat-icon">
+                  <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><path fill="currentColor" d="M699.6 148.8c-76.8 0-146.4 40.8-187.6 102.4C470.4 189.6 401.2 148.8 324 148.8 194.8 148.8 90 253.6 90 382.8c0 178 184.4 330 384.4 468.4 12.8 8.8 29.2 8.8 42 0C739.2 702.4 934 544.4 934 382.8c-0.4-129.2-105.2-234-234.4-234z m0-64c164.4 0 298.4 133.6 298.4 298 0 205.6-224.4 394-472.4 559.6-9.2 6-21.2 6-30.4 0C247.2 776.8 26 588.4 26 382.8 26 218.4 160 84.8 324.4 84.8c92 0 174.4 42 228.4 107.2 54-65.2 136.4-107.2 228.4-107.2z" transform="scale(0.9) translate(50,50)"/></svg>
+                </el-icon>
+                <div class="stat-val">{{ isAuthenticated ? myStat.likes : 0 }}</div><div class="stat-label">获赞</div>
+              </div>
               <div class="stat-item"><el-icon class="stat-icon"><ChatLineSquare /></el-icon><div class="stat-val">{{ isAuthenticated ? myStat.comments : 0 }}</div><div class="stat-label">评论</div></div>
             </div>
           </el-card>
@@ -59,7 +64,7 @@
                     <svg v-if="p.liked" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M923 283.6a260.04 260.04 0 0 0-56.9-82.8 264.4 264.4 0 0 0-84-55.5A260 260 0 0 0 679.7 125c-49.3 0-97.4 13.5-139.2 39-10 6.1-19.5 12.8-28.5 20.1-9-7.3-18.5-14-28.5-20.1-41.8-25.5-89.9-39-139.2-39-35.5 0-69.9 6.8-102.4 20.3-31.4 13-59.7 31.7-84 55.5a258.44 258.44 0 0 0-56.9 82.8c-13.9 32.3-21 66.6-21 101.9 0 33.3 6.8 68 20.3 103.3 11.3 29.5 27.5 60.1 48.2 91 32.8 48.9 77.9 99.9 133.9 151.6 92.8 85.7 184.7 144.9 188.6 147.3l23.7 15.2c10.5 6.7 24 6.7 34.5 0l23.7-15.2c3.9-2.5 95.7-61.6 188.6-147.3 56-51.7 101.1-102.7 133.9-151.6 20.7-30.9 37-61.5 48.2-91 13.5-35.3 20.3-70 20.3-103.3.1-35.3-7-69.6-20.9-101.9z"/></svg>
                     <svg v-else viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M699.6 148.8c-76.8 0-146.4 40.8-187.6 102.4C470.4 189.6 401.2 148.8 324 148.8 194.8 148.8 90 253.6 90 382.8c0 178 184.4 330 384.4 468.4 12.8 8.8 29.2 8.8 42 0C739.2 702.4 934 544.4 934 382.8c-0.4-129.2-105.2-234-234.4-234z m0-64c164.4 0 298.4 133.6 298.4 298 0 205.6-224.4 394-472.4 559.6-9.2 6-21.2 6-30.4 0C247.2 776.8 26 588.4 26 382.8 26 218.4 160 84.8 324.4 84.8c92 0 174.4 42 228.4 107.2 54-65.2 136.4-107.2 228.4-107.2z" transform="scale(0.9) translate(50,50)"/></svg>
                   </el-icon>
-                  <span class="count">{{ p.likes ?? 0 }}</span>
+                  <span class="count">{{ p.likes }}</span>
                 </el-button>
                 <el-button link size="small" :class="{ 'favorited': p.favorited }" @click="toggleFavorite(p)">
                   <el-icon :size="20" class="action-icon">
@@ -79,7 +84,7 @@
               </div>
               <div v-if="p.showComment" class="comments">
                 <CommentItem v-for="(c,i) in (p.comments||[])" :key="i" :comment="c" />
-                <div class="comment-editor"><el-input v-model="p.newComment" placeholder="写下评论" /><el-button size="small" type="primary" @click="addComment(p)">发布</el-button></div>
+                <div class="comment-editor"><el-input v-model="p.newComment" placeholder="写下评论" /><el-button size="small" type="primary" @click="addComment(p)">发送</el-button></div>
               </div>
             </el-card>
           </div></transition>
@@ -100,7 +105,8 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments } from '@/api/wallpaper'
+import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments } from '@/api'
+import { getCommunityPost } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
 
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
@@ -332,7 +338,7 @@ const goProfile = (uid) => {
 const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 
 watch(() => userStore.info?.id, async () => { await loadPosts(); })
-import { getCommunityPost } from '@/api/wallpaper'
+
 const refreshPost = async (id) => {
   try {
     const fresh = await getCommunityPost(id)
@@ -475,7 +481,7 @@ const refreshPost = async (id) => {
 .content { margin-bottom: 12px; color: var(--app-text-main); line-height: 1.6; cursor: pointer; opacity: 0.9; }
 
 .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.image { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; cursor: zoom-in; transition: transform 0.2s; }
+.image { width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; cursor: zoom-in; transition: transform 0.2s; }
 .image:hover { transform: scale(1.02); }
 
 .post-actions { display: flex; gap: 16px; border-top: 1px solid var(--app-border); padding-top: 12px; }
@@ -484,6 +490,25 @@ const refreshPost = async (id) => {
 .post-actions .el-button.liked { color: #f56c6c; }
 .post-actions .el-button.favorited { color: #e6a23c; }
 .action-icon { vertical-align: middle; margin-right: 4px; }
+
+.comments { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--app-border); }
+.comment-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.inline-comment-input { flex: 1; }
+.inline-comment-input :deep(.el-input__wrapper) {
+  border-radius: 999px;
+  background: var(--app-bg-base) !important;
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+  padding: 8px 16px;
+}
+.inline-comment-input :deep(.el-input__inner) { color: var(--app-text-main); height: 24px; }
+.send-btn { border-radius: 999px; padding: 8px 24px; height: 40px; }
+
+.pagination { margin-top: 3rem; display: flex; justify-content: center; }
 
 /* Right Sidebar */
 .right { display: flex; flex-direction: column; gap: 16px; }
@@ -537,7 +562,41 @@ const refreshPost = async (id) => {
 
 @media (max-width: 900px) {
   .grid { grid-template-columns: 1fr; }
-  .images { grid-template-columns: repeat(2, 1fr); }
+  .images { grid-template-columns: repeat(3, 1fr); }
   .left, .right { display: none; }
+}
+
+@media (max-width: 600px) {
+  .community { padding: 0.5rem 0; }
+  .container { padding: 0 8px; }
+  
+  .post { border-radius: 8px; }
+  .post :deep(.el-card__body) { padding: 12px !important; }
+  
+  .post-header { margin-bottom: 8px; }
+  .author .avatar { width: 28px; height: 28px; }
+  .author .name { font-size: 0.9rem; }
+  .title { font-size: 1rem; margin-bottom: 6px; }
+  .content { font-size: 0.9rem; margin-bottom: 8px; }
+  
+  .images { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  /* Single image spans full width */
+  .image:first-child:nth-last-child(1) {
+    grid-column: 1 / -1;
+    aspect-ratio: 16/9;
+  }
+  
+  .post-actions { gap: 4px; padding-top: 8px; justify-content: space-between; }
+  .post-actions .el-button { padding: 0 6px; height: 28px; font-size: 12px; }
+  .post-actions .action-icon { margin-right: 2px; font-size: 16px !important; }
+  
+  .pagination { margin-top: 2rem; }
+  .pagination :deep(.el-pagination) { 
+    --el-pagination-button-width: 28px;
+    --el-pagination-button-height: 28px;
+    --el-pagination-font-size: 12px;
+  }
+  .pagination :deep(.btn-prev), .pagination :deep(.btn-next) { margin: 0 2px; }
+  .pagination :deep(.el-pager li) { margin: 0 2px; }
 }
 </style>

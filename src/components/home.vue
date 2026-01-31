@@ -15,7 +15,7 @@ import { ref, onMounted } from 'vue'
 import MasonryList from '@/components/MasonryList.vue'
 import WallpaperCard from '@/components/WallpaperCard.vue'
 import PreviewModal from '@/components/PreviewModal.vue'
-import { getWallpapers } from '@/api/wallpaper'
+import { getWallpapers } from '@/api'
 
 const wallpapers = ref([])
 const page = ref(1)
