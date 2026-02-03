@@ -65,3 +65,29 @@ export const downloadFile = (url, filename) => {
   link.click()
   document.body.removeChild(link)
 }
+
+// 格式化作者名称
+export const formatAuthor = (userOrString) => {
+  if (!userOrString) return 'Unknown'
+  
+  // If it's already a simple string
+  if (typeof userOrString === 'string') {
+    // Try to parse if it looks like JSON
+    if (userOrString.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(userOrString)
+        return parsed.nickname || parsed.username || 'Unknown'
+      } catch (e) {
+        return userOrString
+      }
+    }
+    return userOrString
+  }
+  
+  // If it's an object
+  if (typeof userOrString === 'object') {
+    return userOrString.nickname || userOrString.username || 'Unknown'
+  }
+  
+  return 'Unknown'
+}

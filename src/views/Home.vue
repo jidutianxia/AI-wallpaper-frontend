@@ -3,7 +3,49 @@
     <!-- 精选作品 -->
     <section class="featured-section">
       <div class="container">
-        <div class="wallpapers-grid">
+        <!-- <div class="section-header"> -->
+          <!-- <h2 class="section-title">精选作品</h2>
+          <div class="section-tabs">
+             <el-button 
+               v-for="tab in tabs" 
+               :key="tab.key"
+               :type="activeTab === tab.key ? 'primary' : 'default'"
+               :text="activeTab !== tab.key"
+               bg
+               @click="handleTabChange(tab.key)"
+             >
+               {{ tab.label }}
+             </el-button>
+          </div> -->
+        <!-- </div> -->
+
+        <!-- Error State -->
+        <div v-if="isError" class="error-state">
+          <el-empty description="加载失败，请重试">
+            <el-button type="primary" @click="fetchWallpapers">重试</el-button>
+          </el-empty>
+        </div>
+
+        <!-- Skeleton Loading -->
+        <div v-else-if="loading && page === 1" class="wallpapers-grid">
+          <div v-for="n in size" :key="n" class="skeleton-card">
+             <el-skeleton animated>
+               <template #template>
+                 <el-skeleton-item variant="image" style="width: 100%; height: 240px; border-radius: 12px;" />
+                 <div style="padding: 14px 0;">
+                   <el-skeleton-item variant="h3" style="width: 50%" />
+                   <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                     <el-skeleton-item variant="text" style="width: 30%" />
+                     <el-skeleton-item variant="text" style="width: 20%" />
+                   </div>
+                 </div>
+               </template>
+             </el-skeleton>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div v-else class="wallpapers-grid">
           <UnifiedCard
             v-for="wallpaper in featuredWallpapers"
             :key="wallpaper.id"
@@ -11,8 +53,16 @@
           />
         </div>
         
-        <div class="load-more">
-          <el-button size="large">查看更多作品</el-button>
+        <div class="load-more" v-if="hasMore && !isError && !loading">
+          <div ref="sentinel" class="scroll-sentinel">
+            <span v-if="!loading">下滑加载更多</span>
+          </div>
+        </div>
+        <div class="load-more" v-else-if="loading && page > 1">
+          <el-button loading text>加载中...</el-button>
+        </div>
+        <div class="load-more" v-else-if="!hasMore && !isError && featuredWallpapers.length > 0">
+          <span class="no-more">没有更多了</span>
         </div>
       </div>
     </section>
@@ -22,15 +72,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Star, Download, Picture, Camera, Brush, Monitor, Phone } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import { getWallpapers } from '@/api/wallpaper'
+import { formatAuthor } from '@/utils'
 
 const router = useRouter()
 
 // 响应式数据
 const activeTab = ref('latest')
+const loading = ref(false)
+const isError = ref(false)
+const hasMore = ref(true)
+const page = ref(1)
+const size = ref(9)
+const sentinel = ref(null)
+let observer = null
+
 const categories = ref([
   { id: 1, name: '手绘设计', icon: Brush },
   { id: 2, name: 'UI/UX', icon: Monitor },
@@ -46,72 +107,67 @@ const tabs = ref([
   { key: 'featured', label: '精选' }
 ])
 
-const featuredWallpapers = ref([
-  {
-    id: 1,
-    title: '极简主义思维导图',
-    author: '设计师A',
-    thumbUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=400&fit=crop&crop=center',
-    likes: 1245,
-    downloads: 567
-  },
-  {
-    id: 2,
-    title: '未来科技UI界面',
-    author: '创作者B',
-    thumbUrl: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=300&h=400&fit=crop&crop=center',
-    likes: 2156,
-    downloads: 1023
-  },
-  {
-    id: 3,
-    title: '自然风光摄影',
-    author: '摄影师C',
-    thumbUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop&crop=center',
-    likes: 3421,
-    downloads: 1876
-  },
-  {
-    id: 4,
-    title: '抽象艺术插画',
-    author: '艺术家D',
-    thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=400&fit=crop&crop=center',
-    likes: 987,
-    downloads: 432
-  },
-  {
-    id: 5,
-    title: '环保包装设计',
-    author: '设计团队',
-    thumbUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=400&fit=crop&crop=center',
-    likes: 1567,
-    downloads: 789
-  },
-  {
-    id: 6,
-    title: '现代建筑摄影',
-    author: '建筑师E',
-    thumbUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&h=400&fit=crop&crop=center',
-    likes: 2234,
-    downloads: 1345
-  },
-  {
-    id: 7,
-    title: '时尚品牌视觉',
-    author: '品牌设计师',
-    thumbUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=400&fit=crop&crop=center',
-    likes: 1876,
-    downloads: 923
-  },
-  {
-    id: 8,
-    title: '游戏角色艺术',
-    author: '游戏美术',
-    thumbUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300&h=400&fit=crop&crop=center',
-    likes: 3456,
-    downloads: 2134
+const featuredWallpapers = ref([])
+
+// 获取壁纸列表
+const fetchWallpapers = async (append = false) => {
+  if (loading.value) return
+  loading.value = true
+  isError.value = false
+  
+  try {
+    const sortMap = {
+      'latest': 'latest',
+      'popular': 'hot',
+      'featured': 'download'
+    }
+    const params = {
+      page: page.value,
+      size: size.value,
+      sort: sortMap[activeTab.value] || 'latest'
+    }
+    
+    const res = await getWallpapers(params)
+    const items = res.items || []
+    
+    if (append) {
+      featuredWallpapers.value.push(...items)
+    } else {
+      featuredWallpapers.value = items
+    }
+    
+    // Check if we have more pages
+    const total = res.total || 0
+    hasMore.value = featuredWallpapers.value.length < total
+  } catch (error) {
+    console.error('Failed to fetch wallpapers:', error)
+    if (!append) isError.value = true
+    ElMessage.error('获取壁纸失败，请稍后重试')
+  } finally {
+    loading.value = false
+    // Re-observe if needed
+    if (hasMore.value && !isError.value && sentinel.value && observer) {
+       // Small delay to ensure DOM updated
+       setTimeout(() => {
+         observer.unobserve(sentinel.value)
+         observer.observe(sentinel.value)
+       }, 100)
+    }
   }
-])
+}
+
+// 切换标签
+const handleTabChange = (tab) => {
+  activeTab.value = tab
+  page.value = 1
+  fetchWallpapers()
+}
+
+// 加载更多
+const loadMore = () => {
+  page.value++
+  fetchWallpapers(true)
+}
 
 // 方法
 const goToCategory = (categoryId) => {
@@ -123,18 +179,34 @@ const goToDetail = (wallpaperId) => {
 }
 
 onMounted(() => {
-  // 初始化数据加载
+  fetchWallpapers()
+  
+  // Setup Intersection Observer
+  observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && hasMore.value && !loading.value && !isError.value) {
+      loadMore()
+    }
+  }, { rootMargin: '200px' })
+  
+  // We need to wait for DOM update to observe sentinel
+  setTimeout(() => {
+    if (sentinel.value) observer.observe(sentinel.value)
+  }, 500)
+})
+
+onUnmounted(() => {
+  if (observer) observer.disconnect()
 })
 
 // 首页 Hero 背景
 const mapCard = (w) => ({
   id: w.id,
   title: w.title,
-  thumb: w.thumbUrl,
-  url: w.url || w.thumbUrl,
+  thumb: w.thumbUrl || w.url,
+  url: w.url,
   resolution: w.resolution,
   likes: w.likes,
-  author: w.author
+  author: formatAuthor(w.uploader || w.author)
 })
 
 const heroUrl = ref('https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1920&q=80&auto=format&fit=crop')
@@ -298,17 +370,27 @@ const heroStyle = computed(() => ({
 
 .wallpapers-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
 }
 @media (max-width: 48em) {
-  .wallpapers-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding: 0 0.75rem; }
+  .wallpapers-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0 0.5rem; }
 }
 @media (min-width: 48em) and (max-width: 64em) {
-  .wallpapers-grid { grid-template-columns: repeat(3, 1fr); }
+  .wallpapers-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 64em) {
-  .wallpapers-grid { grid-template-columns: repeat(4, 1fr); }
+  .wallpapers-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.error-state {
+  padding: 4rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.skeleton-card {
+  height: 320px;
 }
 
 

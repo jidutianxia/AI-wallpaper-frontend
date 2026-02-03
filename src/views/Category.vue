@@ -57,9 +57,17 @@
       />
     </div>
     
-    <!-- 无限滚动加载更多 -->
-    <div v-if="hasMore && !loading" class="load-more">
-      <el-button @click="loadMore" :loading="loadingMore">加载更多</el-button>
+    <!-- 分页 -->
+    <div class="pagination" v-if="wallpapers.length > 0">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-size="6"
+        layout="prev, pager, next"
+        @current-change="handleCurrentChange"
+        hide-on-single-page
+      />
     </div>
     
     <!-- 无结果提示 -->
@@ -77,6 +85,7 @@ import { View, Star, Download } from '@element-plus/icons-vue'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import { getWallpapers, getCategories, likeWallpaper } from '@/api'
 import { useUserStore } from '@/store/user'
+import { formatAuthor } from '@/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -84,12 +93,12 @@ const userStore = useUserStore()
 
 // 响应式数据
 const loading = ref(false)
-const loadingMore = ref(false)
 const wallpapers = ref([])
 const categories = ref([])
 const currentCategoryId = ref(null)
 const currentPage = ref(1)
-const hasMore = ref(true)
+const pageSize = ref(6)
+const total = ref(0)
 
 // 热门标签
 const popularTags = ref(['自然', '城市', '抽象', '动漫', '游戏', '科技'])
@@ -136,19 +145,14 @@ const fetchCategories = async () => {
 }
 
 // 获取壁纸列表
-const fetchWallpapers = async (append = false) => {
-  if (!append) {
-    loading.value = true
-    wallpapers.value = []
-    currentPage.value = 1
-  } else {
-    loadingMore.value = true
-  }
+const fetchWallpapers = async () => {
+  loading.value = true
+  wallpapers.value = []
   
   try {
     const params = {
       page: currentPage.value,
-      size: 12,
+      size: pageSize.value,
       category: currentCategoryId.value,
       ...filters
     }
@@ -159,15 +163,9 @@ const fetchWallpapers = async (append = false) => {
     }
     
     const response = await getWallpapers(params)
-    const newWallpapers = response.items || []
+    wallpapers.value = response.items || []
+    total.value = response.total || 0
     
-    if (append) {
-      wallpapers.value.push(...newWallpapers)
-    } else {
-      wallpapers.value = newWallpapers
-    }
-    
-    hasMore.value = newWallpapers.length === 12
   } catch (error) {
     ElMessage.error('获取壁纸列表失败：' + (error.response?.data?.message || error.message))
     
@@ -199,34 +197,32 @@ const fetchWallpapers = async (append = false) => {
       }
     ]
     
-    if (append) {
-      wallpapers.value.push(...mockWallpapers)
-    } else {
-      wallpapers.value = mockWallpapers
-    }
-    hasMore.value = false
+    wallpapers.value = mockWallpapers
+    total.value = mockWallpapers.length
   } finally {
     loading.value = false
-    loadingMore.value = false
   }
 }
 
 // 选择分类
 const selectCategory = (categoryId) => {
   currentCategoryId.value = categoryId
+  currentPage.value = 1
   router.push({ path: `/category/${categoryId}`, query: route.query })
   fetchWallpapers()
 }
 
 // 筛选变化处理
 const handleFilterChange = () => {
+  currentPage.value = 1
   fetchWallpapers()
 }
 
-// 加载更多
-const loadMore = () => {
-  currentPage.value++
-  fetchWallpapers(true)
+// 分页切换
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  fetchWallpapers()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // 查看详情
@@ -291,13 +287,13 @@ onMounted(() => {
 const toCard = (w) => ({
   id: w.id,
   title: w.title,
-  thumb: w.thumbUrl,
+  thumb: w.thumbUrl || w.url,
   url: w.url || w.thumbUrl,
   resolution: w.resolution,
   previewVideoUrl: w.previewVideoUrl,
   likes: w.likes,
   liked: w.liked,
-  author: w.author
+  author: formatAuthor(w.uploader || w.author)
 })
 </script>
 
@@ -365,8 +361,8 @@ const toCard = (w) => ({
 
 .wallpaper-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
   margin-bottom: 2rem;
 }
 

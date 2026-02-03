@@ -294,7 +294,7 @@ const fetchRelatedWallpapers = async () => {
   try {
     const response = await getWallpapers({
       category: wallpaper.value?.category,
-      limit: 6,
+      size: 6,
       exclude: wallpaper.value?.id
     })
     if (!isMounted.value) return

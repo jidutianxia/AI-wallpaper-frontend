@@ -6,17 +6,18 @@
     @mouseleave="stopSlideshow"
   >
     <div class="image-wrapper">
-      <img :src="currentImgSrc" :alt="displayTitle" @error="onError" :class="{ 'zoomed': isHovering && !hasMultipleImages }" />
+      <img 
+        :src="currentImgSrc" 
+        :alt="displayTitle" 
+        @error="onError" 
+        @load="onLoad"
+        :class="{ 'zoomed': isHovering && !hasMultipleImages, 'loaded': isLoaded }" 
+        loading="lazy" 
+      />
       <!-- 多图标识 -->
       <div v-if="hasMultipleImages" class="multi-badge">
         <svg viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
         <span>{{ imageCount }}</span>
-      </div>
-      <!-- Like Action (Hover) -->
-      <div class="like-overlay" @click.stop="toggleLike">
-        <div class="like-btn" :class="{ active: isLiked }">
-          <svg viewBox="0 0 24 24" class="heart-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>
-        </div>
       </div>
     </div>
     
@@ -29,10 +30,6 @@
       <div class="info">
         <h3>{{ displayTitle }}</h3>
         <p v-if="displaySubtitle">{{ displaySubtitle }}</p>
-      </div>
-      <div class="actions" @click.stop v-if="!noActions">
-        <el-button size="small" @click="share"><svg viewBox="0 0 24 24" class="icon"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg>分享</el-button>
-        <el-button size="small" @click="copyLink">复制链接</el-button>
       </div>
     </div>
   </div>
@@ -76,6 +73,7 @@ const isFavorited = computed(() => props.favorited || cardData.value.favorited)
 const initialCover = computed(() => displayCover.value)
 const currentImgSrc = ref(initialCover.value)
 const isHovering = ref(false)
+const isLoaded = ref(false)
 const slideIndex = ref(0)
 let slideTimer = null
 
@@ -87,6 +85,8 @@ watch(initialCover, (val) => {
 })
 
 const onError = (e) => { e.target.src = placeholder }
+const onLoad = () => { isLoaded.value = true }
+
 const go = () => {
   const targetPath = displayTo.value;
   
@@ -127,23 +127,6 @@ const stopSlideshow = () => {
   }
   currentImgSrc.value = initialCover.value
 }
-
-const share = async () => {
-  const path = displayTo.value;
-  // 如果 path 是对象，转换会失败，这里做一层过滤
-  const validPath = (typeof path === 'string' && !path.includes('[object Object]')) ? path : '/';
-  const url = new URL(validPath, location.origin).toString();
-  // const url = props.to ? new URL(props.to, location.origin).toString() : location.href
-  try {
-    if (navigator.share) { await navigator.share({ title: props.title, url }) }
-    else if (navigator.clipboard) { await navigator.clipboard.writeText(url) }
-    else { const inp = document.createElement('input'); inp.value = url; document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp) }
-  } catch {}
-}
-const copyLink = async () => {
-  const url = props.to ? new URL(props.to, location.origin).toString() : location.href
-  try { await navigator.clipboard.writeText(url) } catch {}
-}
 </script>
 
 <style scoped>
@@ -176,16 +159,26 @@ const copyLink = async () => {
 
 .image-wrapper {
   width: 100%;
-  height: 200px;
+  height: 0;
+  padding-bottom: 66.66%; /* 3:2 Aspect Ratio */
   overflow: hidden;
   position: relative;
+  background-color: var(--app-bg-hover); /* Placeholder color */
 }
 
 .item-card img { 
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%; 
   height: 100%; 
   object-fit: cover; 
-  transition: transform 0.5s ease, filter 0.3s ease;
+  opacity: 0; /* Hidden by default for fade-in */
+  transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.3s ease, opacity 0.5s ease;
+}
+
+.item-card img.loaded {
+  opacity: 1;
 }
 
 /* Zoom effect on hover if single image */
@@ -227,34 +220,4 @@ const copyLink = async () => {
 .info { color: #fff; margin-bottom: 8px; }
 .info h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 .info p { margin: 0; font-size: 12px; opacity: .9; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-.actions { display: flex; gap: 8px; }
-
-/* Like Overlay Button */
-.like-overlay {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.item-card:hover .like-overlay { opacity: 1; }
-.like-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  transition: all 0.2s;
-}
-.like-btn:hover { transform: scale(1.1); }
-.like-btn.active { background: #fff; }
-.like-btn .heart-icon { width: 20px; height: 20px; color: #ccc; transition: color 0.2s; }
-.like-btn.active .heart-icon { color: #f56c6c; }
-:root.dark .like-btn { background: rgba(30, 30, 35, 0.8); }
-:root.dark .like-btn.active { background: rgba(30, 30, 35, 1); }
 </style>

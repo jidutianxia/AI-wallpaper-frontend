@@ -55,7 +55,6 @@
         :key="wallpaper.id"
         :data="toCard(wallpaper)"
       />
-      <div ref="sentinel" class="h-1"></div>
     </div>
     
     <!-- 分页 -->
@@ -63,11 +62,10 @@
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :page-sizes="[12, 24, 48]"
         :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
+        layout="prev, pager, next"
         @current-change="handleCurrentChange"
+        hide-on-single-page
       />
     </div>
     
@@ -84,6 +82,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getWallpapers, getCategories } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import { formatAuthor } from '@/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,8 +95,6 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(12)
 const tagCloud = ref([])
-const sentinel = ref(null)
-let io
 
 // 筛选器
 const filters = reactive({
@@ -107,8 +104,10 @@ const filters = reactive({
 })
 
 // 获取壁纸列表
-const fetchWallpapers = async (append = false) => {
-  loading.value = !append
+const fetchWallpapers = async () => {
+  loading.value = true
+  wallpapers.value = []
+  
   try {
     const params = {
       page: currentPage.value,
@@ -118,20 +117,16 @@ const fetchWallpapers = async (append = false) => {
     
     // 添加搜索关键词或标签
     if (route.query.q) {
-      params.keyword = route.query.q
+      params.q = route.query.q
     }
     if (route.query.tag) {
       params.tag = route.query.tag
     }
     
     const response = await getWallpapers(params)
-    const data = response.data || []
-    if (append) {
-      wallpapers.value.push(...data)
-    } else {
-      wallpapers.value = data
-    }
-    total.value = response.total || wallpapers.value.length
+    const data = response.items || []
+    wallpapers.value = data
+    total.value = response.total || 0
   } catch (error) {
     ElMessage.error('获取壁纸列表失败：' + (error.response?.data?.message || error.message))
     // 模拟数据
@@ -151,9 +146,8 @@ const fetchWallpapers = async (append = false) => {
         likes: 78
       }
     ]
-    if (append) wallpapers.value.push(...mock)
-    else wallpapers.value = mock
-    total.value = wallpapers.value.length
+    wallpapers.value = mock
+    total.value = mock.length
   } finally {
     loading.value = false
   }
@@ -205,15 +199,10 @@ const resetFilters = () => {
 }
 
 // 分页处理
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  currentPage.value = 1
-  fetchWallpapers()
-}
-
 const handleCurrentChange = (val) => {
   currentPage.value = val
-  fetchWallpapers(true)
+  fetchWallpapers()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // 查看详情
@@ -250,17 +239,6 @@ watch(() => route.query, () => {
 // 组件挂载
 onMounted(() => {
   fetchCategories()
-  if ('IntersectionObserver' in window) {
-    io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting && wallpapers.value.length < total.value) {
-          currentPage.value += 1
-          fetchWallpapers(true)
-        }
-      })
-    }, { rootMargin: '300px' })
-    setTimeout(() => { if (sentinel.value) io.observe(sentinel.value) }, 0)
-  }
 })
 
 const applyTag = (name) => {
@@ -270,12 +248,12 @@ const applyTag = (name) => {
 const toCard = (w) => ({
   id: w.id,
   title: w.title,
-  thumb: w.thumbUrl,
+  thumb: w.thumbUrl || w.url,
   url: w.url || w.thumbUrl,
   resolution: w.resolution,
   previewVideoUrl: w.previewVideoUrl,
   likes: w.likes,
-  author: w.author
+  author: formatAuthor(w.uploader || w.author)
 })
 </script>
 
@@ -316,8 +294,8 @@ const toCard = (w) => ({
 
 .wallpaper-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
   margin-bottom: 2rem;
 }
 
