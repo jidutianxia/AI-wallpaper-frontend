@@ -2,87 +2,103 @@
   <div class="profile">
     <div class="container" v-if="userId">
       <div class="header">
-        <img :src="avatarUrl" class="avatar" />
+        <el-avatar :size="80" :src="avatarUrl" class="avatar-lg">
+           {{ username?.charAt(0)?.toUpperCase() }}
+        </el-avatar>
         <div class="meta">
           <div class="name">{{ username }}</div>
           <div class="desc">公开分享</div>
         </div>
         <div class="follow-area" v-if="!isSelf">
-          <el-button type="primary" size="small" @click="toggleFollow">{{ isFollowing ? '已关注' : '关注' }}</el-button>
+          <el-button 
+            :type="isFollowing ? 'default' : 'primary'" 
+            round
+            @click="toggleFollow"
+          >
+            {{ isFollowing ? '已关注' : '关注' }}
+          </el-button>
           <span class="followers">粉丝 {{ followersCount }}</span>
         </div>
       </div>
 
       <el-tabs v-model="activeTab" class="profile-tabs">
         <el-tab-pane label="TA的帖子" name="posts">
-          <div class="posts" v-if="loadingProfile">
-            <el-card v-for="i in 3" :key="i" class="post"><el-skeleton animated :rows="3" /></el-card>
-          </div>
-          <div class="posts" v-else>
-            <el-card v-for="p in userPosts" :key="p.id" class="post">
-              <div class="post-head">
-                <h4 class="title" @click="goPost(p.id)">{{ p.title }}</h4>
-                <div class="meta-right">
-                  <span class="count">👍 {{ Number(p.likes || 0) }}</span>
-                  <span class="count">💬 {{ Number(p.commentsCount || 0) }}</span>
+          <div class="posts-list" v-loading="loadingProfile">
+            <div v-for="p in userPosts" :key="p.id" class="post-card">
+              <div class="post-header">
+                <div class="author">
+                  <el-avatar :size="32" :src="p.author?.avatarUrl || avatarUrl" class="avatar-sm">
+                    {{ (p.author?.username || username)?.charAt(0)?.toUpperCase() }}
+                  </el-avatar>
+                  <span class="name">{{ p.author?.username || username }}</span>
+                  <span class="time">{{ formatDate(p.createdAt) }}</span>
                 </div>
               </div>
-              <div class="tags">
-                <el-tag v-for="t in p.tags" :key="t" size="small">{{ t }}</el-tag>
+              <h4 class="post-title" @click="goPost(p.id)">{{ p.title }}</h4>
+              <p class="post-content" @click="goPost(p.id)">{{ p.content }}</p>
+              <div class="post-images" v-if="p.images && p.images.length">
+                <img 
+                  v-for="(img, idx) in p.images.slice(0, 4)" 
+                  :key="idx" 
+                  :src="img" 
+                  class="post-img" 
+                  @click.stop="goImage(p.id, idx)" 
+                />
               </div>
-              <p class="content">{{ p.content }}</p>
-              <div class="images">
-                <img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" />
+              <div class="post-footer">
+                <div class="tags-list">
+                  <span class="tag" v-for="t in p.tags" :key="t">#{{ t }}</span>
+                </div>
+                <div class="stats">
+                  <span><el-icon><Star /></el-icon> {{ p.likes || 0 }}</span>
+                  <span><el-icon><ChatLineSquare /></el-icon> {{ p.commentsCount || 0 }}</span>
+                </div>
               </div>
-            </el-card>
+            </div>
+            <div v-if="!loadingProfile && userPosts.length === 0" class="empty-state">
+              <el-empty description="TA还没有发布任何作品" />
+            </div>
           </div>
         </el-tab-pane>
+        
         <el-tab-pane label="点赞的帖子" name="likes">
-          <div class="posts" v-if="loadingLikes">
-            <el-card v-for="i in 2" :key="i" class="post"><el-skeleton animated :rows="3" /></el-card>
+          <div class="wallpaper-grid" v-loading="loadingLikes">
+            <UnifiedCard 
+              v-for="p in likedPosts" 
+              :key="p.id" 
+              :title="p.title" 
+              :cover="p.images?.[0]" 
+              :images="p.images || []"
+              :image-count="p.images?.length || 0"
+              :subtitle="p.author?.username || ''" 
+              :to="String(`/community/post/${p.id}`)" 
+              :likes="p.likes"
+              :no-actions="true"
+            />
           </div>
-          <div class="posts" v-else>
-            <el-card v-for="p in likedPosts" :key="p.id" class="post">
-              <div class="post-head">
-                <h4 class="title" @click="goPost(p.id)">{{ p.title }}</h4>
-                <div class="meta-right">
-                  <span class="count">👍 {{ Number(p.likes || 0) }}</span>
-                  <span class="count">💬 {{ Number(p.commentsCount || 0) }}</span>
-                </div>
-              </div>
-              <div class="tags">
-                <el-tag v-for="t in p.tags" :key="t" size="small">{{ t }}</el-tag>
-              </div>
-              <p class="content">{{ p.content }}</p>
-              <div class="images">
-                <img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" />
-              </div>
-            </el-card>
-            <div v-if="likedPosts.length === 0" class="empty">暂无点赞的帖子</div>
+          <div v-if="!loadingLikes && likedPosts.length === 0" class="empty-state">
+            <el-empty description="TA还没有点赞任何帖子" />
           </div>
         </el-tab-pane>
+        
         <el-tab-pane label="收藏的帖子" name="favorites">
-          <div class="posts" v-if="loadingFavorites">
-            <el-card v-for="i in 2" :key="i" class="post"><el-skeleton animated :rows="3" /></el-card>
+          <div class="wallpaper-grid" v-loading="loadingFavorites">
+            <UnifiedCard 
+              v-for="p in favoritePosts" 
+              :key="p.id" 
+              :title="p.title" 
+              :cover="p.images?.[0] || p.cover" 
+              :images="p.images || (p.cover ? [p.cover] : [])"
+              :image-count="p.images?.length || (p.cover ? 1 : 0)"
+              :subtitle="p.author?.username || ''" 
+              :to="String(`/community/post/${p.id}`)" 
+              :likes="p.likes" 
+              :favorites="p.favorites"
+              :no-actions="true"
+            />
           </div>
-          <div class="posts" v-else>
-            <el-card v-for="p in favoritePosts" :key="p.id" class="post">
-              <div class="post-head">
-                <h4 class="title" @click="goPost(p.id)">{{ p.title }}</h4>
-                <div class="meta-right">
-                  <span class="count">👍 {{ Number(p.likes || 0) }}</span>
-                  <span class="count">💬 {{ Number(p.commentsCount || 0) }}</span>
-                </div>
-              </div>
-              <div class="tags">
-                <el-tag v-for="t in p.tags" :key="t" size="small">{{ t }}</el-tag>
-              </div>
-              <p class="content">{{ p.content }}</p>
-              <div class="images">
-                <img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" />
-              </div>
-            </el-card>
-            <div v-if="favoritePosts.length === 0" class="empty">暂无收藏的帖子</div>
+          <div v-if="!loadingFavorites && favoritePosts.length === 0" class="empty-state">
+            <el-empty description="TA还没有收藏任何帖子" />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -91,11 +107,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, getFollowState, followUser, unfollowUser, getFollowersCount } from '@/api'
+import { Star, ChatLineSquare } from '@element-plus/icons-vue'
+import { getUserProfile, getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, followUser, unfollowUser } from '@/api'
 import { useUserStore } from '@/store/user'
+import UnifiedCard from '@/components/UnifiedCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -114,125 +132,346 @@ const isSelf = ref(false)
 const isFollowing = ref(false)
 const followersCount = ref(0)
 
+const isMounted = ref(true)
+onBeforeUnmount(() => {
+  isMounted.value = false
+})
+
+// Helper to normalize post images
+const normalizePost = (p) => {
+  if (p.images && Array.isArray(p.images)) {
+    p.images = p.images.map(img => {
+      if (typeof img === 'string') return img
+      return img?.url || img?.src || img?.path || ''
+    }).filter(Boolean)
+  }
+  if (p.cover && typeof p.cover === 'object') {
+     p.cover = p.cover.url || p.cover.src || p.cover.path || ''
+  }
+  return p
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('zh-CN')
+}
+
 onMounted(async () => {
   try {
     isSelf.value = userStore.info?.id && String(userStore.info.id) === String(userId)
-    const res = isSelf.value ? await getMyCommunityPosts({ page: 1, size: 20 }) : await getUserCommunityPosts(userId, { page: 1, size: 20 })
-    userPosts.value = res.items || []
-    const a = userPosts.value[0]?.author
-    if (a) {
-      username.value = a.nickname || a.username || '用户'
-      avatarUrl.value = a.avatarUrl || ''
-    } else if (isSelf.value) {
-      username.value = userStore.info?.nickname || userStore.info?.username || '我'
-      avatarUrl.value = userStore.info?.avatarUrl || ''
+    
+    // Fetch User Profile First
+    try {
+      if (!isSelf.value) {
+        const profile = await getUserProfile(userId)
+        if (!isMounted.value) return
+        username.value = profile.nickname || profile.username || '用户'
+        avatarUrl.value = profile.avatarUrl || ''
+        isFollowing.value = !!profile.isFollowing
+        // followersCount.value = profile.stats?.followers || 0
+      } else {
+        username.value = userStore.info?.nickname || userStore.info?.username || '我'
+        avatarUrl.value = userStore.info?.avatarUrl || ''
+      }
+    } catch (e) {
+      console.error('Failed to load profile', e)
     }
-    if (!isSelf.value) {
-      try {
-        const s = await getFollowState(userId)
-        isFollowing.value = !!(s?.isFollowing)
-      } catch {}
-      try {
-        const c = await getFollowersCount(userId)
-        followersCount.value = Number(c?.count || 0)
-      } catch {}
+
+    const res = isSelf.value ? await getMyCommunityPosts({ page: 1, size: 20 }) : await getUserCommunityPosts(userId, { page: 1, size: 20 })
+    if (!isMounted.value) return
+    const list = res.items || []
+    userPosts.value = list.map(normalizePost)
+    
+    if ((!username.value || username.value === '用户') && userPosts.value.length > 0) {
+      const a = userPosts.value[0]?.author
+      if (a) {
+        username.value = a.nickname || a.username || '用户'
+        avatarUrl.value = a.avatarUrl || ''
+      }
     }
   } catch (e) {
+    if (!isMounted.value) return
     ElMessage.error(e.response?.data?.message || '加载用户公开帖子失败')
-  } finally { loadingProfile.value = false }
+  } finally { if (isMounted.value) loadingProfile.value = false }
 
   try {
     // For Likes (Community Posts)
     const likes = isSelf.value 
       ? await getUserLikes({ page: 1, size: 20 }) 
       : await getOtherUserLikedPosts(userId, { page: 1, size: 20 })
-    likedPosts.value = likes.items || []
+    if (!isMounted.value) return
+    const list = likes.items || []
+    likedPosts.value = list.map(normalizePost)
   } catch {}
-  finally { loadingLikes.value = false }
+  finally { if (isMounted.value) loadingLikes.value = false }
 
   try {
     // For Favorites (Community Posts)
     const favs = isSelf.value 
       ? await getUserPostFavorites({ page: 1, size: 20 }) 
       : await getOtherUserPostFavorites(userId, { page: 1, size: 20 })
-    favoritePosts.value = favs.items || []
+    if (!isMounted.value) return
+    const list = favs.items || []
+    favoritePosts.value = list.map(normalizePost)
   } catch {}
-  finally { loadingFavorites.value = false }
+  finally { if (isMounted.value) loadingFavorites.value = false }
 })
 
 const goPost = (id) => router.push(`/community/post/${id}`)
 const goImage = (id, index) => router.push(`/community/post/${id}/image/${index}`)
 const toggleFollow = async () => {
   try {
-    if (isFollowing.value) { await unfollowUser(userId); isFollowing.value = false; followersCount.value = Math.max(0, followersCount.value - 1) }
-    else { await followUser(userId); isFollowing.value = true; followersCount.value = followersCount.value + 1 }
+    if (isFollowing.value) { 
+      await unfollowUser(userId)
+      if (!isMounted.value) return
+      isFollowing.value = false
+      followersCount.value = Math.max(0, followersCount.value - 1) 
+    } else { 
+      await followUser(userId)
+      if (!isMounted.value) return
+      isFollowing.value = true
+      followersCount.value = followersCount.value + 1 
+    }
   } catch {}
 }
 </script>
 
 <style scoped>
-.profile { padding: 2rem 0; }
-.container { max-width: 1000px; margin: 0 auto; padding: 0 2rem; }
-.header { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
-.avatar {
-  width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
-  border: 2px solid var(--app-border);
-  box-shadow: var(--app-shadow-card);
+.profile {
+  padding: 30px 0;
+  min-height: 80vh;
 }
-.name { font-size: 1.25rem; font-weight: 700; color: var(--app-text-main); }
-.desc { color: var(--app-text-secondary); font-size: 0.9rem; margin-top: 4px; }
-.meta { display: flex; flex-direction: column; justify-content: center; }
 
-.follow-area { margin-left: auto; display: inline-flex; align-items: center; gap: 12px; }
-.followers { font-size: 13px; color: var(--app-text-secondary); }
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 40px;
+  background: var(--app-bg-card);
+  padding: 30px;
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.avatar-lg {
+  border: 4px solid var(--app-bg-base);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.meta {
+  flex: 1;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--app-text-main);
+  margin-bottom: 8px;
+}
+
+.desc {
+  color: var(--app-text-secondary);
+  font-size: 14px;
+}
+
+.follow-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.followers {
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
 
 /* Tabs */
-.profile-tabs :deep(.el-tabs__item) { color: var(--app-text-secondary); }
-.profile-tabs :deep(.el-tabs__item.is-active) { color: var(--app-color-primary); }
-
-.posts { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.post {
-  border-radius: 12px;
-  /* Double gradient for border effect */
-  background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
-              linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box;
-  border: 1px solid transparent;
-  color: var(--app-text-main);
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.post:hover { transform: translateY(-2px); box-shadow: var(--app-shadow-hover); }
-
-.post-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.title { font-weight: 600; cursor: pointer; color: var(--app-text-main); margin: 0; }
-.title:hover { color: var(--app-color-primary); }
-
-.meta-right { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--app-text-secondary); }
-
-.count {
-  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
-  background: var(--app-accent-bg-soft);
-  color: var(--app-text-main);
-  font-size: 12px;
-}
-
-.tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-.post :deep(.el-tag) {
-  border-radius: 999px;
-  background: var(--app-accent-bg-soft);
-  border: 1px solid var(--app-accent-border);
+.profile-tabs :deep(.el-tabs__item) {
+  font-size: 16px;
   color: var(--app-text-secondary);
-  --el-tag-bg-color: var(--app-accent-bg-soft);
-  --el-tag-border-color: var(--app-accent-border);
-  --el-tag-text-color: var(--app-text-secondary);
+}
+.profile-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--app-color-primary);
+  font-weight: 600;
+}
+.profile-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: var(--app-border);
 }
 
-.content { margin-bottom: 12px; color: var(--app-text-main); line-height: 1.6; opacity: 0.9; }
+/* Grid Layout for UnifiedCard */
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 10px 0;
+}
 
-.images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
-.image { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; cursor: zoom-in; transition: transform 0.2s; }
-.image:hover { transform: scale(1.02); }
+/* Post List Styles */
+.posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-.empty { text-align: center; padding: 40px; color: var(--app-text-secondary); }
+.post-card {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 24px;
+  background: var(--app-bg-card);
+  transition: all 0.3s ease;
+}
 
-@media (max-width: 768px) { .images { grid-template-columns: repeat(2, 1fr); } }
+.post-card:hover {
+  box-shadow: var(--app-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.post-header {
+  margin-bottom: 16px;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-sm {
+  border: 1px solid var(--app-border);
+}
+
+.author .name {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.author .time {
+  font-size: 13px;
+  color: var(--app-text-secondary);
+  margin-left: auto;
+}
+
+.post-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--app-text-main);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.post-title:hover {
+  color: var(--app-color-primary);
+}
+
+.post-content {
+  color: var(--app-text-main);
+  font-size: 15px;
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.post-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.post-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+  border: 1px solid var(--app-border);
+}
+
+.post-img:hover {
+  transform: scale(1.02);
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--app-border);
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  color: var(--app-color-primary);
+  font-size: 13px;
+  background: var(--app-bg-base);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.stats {
+  display: flex;
+  gap: 20px;
+  color: var(--app-text-secondary);
+  font-size: 14px;
+}
+
+.stats span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state {
+  padding: 60px 0;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .follow-area {
+    align-items: center;
+    margin-top: 10px;
+  }
+  
+  .wallpaper-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .post-images {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .post-img {
+    height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallpaper-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

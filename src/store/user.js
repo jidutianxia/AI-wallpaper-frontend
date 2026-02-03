@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import request from '@/api'
+import { login, register, getMe } from '@/api/user'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -13,29 +13,25 @@ export const useUserStore = defineStore('user', {
   },
   
   actions: {
-    _extract(data) {
-      // 兼容 {result:{...}} / {data:{...}} / 直接对象
-      return data?.result ?? data?.data ?? data
-    },
-    _extractToken(data) {
-      const d = this._extract(data) || {}
-      // 兼容 token / access_token / Authorization("Bearer xxx")
-      let t = d.token || d.access_token || d.authToken
-      if (!t && typeof d.Authorization === 'string') {
-        t = d.Authorization.replace(/^Bearer\s+/i, '')
-      }
-      return t
-    },
     async login(payload) {
       try {
-        const r = await request.post('/auth/login', payload)
-        const data = this._extract(r.data)
-        const token = this._extractToken(r.data)
+        const data = await login(payload)
+        const token = data.token
         if (!token) throw new Error('登录响应缺少 token')
+        
         this.token = token
         localStorage.setItem('token', this.token)
+        
+        // Login response might contain userInfo, update it directly if available
+        if (data.userInfo) {
+          this.info = data.userInfo
+          this.isLoggedIn = true
+        }
+        
+        // Always fetch latest user info to ensure avatar and other details are up to date
+        // This solves the issue where avatar might be missing after re-login
         await this.fetchUser()
-        this.isLoggedIn = true
+        
         try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'login' } })) } catch {}
         return data
       } catch (error) {
@@ -45,8 +41,7 @@ export const useUserStore = defineStore('user', {
     
     async register(payload) {
       try {
-        const r = await request.post('/auth/register', payload)
-        return this._extract(r.data)
+        return await register(payload)
       } catch (error) {
         throw error
       }
@@ -54,12 +49,14 @@ export const useUserStore = defineStore('user', {
     
     async fetchUser() {
       try {
-        const r = await request.get('/auth/me')
-        const data = this._extract(r.data)
+        const data = await getMe()
         this.info = data
         this.isLoggedIn = true
       } catch (error) {
-        this.logout()
+        // If 401, the interceptor handles it, but we should also clean up
+        // However, getMe failure might be due to network, so don't auto-logout unless 401 (handled by interceptor event)
+        // But for safety, if we can't get user info, we are effectively not logged in fully
+        // Let's rely on the interceptor for 401 logout.
         throw error
       }
     },
@@ -80,13 +77,14 @@ export const useUserStore = defineStore('user', {
     
     async initAuth() {
       if (this.token) {
-        // 如果有 token，先标记为“已登录”（但 info 可能为空）
-        // 这可以防止路由守卫在 fetchUser 完成前就拦截
         this.isLoggedIn = true 
         try {
           await this.fetchUser()
         } catch (error) {
-          this.logout()
+           // If fetchUser fails (e.g. 401), interceptor will trigger auth-required
+           // If it's 401, we should clear token.
+           // Since we can't easily check status here without raw error object which might be wrapped.
+           // We rely on interceptor.
         }
       }
     }

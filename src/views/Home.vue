@@ -314,6 +314,13 @@ const heroStyle = computed(() => ({
 
 .load-more {
   text-align: center;
+  margin-top: 3rem; /* 增加与卡片的间距 */
+  margin-bottom: 2rem;
+}
+
+.no-more {
+  color: var(--app-text-secondary);
+  font-size: 0.9rem;
 }
 
 /* 响应式设计 */

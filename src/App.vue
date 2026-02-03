@@ -6,6 +6,7 @@ import { Search, Menu, Sunny, Moon, Top, Setting, Bell, User } from '@element-pl
 import { getUserReceivedComments, getUserReceivedLikes } from '@/api'
 import { useUserStore } from '@/store/user'
 import { useTheme } from '@/composables/useTheme'
+import { getAvatarUrl } from '@/utils/imageHelper'
 import { ClickOutside as vClickOutside } from 'element-plus'
 
 const router = useRouter()
@@ -246,7 +247,7 @@ watch(showNotifyDialog, async (open) => {
             <el-icon><Bell /></el-icon>
           </el-button>
           <router-link to="/user" class="nav-link">
-            <el-avatar :src="userStore.info?.avatarUrl" size="small" class="nav-avatar" />
+            <el-avatar :src="getAvatarUrl(userStore.info?.avatarUrl)" size="small" class="nav-avatar" />
             {{ userStore.info?.username }}
           </router-link>
           <el-button @click="handleLogout" size="small">退出</el-button>
@@ -594,6 +595,10 @@ watch(showNotifyDialog, async (open) => {
 }
 
 .nav-link {
+  display: inline-flex;  /* 变为弹性盒子 */
+  align-items: center;   /* 垂直居中核心属性 */
+  gap: 8px;              /* 在头像和文字之间加点间距，比 margin 更好用 */
+  
   text-decoration: none;
   color: #606266;
   font-weight: 500;

@@ -19,10 +19,12 @@ export const commentCommunityPost = (id, content) => request.post(`/community/po
 export const getCommunityPostImageMeta = (postId, index) => request.get(`/community/posts/${postId}/images/${index}`).then(unwrap)
 export const likeCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/like`).then(unwrap)
 export const favoriteCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/favorite`).then(unwrap)
-export const downloadCommunityPostImage = (postId, index) => request.post(`/community/posts/${postId}/images/${index}/download`).then(unwrap)
+export const downloadCommunityPostImage = (postId, index) => request.get(`/community/posts/${postId}/images/${index}/download`).then(unwrap)
 
 // General Community
+export const getCommunityTags = () => request.get('/community/tags').then(unwrap)
 export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(unwrap)
+export const getMyFavoriteCommunityImages = (params) => request.get('/community/my/favorite-images', { params }).then(unwrap) // Added v3.5 API
 export const uploadCommunityImage = (formData) => request.post('/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
-}).then(unwrap) // Assuming upload is shared or generic, placing here as it's used in compose
+}).then(unwrap)

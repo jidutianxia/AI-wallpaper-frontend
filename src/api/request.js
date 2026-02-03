@@ -21,7 +21,16 @@ request.interceptors.request.use(
 
 // 响应拦截器 - 处理错误
 request.interceptors.response.use(
-  response => response,
+  response => {
+    // Check business code
+    const res = response.data
+    if (res && res.code !== undefined && res.code !== 200) {
+      const msg = res.message || 'Error'
+      try { ElMessage.error(msg) } catch {}
+      return Promise.reject(new Error(msg))
+    }
+    return response
+  },
   error => {
     const status = error.response?.status
     if (status === 401) {
@@ -36,6 +45,6 @@ request.interceptors.response.use(
   }
 )
 
-export const unwrap = (r) => (r?.data?.data ?? r?.data?.result ?? r?.data)
+export const unwrap = (r) => (r?.data?.data ?? r?.data)
 
 export default request

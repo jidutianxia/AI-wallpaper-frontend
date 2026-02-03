@@ -6,11 +6,17 @@
     @mouseleave="stopSlideshow"
   >
     <div class="image-wrapper">
-      <img :src="currentImgSrc" :alt="title" @error="onError" :class="{ 'zoomed': isHovering && !hasMultipleImages }" />
+      <img :src="currentImgSrc" :alt="displayTitle" @error="onError" :class="{ 'zoomed': isHovering && !hasMultipleImages }" />
       <!-- 多图标识 -->
       <div v-if="hasMultipleImages" class="multi-badge">
         <svg viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
         <span>{{ imageCount }}</span>
+      </div>
+      <!-- Like Action (Hover) -->
+      <div class="like-overlay" @click.stop="toggleLike">
+        <div class="like-btn" :class="{ active: isLiked }">
+          <svg viewBox="0 0 24 24" class="heart-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/></svg>
+        </div>
       </div>
     </div>
     
@@ -21,8 +27,8 @@
 
     <div class="overlay">
       <div class="info">
-        <h3>{{ title }}</h3>
-        <p v-if="subtitle">{{ subtitle }}</p>
+        <h3>{{ displayTitle }}</h3>
+        <p v-if="displaySubtitle">{{ displaySubtitle }}</p>
       </div>
       <div class="actions" @click.stop v-if="!noActions">
         <el-button size="small" @click="share"><svg viewBox="0 0 24 24" class="icon"><path d="M2 12l20-8-8 9 8 9-20-8 7-2 0 0z" fill="currentColor"/></svg>分享</el-button>
@@ -45,13 +51,29 @@ const props = defineProps({
   favorites: [Number, String], 
   noActions: Boolean,
   images: { type: Array, default: () => [] },
-  imageCount: { type: Number, default: 0 }
+  imageCount: { type: Number, default: 0 },
+  liked: Boolean,
+  favorited: Boolean,
+  data: Object
 })
+
+const emit = defineEmits(['like', 'favorite'])
 
 const router = useRouter()
 const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmOGY5ZmEiLz48dGV4dCB4PSIxNTAiIHk9IjEwMCIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzkxOTI5NyI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'
 
-const initialCover = computed(() => props.cover || (props.images && props.images.length > 0 ? props.images[0] : placeholder))
+// Computed values to handle data prop override
+const cardData = computed(() => props.data || {})
+const displayTitle = computed(() => props.title || cardData.value.title)
+const displaySubtitle = computed(() => props.subtitle || cardData.value.subtitle || cardData.value.author)
+const displayCover = computed(() => props.cover || cardData.value.cover || cardData.value.thumb || cardData.value.url || (props.images && props.images.length > 0 ? props.images[0] : placeholder))
+const displayTo = computed(() => props.to || cardData.value.to || (cardData.value.id ? `/detail/${cardData.value.id}` : ''))
+const displayLikes = computed(() => props.likes ?? cardData.value.likes)
+const displayFavorites = computed(() => props.favorites ?? cardData.value.favorites)
+const isLiked = computed(() => props.liked || cardData.value.liked)
+const isFavorited = computed(() => props.favorited || cardData.value.favorited)
+
+const initialCover = computed(() => displayCover.value)
 const currentImgSrc = ref(initialCover.value)
 const isHovering = ref(false)
 const slideIndex = ref(0)
@@ -65,7 +87,16 @@ watch(initialCover, (val) => {
 })
 
 const onError = (e) => { e.target.src = placeholder }
-const go = () => { if (props.to) router.push(props.to) }
+const go = () => {
+  const targetPath = displayTo.value;
+  
+  if (targetPath && typeof targetPath === 'string' && !targetPath.includes('[object Object]')) {
+    router.push(targetPath);
+  } else {
+    console.error("无效的路由路径:", targetPath);
+  }
+  if (displayTo.value) router.push(displayTo.value) 
+}
 
 const likesNum = computed(() => typeof props.likes === 'number' || typeof props.likes === 'string' ? Number(props.likes) : null)
 const favoritesNum = computed(() => typeof props.favorites === 'number' || typeof props.favorites === 'string' ? Number(props.favorites) : null)
@@ -98,7 +129,11 @@ const stopSlideshow = () => {
 }
 
 const share = async () => {
-  const url = props.to ? new URL(props.to, location.origin).toString() : location.href
+  const path = displayTo.value;
+  // 如果 path 是对象，转换会失败，这里做一层过滤
+  const validPath = (typeof path === 'string' && !path.includes('[object Object]')) ? path : '/';
+  const url = new URL(validPath, location.origin).toString();
+  // const url = props.to ? new URL(props.to, location.origin).toString() : location.href
   try {
     if (navigator.share) { await navigator.share({ title: props.title, url }) }
     else if (navigator.clipboard) { await navigator.clipboard.writeText(url) }
@@ -193,4 +228,33 @@ const copyLink = async () => {
 .info h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 .info p { margin: 0; font-size: 12px; opacity: .9; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 .actions { display: flex; gap: 8px; }
+
+/* Like Overlay Button */
+.like-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.item-card:hover .like-overlay { opacity: 1; }
+.like-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s;
+}
+.like-btn:hover { transform: scale(1.1); }
+.like-btn.active { background: #fff; }
+.like-btn .heart-icon { width: 20px; height: 20px; color: #ccc; transition: color 0.2s; }
+.like-btn.active .heart-icon { color: #f56c6c; }
+:root.dark .like-btn { background: rgba(30, 30, 35, 0.8); }
+:root.dark .like-btn.active { background: rgba(30, 30, 35, 1); }
 </style>

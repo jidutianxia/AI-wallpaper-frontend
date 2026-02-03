@@ -159,7 +159,7 @@ const fetchWallpapers = async (append = false) => {
     }
     
     const response = await getWallpapers(params)
-    const newWallpapers = response.data || []
+    const newWallpapers = response.items || []
     
     if (append) {
       wallpapers.value.push(...newWallpapers)
@@ -296,7 +296,7 @@ const toCard = (w) => ({
   resolution: w.resolution,
   previewVideoUrl: w.previewVideoUrl,
   likes: w.likes,
-  liked: w.isLiked,
+  liked: w.liked,
   author: w.author
 })
 </script>

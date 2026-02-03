@@ -3,7 +3,7 @@
     <!-- 用户信息卡片 -->
     <div class="user-profile">
       <div class="profile-header">
-        <el-avatar :size="80" :src="userStore.info?.avatarUrl">
+        <el-avatar :size="80" :src="getAvatarUrl(userStore.info?.avatarUrl)">
           {{ userStore.info?.username?.charAt(0).toUpperCase() }}
         </el-avatar>
         <div class="profile-info">
@@ -39,7 +39,7 @@
           <div v-for="p in posts" :key="p.id" class="post-card">
             <div class="post-header">
               <div class="author">
-                <img :src="p.author?.avatarUrl || userStore.info?.avatarUrl" class="avatar-sm" />
+                <img :src="getAvatarUrl(p.author?.avatarUrl || userStore.info?.avatarUrl)" class="avatar-sm" />
                 <span class="name">{{ p.author?.username || userStore.info?.username }}</span>
                 <span class="time">{{ formatDate(p.createdAt) }}</span>
               </div>
@@ -68,21 +68,22 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="我的偏爱壁纸" name="wallpaperFavorites">
-        <div class="wallpaper-grid" v-loading="loading.wallpaperFavorites">
+
+      <el-tab-pane label="我喜欢的壁纸" name="wallpaperLikes">
+        <div class="wallpaper-grid" v-loading="loading.wallpaperLikes">
           <UnifiedCard 
-            v-for="w in wallpaperFavorites" 
+            v-for="w in wallpaperLikes" 
             :key="w.id" 
             :title="w.title" 
             :cover="w.thumbUrl || w.url" 
-            :subtitle="`收藏于 ${formatDate(w.favoriteTime)}`" 
-            :to="`/detail/${w.id}`" 
+            :to="String(`/detail/${w.id}`)" 
             :likes="w.likes" 
             :favorites="w.favorites"
+            :no-actions="true"
           />
         </div>
-        <div v-if="!loading.wallpaperFavorites && wallpaperFavorites.length === 0" class="empty-state">
-          <el-empty description="还没有收藏任何壁纸" />
+        <div v-if="!loading.wallpaperLikes && (!wallpaperLikes || wallpaperLikes.length === 0)" class="empty-state">
+          <el-empty description="还没有喜爱任何壁纸" />
         </div>
       </el-tab-pane>
 
@@ -96,7 +97,7 @@
             :images="p.images || []"
             :image-count="p.images?.length || 0"
             :subtitle="p.author?.username || ''" 
-            :to="`/community/post/${p.id}`" 
+            :to="String(`/community/post/${p.id}`)" 
             :likes="p.likes"
             :no-actions="true"
           />
@@ -116,7 +117,7 @@
             :images="p.images || (p.cover ? [p.cover] : [])"
             :image-count="p.images?.length || (p.cover ? 1 : 0)"
             :subtitle="p.author?.username || ''" 
-            :to="`/community/post/${p.id}`" 
+            :to="String(`/community/post/${p.id}`)" 
             :likes="p.likes" 
             :favorites="p.favorites"
             :no-actions="true"
@@ -126,6 +127,27 @@
           <el-empty description="还没有收藏任何帖子" />
         </div>
       </el-tab-pane>
+
+      <!-- <el-tab-pane label="我的收藏（图片）" name="imageFavorites">
+        <div class="wallpaper-grid" v-loading="loading.imageFavorites">
+          <div 
+            v-for="img in imageFavorites" 
+            :key="img.url" 
+            class="wallpaper-item"
+            @click="router.push(`/community/post/${img.postId}/image/${img.index}`)"
+          >
+            <img :src="getImageUrl(img.url)" :alt="`图片 ${img.index}`" />
+            <div class="wallpaper-overlay">
+              <div class="wallpaper-info">
+                 <p>来自帖子 #{{ img.postId }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="!loading.imageFavorites && imageFavorites.length === 0" class="empty-state">
+          <el-empty description="还没有收藏任何图片" />
+        </div>
+      </el-tab-pane> -->
       
       <el-tab-pane label="我的上传" name="uploads" v-if="userStore.info?.role === 'admin'">
         <div class="wallpaper-grid" v-loading="loading.uploads">
@@ -188,7 +210,7 @@
             :http-request="uploadAvatar"
             :before-upload="beforeAvatarUpload"
           >
-            <img v-if="editForm.avatarUrl" :src="editForm.avatarUrl" class="avatar" />
+            <img v-if="editForm.avatarUrl" :src="getAvatarUrl(editForm.avatarUrl)" class="avatar" />
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
@@ -270,7 +292,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, Download, Edit, Delete, Plus, UploadFilled, ChatLineSquare } from '@element-plus/icons-vue'
@@ -278,13 +300,21 @@ import { useUserStore } from '@/store/user'
 import { 
   getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, 
   getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites,
-  getMyCommunityPosts, deleteCommunityPost, updateCommunityPost 
+  getMyCommunityPosts, deleteCommunityPost, updateCommunityPost,
+  deleteWallpaper as apiDeleteWallpaper, getUserUploads, getMyFavoriteCommunityImages,
+  getMyLikedWallpapers
 } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import request from '@/api'
+import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const isMounted = ref(true)
+onBeforeUnmount(() => {
+  isMounted.value = false
+})
 
 // 响应式数据
 const activeTab = ref('posts') // 默认显示发布的作品
@@ -309,16 +339,21 @@ const loading = reactive({
   favorites: false,
   wallpaperFavorites: false,
   likes: false,
-  uploads: false
+  wallpaperLikes: false,
+  uploads: false,
+  imageFavorites: false
 })
 
 // 数据列表
 const posts = ref([])
 const favorites = ref([])
 const wallpaperFavorites = ref([])
+const imageFavorites = ref([])
 const likes = ref([])
 const uploads = ref([])
 const categories = ref([])
+const wallpaperLikes = ref([])
+
 
 // 编辑表单
 const editForm = reactive({
@@ -345,10 +380,25 @@ const uploadForm = reactive({
   file: null
 })
 
+// Helper to normalize post images (handle string vs object)
+const normalizePost = (p) => {
+  if (p.images && Array.isArray(p.images)) {
+    p.images = p.images.map(img => {
+      if (typeof img === 'string') return img
+      return img?.url || img?.src || img?.path || ''
+    }).filter(Boolean)
+  }
+  if (p.cover && typeof p.cover === 'object') {
+     p.cover = p.cover.url || p.cover.src || p.cover.path || ''
+  }
+  return p
+}
+
 // 获取统计数据
 const fetchUserStats = async () => {
   try {
     const stats = await getUserStats()
+    if (!isMounted.value) return
     if (stats) {
       userStats.posts = stats.postCount ?? 0
       userStats.favorites = stats.favoriteCount ?? stats.favoritesCount ?? 0
@@ -356,6 +406,7 @@ const fetchUserStats = async () => {
       userStats.downloads = stats.downloads ?? 0
     }
   } catch (error) {
+    if (!isMounted.value) return
     userStats.posts = posts.value.length
     userStats.favorites = favorites.value.length
     userStats.likes = likes.value.length
@@ -367,12 +418,23 @@ const fetchMyPosts = async () => {
   loading.posts = true
   try {
     const response = await getMyCommunityPosts({ page: 1, size: 50 })
-    posts.value = Array.isArray(response) ? response : (response.items || [])
+    if (!isMounted.value) return
+    const list = Array.isArray(response) ? response : (response.items || [])
+    posts.value = list.map(normalizePost)
     if (userStats.posts === 0) userStats.posts = response.total || posts.value.length
+    
+    // Sync avatar from posts if missing in store
+    if (posts.value.length > 0 && userStore.info && !userStore.info.avatarUrl) {
+      const authorAvatar = posts.value[0].author?.avatarUrl
+      if (authorAvatar) {
+        userStore.info.avatarUrl = authorAvatar
+      }
+    }
   } catch (error) {
+    if (!isMounted.value) return
     posts.value = []
   } finally {
-    loading.posts = false
+    if (isMounted.value) loading.posts = false
   }
 }
 
@@ -381,11 +443,14 @@ const fetchFavorites = async () => {
   loading.favorites = true
   try {
     const response = await getMyPostFavorites()
-    favorites.value = Array.isArray(response) ? response : (response.items || [])
+    if (!isMounted.value) return
+    const list = Array.isArray(response) ? response : (response.items || [])
+    favorites.value = list.map(normalizePost)
   } catch (error) {
+    if (!isMounted.value) return
     favorites.value = []
   } finally {
-    loading.favorites = false
+    if (isMounted.value) loading.favorites = false
   }
 }
 
@@ -394,24 +459,44 @@ const fetchWallpaperFavorites = async () => {
   loading.wallpaperFavorites = true
   try {
     const response = await getMyWallpaperFavorites()
+    if (!isMounted.value) return
     wallpaperFavorites.value = Array.isArray(response) ? response : (response.items || [])
   } catch (error) {
+    if (!isMounted.value) return
     wallpaperFavorites.value = []
   } finally {
-    loading.wallpaperFavorites = false
+    if (isMounted.value) loading.wallpaperFavorites = false
   }
 }
 
-// 获取用户点赞
+// 获取用户点赞的壁纸
+const fetchWallpaperLikes = async () => {
+  loading.wallpaperLikes = true
+  try {
+    const response = await getMyLikedWallpapers()
+    if (!isMounted.value) return
+    wallpaperLikes.value = Array.isArray(response) ? response : (response.items || [])
+  } catch (error) {
+    if (!isMounted.value) return
+    wallpaperLikes.value = []
+  } finally {
+    if (isMounted.value) loading.wallpaperLikes = false
+  }
+}
+
+// 获取用户点赞 (帖子)
 const fetchLikes = async () => {
   loading.likes = true
   try {
     const response = await getUserLikes({ page: 1, size: 50 })
-    likes.value = Array.isArray(response) ? response : (response.items || [])
+    if (!isMounted.value) return
+    const list = Array.isArray(response) ? response : (response.items || [])
+    likes.value = list.map(normalizePost)
   } catch (error) {
+    if (!isMounted.value) return
     likes.value = []
   } finally {
-    loading.likes = false
+    if (isMounted.value) loading.likes = false
   }
 }
 
@@ -421,12 +506,14 @@ const fetchUploads = async () => {
   
   loading.uploads = true
   try {
-    const response = await request.get('/user/uploads')
-    uploads.value = response.data || []
+    const response = await getUserUploads()
+    if (!isMounted.value) return
+    uploads.value = response || []
   } catch (error) {
+    if (!isMounted.value) return
     uploads.value = []
   } finally {
-    loading.uploads = false
+    if (isMounted.value) loading.uploads = false
   }
 }
 
@@ -434,8 +521,10 @@ const fetchUploads = async () => {
 const fetchCategories = async () => {
   try {
     const response = await getCategories()
+    if (!isMounted.value) return
     categories.value = response || []
   } catch (error) {
+    if (!isMounted.value) return
     categories.value = []
   }
 }
@@ -454,7 +543,8 @@ const deleteWallpaper = async (wallpaper) => {
       type: 'warning'
     })
     
-    await request.delete(`/wallpapers/${wallpaper.id}`)
+    await apiDeleteWallpaper(wallpaper.id)
+    if (!isMounted.value) return
     uploads.value = uploads.value.filter(item => item.id !== wallpaper.id)
     ElMessage.success('删除成功')
   } catch (error) {
@@ -483,13 +573,15 @@ const savePost = async () => {
       tags: editPostForm.tags.split(/[,，]/).map(t => t.trim()).filter(Boolean)
     }
     await updateCommunityPost(editPostForm.id, payload)
+    if (!isMounted.value) return
     ElMessage.success('更新成功')
     showEditPostDialog.value = false
     fetchMyPosts()
   } catch (error) {
+    if (!isMounted.value) return
     ElMessage.error('更新失败')
   } finally {
-    savingPost.value = false
+    if (isMounted.value) savingPost.value = false
   }
 }
 
@@ -502,6 +594,7 @@ const deletePost = async (post) => {
       type: 'warning'
     })
     await deleteCommunityPost(post.id)
+    if (!isMounted.value) return
     ElMessage.success('删除成功')
     posts.value = posts.value.filter(p => p.id !== post.id)
     userStats.posts = Math.max(0, userStats.posts - 1)
@@ -522,15 +615,18 @@ const saveProfile = async () => {
     if (editForm.signature) payload.signature = editForm.signature
     
     await request.put('/auth/me', payload)
+    if (!isMounted.value) return
     await userStore.fetchUser()
+    if (!isMounted.value) return
     try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'profile-updated' } })) } catch {}
     showEditDialog.value = false
     ElMessage.success('保存成功')
   } catch (error) {
+    if (!isMounted.value) return
     const msg = error.response?.data?.message || error.message || '保存失败'
     ElMessage.error(msg)
   } finally {
-    saving.value = false
+    if (isMounted.value) saving.value = false
   }
 }
 
@@ -539,11 +635,13 @@ const uploadAvatar = async (opt) => {
   try {
     const fd = new FormData(); fd.append('file', opt.file)
     const res = await request.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (!isMounted.value) return
     const url = res?.data?.data?.url || res?.data?.url || res?.url
     if (url) editForm.avatarUrl = url
     ElMessage.success('头像上传成功')
     opt.onSuccess && opt.onSuccess(res)
   } catch (e) {
+    if (!isMounted.value) return
     ElMessage.error('头像上传失败')
     opt.onError && opt.onError(e)
   }
@@ -599,6 +697,7 @@ const submitUpload = async () => {
     formData.append('file', uploadForm.file)
     
     await uploadWallpaper(formData)
+    if (!isMounted.value) return
     showUploadDialog.value = false
     ElMessage.success('上传成功，等待审核')
     
@@ -613,9 +712,10 @@ const submitUpload = async () => {
     // 刷新上传列表
     fetchUploads()
   } catch (error) {
+    if (!isMounted.value) return
     ElMessage.error('上传失败：' + (error.response?.data?.message || error.message))
   } finally {
-    uploading.value = false
+    if (isMounted.value) uploading.value = false
   }
 }
 
@@ -634,8 +734,8 @@ watch(activeTab, (newTab) => {
     case 'favorites':
       if (favorites.value.length === 0) fetchFavorites()
       break
-    case 'wallpaperFavorites':
-      if (wallpaperFavorites.value.length === 0) fetchWallpaperFavorites()
+    case 'wallpaperLikes':
+      if (wallpaperLikes.value.length === 0) fetchWallpaperLikes()
       break
     case 'likes':
       if (likes.value.length === 0) fetchLikes()
@@ -677,6 +777,8 @@ onMounted(async () => {
     }
   }
 
+  if (!isMounted.value) return
+
   // 二次检查
   if (!userStore.isAuthenticated && !userStore.info) {
     ElMessage.warning('登录已过期，请重新登录')
@@ -688,6 +790,9 @@ onMounted(async () => {
   fetchUserStats()
   fetchMyPosts() // Default tab
 })
+
+
+
 </script>
 
 <style scoped>

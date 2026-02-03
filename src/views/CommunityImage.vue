@@ -17,7 +17,20 @@
               :initial-index="0"
               fit="contain"
               hide-on-click-modal
-            />
+              lazy
+            >
+              <template #placeholder>
+                <div class="image-slot placeholder-slot">
+                  <el-skeleton-item variant="image" style="width: 100%; height: 100%; min-height: 300px" />
+                </div>
+              </template>
+              <template #error>
+                <div class="image-slot error-slot">
+                  <el-icon><IconPicture /></el-icon>
+                  <span>加载失败</span>
+                </div>
+              </template>
+            </el-image>
           </div>
         </div>
         <div class="side-info" v-if="post">
@@ -32,10 +45,12 @@
                   v-if="imageMeta.wallpaperInfo"
                   type="success" 
                   size="large" 
-                  :icon="Download" 
                   @click="goWallpaper" 
                   round
                 >
+                  <el-icon :size="18" class="action-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path fill="currentColor" d="M160 832h704a32 32 0 1 1 0 64H160a32 32 0 1 1 0-64m384-253.696 236.288-236.352 45.248 45.248L508.8 704 192 387.2l45.248-45.248L480 584.704V128h64z"></path></svg>
+                  </el-icon>
                   已上架壁纸
                 </el-button>
                 <el-button 
@@ -45,6 +60,7 @@
                   @click="openSubmitDialog" 
                   round
                 >
+                  <el-icon :size="18" class="action-icon"><Upload /></el-icon>
                   收录为壁纸
                 </el-button>
                 <el-button type="primary" size="large" :icon="Download" @click="download" round>下载原图</el-button>
@@ -81,7 +97,7 @@
             <div class="info-section" v-if="post.author">
               <h3>发布者</h3>
               <div class="uploader-info" @click="goProfile(post.author.id)" style="cursor:pointer">
-                <el-avatar :src="post.author.avatarUrl" :size="48">{{ post.author.username?.[0] }}</el-avatar>
+                <el-avatar :src="getAvatarUrl(post.author.avatarUrl)" :size="48">{{ post.author.username?.[0] }}</el-avatar>
                 <div class="uploader-details">
                   <div class="uploader-name">{{ post.author.username }}</div>
                   <div class="uploader-desc">查看TA的主页</div>
@@ -89,17 +105,6 @@
                 <el-icon><ArrowRight /></el-icon>
               </div>
             </div>
-          <div class="info-section">
-            <h3>评论</h3>
-            <div class="comments" v-if="loadingComments"><el-skeleton animated :rows="3" /></div>
-            <div class="comments" v-else>
-              <CommentItem v-for="(c,i) in comments" :key="i" :comment="c" />
-              <div class="comment-editor">
-                <el-input v-model="newComment" placeholder="写下评论" />
-                <el-button size="small" type="primary" @click="submitComment">发布</el-button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -137,24 +142,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Download, ArrowLeftBold, Star, StarFilled, Calendar, ArrowRight } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostImageMeta, likeCommunityPostImage, favoriteCommunityPostImage, downloadCommunityPostImage, getCommunityPostComments, commentCommunityPost, submitWallpaperFromPost, getCategories } from '@/api'
-import CommentItem from '@/components/CommentItem.vue'
+import { Download, ArrowLeftBold, Star, StarFilled, Calendar, ArrowRight, Picture as IconPicture } from '@element-plus/icons-vue'
+import { getCommunityPost, getCommunityPostImageMeta, likeCommunityPostImage, favoriteCommunityPostImage, downloadCommunityPostImage, submitWallpaperFromPost, getCategories } from '@/api'
 import { useUserStore } from '@/store/user'
+import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 
 const route = useRoute()
 const postId = Number(route.params.id)
 const index = Number(route.params.index)
-const imageUrl = ref('')
+const rawImage = ref('') // Store raw image data (string or object)
+const imageUrl = computed(() => getImageUrl(rawImage.value)) // Computed safe URL
 const post = ref(null)
 const loading = ref(true)
 const imageMeta = ref({ width: 0, height: 0, fileSize: null, format: '', views: 0, downloads: 0, liked: false, likes: 0, favorited: false, favorites: 0, wallpaperInfo: null })
-const comments = ref([])
-const loadingComments = ref(true)
-const newComment = ref('')
 const previewVisible = ref(false)
 const onImageLoad = () => {}
 
@@ -177,7 +180,7 @@ onMounted(async () => {
   try {
     const p = await getCommunityPost(postId)
     post.value = p
-    imageUrl.value = p?.images?.[index] || ''
+    rawImage.value = p?.images?.[index] || ''
     try {
       const meta = await getCommunityPostImageMeta(postId, index)
       imageMeta.value = {
@@ -199,12 +202,6 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-
-  try {
-    const res = await getCommunityPostComments(postId, { page: 1, size: 20 })
-    comments.value = res.items || []
-  } catch {}
-  finally { loadingComments.value = false }
 })
 
 const router = useRouter()
@@ -218,7 +215,26 @@ const goWallpaper = () => {
     ElMessage.success('该图片已收录为壁纸')
   }
 }
-const download = () => { if (imageUrl.value) window.open(imageUrl.value, '_blank') }
+const download = async () => { 
+  if (imageUrl.value) {
+    try {
+      const res = await downloadCommunityPostImage(postId, index)
+      const url = res?.url || res
+      
+      if (url && typeof url === 'string') {
+        window.open(url, '_blank')
+        
+        // Optimistically update download count if needed
+        // imageMeta.value.downloads++
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        ElMessage.warning('下载次数已达上限，请登录后继续')
+        setTimeout(() => router.push('/register'), 1500)
+      }
+    }
+  }
+}
 
 const openSubmitDialog = () => {
   submitForm.value = { category: '', tags: [...(post.value.tags || [])], description: post.value.content?.slice(0, 100) || '' }
@@ -265,13 +281,19 @@ import { useInteraction } from '@/composables/useInteraction'
 
 const { toggleInteraction } = useInteraction()
 const toggleImageLike = async () => {
+  if (!imageMeta.value.wallpaperInfo) {
+    ElMessage.warning('可提醒作者上架壁纸，方便收藏壁纸')
+    return
+  }
   await toggleInteraction(imageMeta.value, 'like', 'image', { postId, imageIndex: index })
 }
 const toggleImageFavorite = async () => {
   await toggleInteraction(imageMeta.value, 'favorite', 'image', { postId, imageIndex: index })
 }
 
-const recordDownload = async () => { try { await downloadCommunityPostImage(postId, index) } catch {} }
+const recordDownload = async () => { 
+  // try { await downloadCommunityPostImage(postId, index) } catch {} 
+}
 
 const shareImage = async () => {
   const url = `${location.origin}/community/post/${postId}/image/${index}`
@@ -285,17 +307,6 @@ const shareImage = async () => {
       const inp = document.createElement('input'); inp.value = url; document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp); ElMessage.success('链接已复制到剪贴板')
     }
   } catch (e) { ElMessage.error('分享失败：' + (e.message || '未知错误')) }
-}
-
-const submitComment = async () => {
-  const v = newComment.value.trim()
-  if (!v) return
-  try {
-    await commentCommunityPost(postId, v)
-    comments.value.unshift({ content: v, createdAt: new Date().toISOString(), author: userStore.info || { username: '我' } })
-    newComment.value = ''
-    ElMessage.success('评论成功')
-  } catch { ElMessage.error('评论失败') }
 }
 </script>
 
@@ -379,13 +390,10 @@ const submitComment = async () => {
 }
 .dark .post-tag:hover { background: var(--app-color-primary) !important; }
 
-.info-actions .el-button { color: #606266; }
-.dark .info-actions .el-button { color: #9ca3af; }
-.info-actions .el-button:hover { color: #409eff; }
-.info-actions .el-button.liked { color: #f56c6c !important; border-color: #f56c6c; background-color: rgba(245,108,108,0.1); }
-/* Removed dark override */
-.info-actions .el-button.favorited { color: #e6a23c !important; border-color: #e6a23c; background-color: rgba(230,162,60,0.1); }
-/* Removed dark override */
+.like-btn { color: #606266; }
+.dark .like-btn { color: #9ca3af; }
+.like-btn:hover { color: #409eff; }
+.like-btn.liked { color: #f56c6c !important; border-color: #f56c6c; background-color: rgba(245,108,108,0.1); }
 .action-icon { margin-right: 4px; }
 
 .uploader-info { 
@@ -418,6 +426,25 @@ const submitComment = async () => {
   .image-content { grid-template-columns: 1fr; }
   .side-info { position: static; margin-top: 0; }
   .image-container { border-radius: 12px; }
+}
+
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  background: var(--app-bg-hover);
+  color: var(--app-text-secondary);
+}
+.error-slot {
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+.error-slot .el-icon {
+  font-size: 48px;
 }
 </style>
 

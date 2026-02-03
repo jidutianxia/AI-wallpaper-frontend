@@ -27,7 +27,7 @@
       </div>
 
       <div class="images">
-        <img v-for="(u, i) in post.images" :key="u" :src="u" class="image" @click="goImage(i)" />
+        <img v-for="(u, i) in post.images" :key="i" :src="getImageUrl(u)" class="image" @click.stop="goImage(i)" />
       </div>
 
       <div class="actions">
@@ -65,13 +65,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeftBold, Star, StarFilled, Share, ChatLineSquare } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostComments, likeCommunityPost, commentCommunityPost, favoriteCommunityPost } from '@/api'
+import { getCommunityPost, getCommunityPostComments, likeCommunityPost, commentCommunityPost, favoriteCommunityPost, getCommunityPostImageMeta } from '@/api'
 import { useUserStore } from '@/store/user'
 import CommentItem from '@/components/CommentItem.vue'
+import { getImageUrl } from '@/utils/imageHelper'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -80,15 +81,26 @@ const loadingPost = ref(true)
 const newComment = ref('')
 const userStore = useUserStore()
 
+const isMounted = ref(true)
+onBeforeUnmount(() => {
+  isMounted.value = false
+})
+
 onMounted(async () => {
   try {
-    post.value = await getCommunityPost(id)
+    const res = await getCommunityPost(id)
+    if (!isMounted.value) return
+    post.value = res
     if (typeof post.value.likes !== 'number') post.value.likes = 0
     if (typeof post.value.favorites !== 'number') post.value.favorites = 0
     post.value.liked = !!post.value.liked
     post.value.favorited = !!post.value.favorited
-  } catch { ElMessage.error('加载失败') }
-  finally { loadingPost.value = false }
+  } catch { 
+    if (!isMounted.value) return
+    ElMessage.error('加载失败') 
+  } finally { 
+    if (isMounted.value) loadingPost.value = false 
+  }
 })
 
 import { useInteraction } from '@/composables/useInteraction'
@@ -103,14 +115,32 @@ const submitComment = async () => {
   if (!v) return
   try {
     await commentCommunityPost(id, v)
+    if (!isMounted.value) return
     post.value.comments = post.value.comments || []
     post.value.comments.push({ content: v, createdAt: new Date().toISOString(), author: { id: 0, username: '我', avatarUrl: '' } })
     newComment.value = ''
-  } catch { ElMessage.error('评论失败') }
+  } catch { 
+    if (!isMounted.value) return
+    ElMessage.error('评论失败') 
+  }
 }
 
 const router = useRouter()
-const goImage = (index) => { router.push(`/community/post/${id}/image/${index}`) }
+const goImage = async (index) => {
+  try {
+    const meta = await getCommunityPostImageMeta(id, index)
+    if (!isMounted.value) return
+    if (meta && meta.wallpaperInfo && meta.wallpaperInfo.id) {
+      router.push(`/detail/${meta.wallpaperInfo.id}`)
+    } else {
+      router.push(`/community/post/${id}/image/${index}`)
+    }
+  } catch (e) {
+    if (!isMounted.value) return
+    console.error('Check wallpaper info failed:', e)
+    router.push(`/community/post/${id}/image/${index}`)
+  }
+}
 const goProfile = (uid) => { if (uid) router.push(`/profile/${uid}`) }
 const noop = () => {}
 const goBack = () => { router.push('/community') }

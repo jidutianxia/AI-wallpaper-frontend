@@ -10,7 +10,7 @@
           <el-card class="profile-card">
             <div class="profile-top" :class="{ clickable: isAuthenticated }">
               <template v-if="isAuthenticated">
-                <img :src="avatarUrl" class="avatar-lg" @click="goProfile(userStore.info?.id)" />
+                <img :src="getAvatarUrl(userStore.info?.avatarUrl)" class="avatar-lg" @click="goProfile(userStore.info?.id)" />
                 <div class="creator">
                   <div class="creator-name" @click="goProfile(userStore.info?.id)">{{ displayName }}</div>
                   <div class="creator-desc">{{ signature }}</div>
@@ -50,14 +50,14 @@
             </div>
           </template>
           <transition name="fade-list" v-else><div class="posts" ref="postsRef">
-            <el-card v-for="p in pagedPosts" :key="p.id" class="post">
+            <el-card v-for="p in posts" :key="p.id" class="post">
               <div class="post-header">
-                <div class="author" @click="goProfile(p.author?.id)"><img :src="p.author?.avatarUrl" class="avatar" /><span class="name">{{ p.author?.username || '匿名' }}</span></div>
+                <div class="author" @click="goProfile(p.author?.id)"><img :src="getAvatarUrl(p.author?.avatarUrl)" class="avatar" /><span class="name">{{ p.author?.username || '匿名' }}</span></div>
                 <h4 class="title" @click="goPost(p.id)">{{ p.title }}</h4>
                 <div class="tags"><el-tag v-for="t in p.tags" :key="t" size="small" class="post-tag">{{ t }}</el-tag></div>
               </div>
               <p class="content" @click="goPost(p.id)">{{ p.content }}</p>
-              <div class="images"><img v-for="(u,i) in p.images" :key="u" :src="u" class="image" @click="goImage(p.id,i)" /></div>
+              <div class="images"><img v-for="(u,i) in p.images" :key="i" :src="getImageUrl(u)" class="image" @click.stop="goImage(p.id,i)" /></div>
               <div class="post-actions">
                 <el-button link size="small" :class="{ 'liked': p.liked }" @click="toggleLike(p)">
                   <el-icon :size="20" class="action-icon">
@@ -88,12 +88,12 @@
               </div>
             </el-card>
           </div></transition>
-          <div v-if="!loading && filteredPosts.length === 0" class="empty">暂无帖子，去发布一条吧</div>
-          <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="filteredPosts.length" v-model:current-page="page" /></div>
+          <div v-if="!loading && posts.length === 0" class="empty">暂无帖子，去发布一条吧</div>
+          <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="total" v-model:current-page="page" /></div>
         </main>
         <aside class="right">
           <el-card class="hot"><h4>热门帖子</h4><ol class="hot-list"><li v-for="(h,i) in hotPosts" :key="h.id" @click="goPost(h.id)">{{ i+1 }}. {{ h.title }}</li></ol></el-card>
-          <el-card class="recent"><h4>近期分享者</h4><div class="users"><div class="user" v-for="u in recentUsers" :key="u.id" @click="goProfile(u.id)"><img :src="u.avatarUrl" class="avatar" /><div class="uinfo"><div class="uname">{{ u.username }}</div><div class="uextra">帖子 {{ u.postCount }} | 获赞 {{ u.likeCount }}</div></div></div></div></el-card>
+          <el-card class="recent"><h4>近期分享者</h4><div class="users"><div class="user" v-for="u in recentUsers" :key="u.id" @click="goProfile(u.id)"><img :src="getAvatarUrl(u.avatarUrl)" class="avatar" /><div class="uinfo"><div class="uname">{{ u.username }}</div><div class="uextra">帖子 {{ u.postCount }} | 获赞 {{ u.likeCount }}</div></div></div></div></el-card>
         </aside>
       </div>
     </div>
@@ -105,39 +105,12 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments } from '@/api'
+import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta } from '@/api'
 import { getCommunityPost } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
+import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
-const seed = [
-  {
-    id: 1,
-    title: '赛博朋克光影练习',
-    content: '分享近期光影练习与配色方案，欢迎交流。',
-    tags: ['赛博','配色'],
-    images: ['https://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&h=400&fit=crop&crop=center'],
-    author: { id: 100, username: 'Neo', avatarUrl: 'https://i.pravatar.cc/80?img=12' },
-    likes: 12,
-    liked: false,
-    comments: ['很酷','色彩很棒'],
-    newComment: '',
-    showComment: false
-  },
-  {
-    id: 2,
-    title: '自然风景系列壁纸',
-    content: '记录旅行中的风景，整理为移动端壁纸。',
-    tags: ['风景','摄影'],
-    images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop&crop=center'],
-    author: { id: 101, username: 'Luna', avatarUrl: 'https://i.pravatar.cc/80?img=21' },
-    likes: 8,
-    liked: false,
-    comments: ['太治愈了'],
-    newComment: '',
-    showComment: false
-  }
-]
 const posts = ref([])
 const userStore = useUserStore()
 const isAuthenticated = computed(() => userStore.isAuthenticated)
@@ -147,19 +120,13 @@ const avatarUrl = computed(() => userStore.info?.avatarUrl || 'https://i.pravata
 const q = ref('')
 const tag = ref('')
 const page = ref(1)
-const pageSize = ref(5)
-const filteredPosts = computed(() => {
-  const text = q.value.trim().toLowerCase()
-  return posts.value.filter(p => {
-    const matchText = !text || p.title.toLowerCase().includes(text) || p.content.toLowerCase().includes(text)
-    const matchTag = !tag.value || p.tags.includes(tag.value)
-    return matchText && matchTag
-  })
-})
-const pagedPosts = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filteredPosts.value.slice(start, start + pageSize.value)
-})
+const pageSize = ref(10) // Changed to 10 for better view
+const total = ref(0)
+
+// Removed frontend filtering logic to rely on backend
+// const filteredPosts = computed(...) 
+// const pagedPosts = computed(...)
+
 const myStat = ref({ posts: 0, likes: 0, comments: 0 })
 const hotPostsSource = ref([])
 const hotPosts = computed(() => hotPostsSource.value)
@@ -195,10 +162,25 @@ const loadPosts = async () => {
   loading.value = true
   try {
     const list = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest', includeCounts: true })
-    posts.value = list.items || []
+    if (Array.isArray(list)) {
+      posts.value = list
+      total.value = list.length
+    } else {
+      posts.value = list.items || []
+      total.value = list.total || 0
+    }
     applyInteractions()
   } finally { loading.value = false }
 }
+
+// Watchers for search/filter/pagination
+watch([q, tag], () => {
+  page.value = 1
+  loadPosts()
+})
+watch(page, loadPosts)
+
+// Initial load
 loadPosts()
 
 const loadMyStats = async () => {
@@ -232,7 +214,7 @@ onMounted(() => {
   }, { threshold: 0.12 })
 })
 
-watch([pagedPosts, loading], async () => {
+watch([posts, loading], async () => {
   await nextTick()
   if (!postsRef.value || !io || loading.value) return
   const cards = postsRef.value.querySelectorAll('.post')
@@ -327,7 +309,19 @@ const sharePost = async (p) => {
 import { useRouter } from 'vue-router'
 const router = useRouter()
 const goPost = (id) => { router.push(`/community/post/${id}`) }
-const goImage = (id, index) => { router.push(`/community/post/${id}/image/${index}`) }
+const goImage = async (id, index) => {
+  try {
+    const meta = await getCommunityPostImageMeta(id, index)
+    if (meta && meta.wallpaperInfo && meta.wallpaperInfo.id) {
+      router.push(`/detail/${meta.wallpaperInfo.id}`)
+    } else {
+      router.push(`/community/post/${id}/image/${index}`)
+    }
+  } catch (e) {
+    console.error('Check wallpaper info failed:', e)
+    router.push(`/community/post/${id}/image/${index}`)
+  }
+}
 const goProfile = (uid) => {
   if (!uid) return
   const myId = userStore.info?.id

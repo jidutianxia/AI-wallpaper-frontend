@@ -21,8 +21,7 @@ export function useInteraction() {
   // 统一交互处理
   // target: 响应式对象 (ref.value 或 reactive object)，必须包含 id, liked/isLiked, likes, favorited/isFavorited 等字段
   // type: 'like' | 'favorite'
-  // scope: 'wallpaper' | 'post' | 'image'
-  // options: { postId, imageIndex } 仅 image scope 需要
+  // scope: 'wallpaper' | 'post'
   const toggleInteraction = async (target, type, scope = 'wallpaper', options = {}) => {
     if (!userStore.isAuthenticated) {
       ElMessage.warning('请先登录')
@@ -66,16 +65,9 @@ export function useInteraction() {
       } else if (scope === 'post') {
         if (type === 'like') await likeCommunityPost(target.id)
         else await favoriteCommunityPost(target.id)
-      } else if (scope === 'image') {
-        // 图片级交互需要 postId 和 index
-        const { postId, imageIndex } = options
-        if (type === 'like') await likeCommunityPostImage(postId, imageIndex)
-        else await favoriteCommunityPostImage(postId, imageIndex)
       }
       
       // 成功：不做任何事，保持 UI 状态
-      // 如果有列表状态管理需求（如从详情页返回），可以在这里通过 event bus 或 store 通知列表更新
-      // 但由于对象引用通常是共享的（如果使用了 store），或者通过父子组件传递，直接修改 target 可能已经足够
       
     } catch (error) {
       // 失败：回滚状态

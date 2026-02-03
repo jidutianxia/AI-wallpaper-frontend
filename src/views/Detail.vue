@@ -1,5 +1,8 @@
 <template>
   <div class="detail" v-loading="loading">
+    <div class="topbar">
+      <el-button size="small" :icon="ArrowLeft" @click="goBack">返回</el-button>
+    </div>
     <div v-if="wallpaper" class="detail-content">
       <!-- 壁纸展示区 -->
       <div class="wallpaper-display">
@@ -20,19 +23,9 @@
           
           <!-- New Action Area (Moved from overlay) -->
           <div class="action-area">
-             <el-button 
-                class="btn-gradient-orange" 
-                size="large" 
-                :icon="Star"
-                @click="toggleLike"
-                :loading="likeLoading"
-              >
-                {{ wallpaper.isLiked ? '已收录' : '收录为壁纸' }}
-              </el-button>
-              
               <div class="secondary-actions">
                 <el-button 
-                  class="btn-purple-soft" 
+                  class="btn-gradient-orange" 
                   size="large" 
                   :icon="Download" 
                   @click="downloadWallpaper"
@@ -40,11 +33,13 @@
                   下载原图
                 </el-button>
                 <el-button 
-                  class="btn-ghost-grey"
+                  :class="wallpaper.liked ? 'btn-red-soft' : 'btn-ghost-grey'"
                   size="large"
                   :icon="View"
+                  @click="toggleLike"
+                  :loading="likeLoading"
                 >
-                  喜欢 ({{ wallpaper.likes }})
+                  {{ wallpaper.liked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
                 </el-button>
               </div>
           </div>
@@ -71,7 +66,7 @@
             <div class="info-grid">
               <div class="info-item">
                 <label>分辨率:</label>
-                <span class="detail-value">{{ wallpaper.width }} × {{ wallpaper.height }}</span>
+                <span class="detail-value">{{ (Number(wallpaper.width) > 0 && Number(wallpaper.height) > 0) ? `${wallpaper.width} × ${wallpaper.height}` : '未知' }}</span>
               </div>
               <div class="info-item">
                 <label>文件大小:</label>
@@ -109,16 +104,17 @@
             <p class="description">{{ wallpaper.description }}</p>
           </div>
 
-          <div class="info-section" v-if="wallpaper.uploader">
+          <div class="info-section" v-if="uploaderInfo">
             <h3>发布者</h3>
-            <div class="uploader-info card-nested">
-              <el-avatar :src="wallpaper.uploader.avatar" :size="40">
-                {{ wallpaper.uploader.username?.[0] }}
+            <div class="uploader-info card-nested" @click="goProfile(uploaderInfo.id)" style="cursor: pointer;">
+              <el-avatar :src="uploaderInfo.avatar" :size="40">
+                {{ (uploaderInfo.nickname || uploaderInfo.username)?.[0]?.toUpperCase() }}
               </el-avatar>
               <div class="uploader-details">
-                <div class="uploader-name">{{ wallpaper.uploader.username }}</div>
-                <div class="uploader-stats">已上传 {{ wallpaper.uploader.uploadCount }} 张壁纸</div>
+                <div class="uploader-name">{{ uploaderInfo.nickname || uploaderInfo.username }}</div>
+                <div class="uploader-stats" v-if="uploaderInfo.uploadCount">已上传 {{ uploaderInfo.uploadCount }} 张壁纸</div>
               </div>
+              <el-icon><ArrowRight /></el-icon>
             </div>
           </div>
         </div>
@@ -165,40 +161,101 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { 
   Download, 
-  Star, 
   View, 
-  Calendar 
+  Calendar,
+  ArrowLeft,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getWallpaper, likeWallpaper, favoriteWallpaper, getWallpapers } from '@/api'
+import { getWallpaper, likeWallpaper, getWallpapers, downloadWallpaperApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+const isMounted = ref(true)
+onBeforeUnmount(() => {
+  isMounted.value = false
+})
+
 // 响应式数据
 const loading = ref(true)
 const likeLoading = ref(false)
-const favoriteLoading = ref(false)
 const showPreview = ref(false)
 const wallpaper = ref(null)
 const relatedWallpapers = ref([])
+
+const uploaderInfo = computed(() => {
+  if (!wallpaper.value) return null
+  
+  // 1. If uploader is already an object
+  if (wallpaper.value.uploader && typeof wallpaper.value.uploader === 'object') {
+    return wallpaper.value.uploader
+  }
+
+  // 2. Handle author field (could be string, JSON string, or object)
+  if (wallpaper.value.author) {
+    let authorData = wallpaper.value.author
+    
+    // Try parsing if it's a string that looks like JSON
+    if (typeof authorData === 'string' && authorData.trim().startsWith('{')) {
+      try {
+        authorData = JSON.parse(authorData)
+      } catch (e) {
+        console.warn('Failed to parse author JSON:', e)
+        // Keep as string if parsing fails
+      }
+    }
+
+    // If we have an object (either originally or parsed)
+    if (typeof authorData === 'object' && authorData !== null) {
+      return {
+        id: authorData.id,
+        username: authorData.username,
+        nickname: authorData.nickname,
+        avatar: authorData.avatar,
+        uploadCount: authorData.uploadCount || 0
+      }
+    }
+    
+    // Fallback: author is a simple string (username)
+    return {
+      id: wallpaper.value.authorId, // Try to get ID from separate field if available
+      username: authorData,
+      avatar: '', 
+      uploadCount: 0
+    }
+  }
+  return null
+})
+
+const goBack = () => {
+  router.back()
+}
+
+const goProfile = (id) => {
+  if (id) {
+    router.push(`/profile/${id}`)
+  }
+}
 
 // 获取壁纸详情
 const fetchWallpaper = async (id) => {
   loading.value = true
   try {
     const response = await getWallpaper(id)
+    if (!isMounted.value) return
     wallpaper.value = response
     
     // 获取相关推荐
     fetchRelatedWallpapers()
   } catch (error) {
+    if (!isMounted.value) return
     // 模拟数据
     wallpaper.value = {
       id: parseInt(id),
@@ -228,7 +285,7 @@ const fetchWallpaper = async (id) => {
     
     fetchRelatedWallpapers()
   } finally {
-    loading.value = false
+    if (isMounted.value) loading.value = false
   }
 }
 
@@ -240,8 +297,10 @@ const fetchRelatedWallpapers = async () => {
       limit: 6,
       exclude: wallpaper.value?.id
     })
+    if (!isMounted.value) return
     relatedWallpapers.value = response.data || []
   } catch (error) {
+    if (!isMounted.value) return
     // 模拟数据
     relatedWallpapers.value = [
       {
@@ -276,29 +335,53 @@ const toggleLike = async () => {
     return
   }
   
+  const prevLiked = wallpaper.value.liked
+  const prevLikes = wallpaper.value.likes
+
+  // Optimistic update
+  wallpaper.value.liked = !prevLiked
+  wallpaper.value.likes += wallpaper.value.liked ? 1 : -1
+  
   likeLoading.value = true
   try {
     await likeWallpaper(wallpaper.value.id)
-    wallpaper.value.isLiked = !wallpaper.value.isLiked
-    wallpaper.value.likes += wallpaper.value.isLiked ? 1 : -1
-    ElMessage.success(wallpaper.value.isLiked ? '点赞成功' : '取消点赞')
+    if (!isMounted.value) return
+    ElMessage.success(wallpaper.value.liked ? '点赞成功' : '取消点赞')
   } catch (error) {
+    if (!isMounted.value) return
+    // Rollback
+    wallpaper.value.liked = prevLiked
+    wallpaper.value.likes = prevLikes
     ElMessage.error('操作失败')
   } finally {
-    likeLoading.value = false
+    if (isMounted.value) likeLoading.value = false
   }
 }
 
 // 下载壁纸
-const downloadWallpaper = () => {
-  const link = document.createElement('a')
-  link.href = wallpaper.value.url || wallpaper.value.thumbUrl
-  link.download = `${wallpaper.value.title}.jpg`
-  link.click()
-  
-  // 更新下载数
-  wallpaper.value.downloads++
-  ElMessage.success('开始下载')
+const downloadWallpaper = async () => {
+  try {
+    const res = await downloadWallpaperApi(wallpaper.value.id)
+    const url = res?.url || res
+    
+    if (url && typeof url === 'string') {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${wallpaper.value.title}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // 更新下载数
+      wallpaper.value.downloads++
+      ElMessage.success('开始下载')
+    }
+  } catch (error) {
+    if (error.response?.status === 403) {
+      ElMessage.warning('下载次数已达上限，请登录后继续')
+      setTimeout(() => router.push('/register'), 1500)
+    }
+  }
 }
 
 // 预览图片
@@ -321,7 +404,15 @@ const viewDetail = (id) => {
 
 // 格式化日期
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('zh-CN')
+  if (!dateString) return '未知'
+  // Check for "0" string or 0 number which often means invalid/epoch
+  if (dateString === '0' || dateString === 0) return '未知'
+  
+  const date = new Date(dateString)
+  // Check for invalid date or Unix epoch (1970)
+  if (isNaN(date.getTime()) || date.getFullYear() <= 1970) return '未知'
+  
+  return date.toLocaleDateString('zh-CN')
 }
 
 // 格式化文件大小
@@ -353,6 +444,12 @@ onMounted(() => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 .detail-content {
@@ -439,6 +536,9 @@ onMounted(() => {
   box-shadow: var(--app-shadow-card);
   height: fit-content;
   border: 1px solid var(--app-border);
+  position: sticky;
+  top: 20px;
+  z-index: 10;
 }
 
 .info-header {
@@ -635,7 +735,7 @@ onMounted(() => {
 }
 
 /* 响应式设计 */
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .detail-content {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -643,6 +743,7 @@ onMounted(() => {
   
   .wallpaper-info {
     order: -1;
+    position: static;
   }
   
   .wallpaper-display {
