@@ -56,6 +56,17 @@
   --app-bg-gradient-1: #F5F5F7;
   --app-bg-gradient-2: #FFFFFF;
   --app-bg-gradient-3: #F0F0F2;
+
+  /* Manage Button Semantics - Light */
+  --app-btn-manage-bg: linear-gradient(135deg, #f3f0ff 0%, #e0d5ff 100%);
+  --app-btn-manage-text: #5b3a8a;
+  --app-btn-manage-border: #d4c2fc;
+  --app-btn-manage-shadow: 0 4px 12px rgba(106, 65, 163, 0.15);
+  --app-btn-manage-hover-bg: linear-gradient(135deg, #8c52ff 0%, #6a41a3 100%);
+  --app-btn-manage-hover-text: #ffffff;
+  --app-btn-manage-hover-border: #8c52ff;
+  --app-btn-manage-hover-shadow: 0 6px 16px rgba(106, 65, 163, 0.3);
+  --app-btn-manage-active-bg: #e0d5ff;
 }
 
 :root.dark {
@@ -119,4 +130,15 @@
   --app-bg-gradient-1: #0A0A0C;
   --app-bg-gradient-2: #141416;
   --app-bg-gradient-3: #0F0F11;
+
+  /* Manage Button Semantics - Dark */
+  --app-btn-manage-bg: linear-gradient(135deg, #3d2266 0%, #22133a 100%);
+  --app-btn-manage-text: #e0d5ff;
+  --app-btn-manage-border: #5b3a8a;
+  --app-btn-manage-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --app-btn-manage-hover-bg: linear-gradient(135deg, #4f2d85 0%, #311b54 100%);
+  --app-btn-manage-hover-text: #ffffff;
+  --app-btn-manage-hover-border: #8c52ff;
+  --app-btn-manage-hover-shadow: 0 6px 16px rgba(106, 65, 163, 0.4);
+  --app-btn-manage-active-bg: #22133a;
 }

@@ -42,6 +42,12 @@
                   {{ wallpaper.liked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
                 </el-button>
               </div>
+             <!-- Author Actions (Only visible to author) -->
+              <div v-if="isAuthor" class="author-actions">
+                <el-button class="btn-manage" round size="large" :icon="Edit" @click="handleEdit">
+                  管理壁纸
+                </el-button>
+              </div>
           </div>
 
           <div class="wallpaper-stats">
@@ -83,17 +89,11 @@
             </div>
           </div>
 
-          <div class="info-section" v-if="wallpaper.tags && wallpaper.tags.length">
+          <div class="info-section" v-if="processedTags.length">
             <h3>标签</h3>
             <div class="tags">
-              <el-tag 
-                v-for="tag in wallpaper.tags" 
-                :key="tag"
-                class="tag-item"
-                effect="plain"
-                round
-                @click="searchByTag(tag)"
-              >
+              <el-tag v-for="tag in processedTags" :key="tag" class="tag-item" effect="plain" round
+                @click="searchByTag(tag)">
                 {{ tag }}
               </el-tag>
             </div>
@@ -143,36 +143,93 @@
       </div>
     </div>
 
-    <!-- 图片预览对话框 -->
-    <el-dialog 
-      v-model="showPreview" 
-      :show-close="false"
-      :close-on-click-modal="true"
-      class="preview-dialog"
-      width="90%"
+    <!-- 编辑壁纸对话框 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑壁纸"
+      width="500px"
+      destroy-on-close
+      :close-on-click-modal="false"
     >
-      <img 
-        :src="wallpaper?.url || wallpaper?.thumbUrl" 
-        :alt="wallpaper?.title"
-        class="preview-image"
-      />
+      <el-form :model="editForm" label-width="60px">
+        <el-form-item label="标题" required>
+          <el-input v-model="editForm.title" placeholder="请输入标题" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input 
+            v-model="editForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入描述" 
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-select v-model="editForm.category" placeholder="请选择分类" style="width: 100%">
+             <el-option
+                v-for="item in categoryOptions"
+                :key="item.id"
+                :label="item.name"
+                :value="item.name"
+             />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-select
+            v-model="editForm.tagsList"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            placeholder="请输入或选择标签"
+            style="width: 100%"
+            @change="handleTagChange"
+          >
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer-content">
+          <el-button type="danger" link @click="handleDelete" :icon="Delete">删除此壁纸</el-button>
+          <div class="dialog-actions">
+            <el-button @click="editDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitEdit" :loading="submitting">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 图片预览对话框 -->
+   <el-dialog v-model="showPreview" :show-close="false" :align-center="true" class="cinema-preview-dialog" width="100%"
+      :transition-drop-down="false" transition="cinema-fade">
+      <div class="cinema-wrapper" @click="showPreview = false">
+        <img :src="wallpaper?.url || wallpaper?.thumbUrl" :alt="wallpaper?.title" class="cinema-image" />
+        <!-- <div class="cinema-caption">
+          <h3>{{ wallpaper?.title }}</h3>
+          <p>{{ wallpaper?.width }} × {{ wallpaper?.height }}</p>
+        </div> -->
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch, onBeforeUnmount } from 'vue'
+import { ref, reactive,nextTick, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
+  Star,
   Download, 
   View, 
   Calendar,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Edit,
+  Delete
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getWallpaper, likeWallpaper, getWallpapers, downloadWallpaperApi } from '@/api'
+import { getWallpaper, likeWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -234,6 +291,13 @@ const uploaderInfo = computed(() => {
   return null
 })
 
+const isAuthor = computed(() => {
+  if (!userStore.isAuthenticated || !userStore.info || !uploaderInfo.value) return false
+  return String(userStore.info.id) === String(uploaderInfo.value.id)
+})
+
+
+
 const goBack = () => {
   router.back()
 }
@@ -241,6 +305,102 @@ const goBack = () => {
 const goProfile = (id) => {
   if (id) {
     router.push(`/profile/${id}`)
+  }
+}
+
+// 编辑状态
+const editDialogVisible = ref(false)
+const submitting = ref(false)
+const categoryOptions = ref([])
+const editForm = reactive({
+  title: '',
+  description: '',
+  category: '',
+  tagsList: []
+})
+
+// 假设你的响应数据存储在 wallpaper.value 中
+const processedTags = computed(() => {
+  const rawTags = wallpaper.value?.tags
+  if (!rawTags) return []
+  
+  // 如果已经是数组则直接返回，如果是字符串则按逗号分割
+  if (Array.isArray(rawTags)) return rawTags
+  
+  return rawTags
+    .split(',')           // 按逗号分割成数组
+    .map(tag => tag.trim()) // 去除每个标签前后的空格
+    .filter(tag => tag !== '') // 过滤掉空字符串
+})
+
+// 获取分类
+const fetchCategories = async () => {
+  if (categoryOptions.value.length > 0) return
+  try {
+    const res = await getCategories()
+    categoryOptions.value = res || []
+  } catch (e) {
+    console.error('Failed to fetch categories:', e)
+  }
+}
+
+// 打开编辑对话框
+const handleEdit = async () => {
+  await fetchCategories()
+  editForm.title = wallpaper.value.title || ''
+  editForm.description = wallpaper.value.description || ''
+  editForm.category = wallpaper.value.category || '' // Assuming category name is stored
+  // Ensure tags is an array
+  editForm.tagsList = Array.isArray(wallpaper.value.tags) ? [...wallpaper.value.tags] : []
+  editDialogVisible.value = true
+}
+
+// 提交编辑
+const submitEdit = async () => {
+  if (!editForm.title) {
+    ElMessage.warning('标题不能为空')
+    return
+  }
+  
+  submitting.value = true
+  try {
+    await updateWallpaper(wallpaper.value.id, {
+      title: editForm.title,
+      description: editForm.description,
+      category: editForm.category,
+      tagsList: editForm.tagsList
+    })
+    ElMessage.success('更新成功')
+    editDialogVisible.value = false
+    // Refresh details
+    await fetchWallpaper(wallpaper.value.id)
+  } catch (error) {
+    ElMessage.error('更新失败: ' + (error.message || '未知错误'))
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 删除壁纸
+const handleDelete = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这张壁纸吗？此操作不可恢复。',
+      '删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    await deleteWallpaper(wallpaper.value.id)
+    ElMessage.success('壁纸已删除')
+    router.push('/user') // 返回用户中心或首页
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败，请稍后重试')
+    }
   }
 }
 
@@ -379,8 +539,9 @@ const downloadWallpaper = async () => {
   } catch (error) {
     if (error.response?.status === 403) {
       ElMessage.warning('下载次数已达上限，请登录后继续')
-      setTimeout(() => router.push('/register'), 1500)
+      window.dispatchEvent(new Event('auth-required'))
     }
+    
   }
 }
 
@@ -437,6 +598,22 @@ onMounted(() => {
     fetchWallpaper(id)
   }
 })
+
+// 处理标签变化
+const handleTagChange = (newTags) => {
+   nextTick(() => {
+    // 找到当前正在输入的 input 元素
+    const activeInput = document.activeElement;
+    if (activeInput && activeInput.tagName === 'INPUT') {
+      // 1. 清空原生 DOM 的值
+      activeInput.value = '';
+      
+      // 2. 触发 input 事件让 Vue/Element 监测到内容已变为空（可选，视版本而定）
+      activeInput.dispatchEvent(new Event('input'));
+    }
+  });
+}
+
 </script>
 
 <style scoped>
@@ -491,6 +668,44 @@ onMounted(() => {
   gap: 12px;
 }
 
+.author-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.author-actions .el-button {
+  flex: 1;
+}
+
+.btn-manage {
+  width: 100%;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Semantic Variables from theme.css */
+  border: 1px solid var(--app-btn-manage-border) !important;
+  color: var(--app-btn-manage-text) !important;
+  background: var(--app-btn-manage-bg) !important;
+  box-shadow: var(--app-btn-manage-shadow);
+}
+
+.btn-manage:hover {
+  border-color: var(--app-btn-manage-hover-border) !important;
+  color: var(--app-btn-manage-hover-text) !important;
+  background: var(--app-btn-manage-hover-bg) !important;
+  box-shadow: var(--app-btn-manage-hover-shadow);
+  transform: translateY(-1px);
+}
+
+.btn-manage:active {
+  background: var(--app-btn-manage-active-bg) !important;
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
 .btn-gradient-orange {
   width: 100%;
   height: 48px !important;
@@ -504,6 +719,39 @@ onMounted(() => {
 
 .secondary-actions .el-button {
   flex: 1;
+}
+
+/* Dialog Styles */
+.dialog-footer-content {
+  display: flex;
+  justify-content: space-between; /* 拉开左侧删除和右侧保存的距离 */
+  align-items: center;           /* 垂直方向居中对齐 */
+  width: 100%;
+  padding-top: 10px;             /* 增加一点顶距更美观 */
+}
+
+/* 按钮内部图标与文字水平垂直居中 */
+:deep(.el-button.is-link) {
+  display: inline-flex;
+  align-items: center;   /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+  height: auto;
+  padding: 4px 8px;
+}
+:deep(.el-button--danger.is-link) {
+  color: #ff4d4f !important; /* 你想要的颜色，比如更鲜艳的红色 */
+}
+/* 强制图标和文字之间的间距平衡 */
+:deep(.el-button .el-icon) {
+  margin-right: 6px;     /* 图标与文字的间距 */
+  vertical-align: middle;
+  font-size: 16px;       /* 调整图标大小使其与文字视觉统一 */
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 /* Typography Overrides */
@@ -917,4 +1165,86 @@ onMounted(() => {
     font-size: 12px;
   }
 }
+
+
+/* 1. 消除 Dialog 默认白盒样式 */
+:deep(.cinema-preview-dialog) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  margin: 0 !important;
+  --el-dialog-bg-color: transparent;
+}
+
+/* 2. 移除 Header 和 Body 的内边距 */
+:deep(.cinema-preview-dialog .el-dialog__header) {
+  display: none; 
+}
+:deep(.cinema-preview-dialog .el-dialog__body) {
+  padding: 0 !important;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3. 沉浸式背景：深度模糊 */
+:deep(.el-overlay) {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(15px); /* 毛玻璃效果 */
+  transition: all 0.4s ease;
+}
+
+/* 4. 图片容器与动画 */
+.cinema-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: zoom-out; /* 提示点击缩小 */
+}
+
+.cinema-image {
+  max-width: 95vw;
+  max-height: 85vh;
+  object-fit: contain;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
+  /* 入场动画：轻微放大弹出 */
+  animation: cinemaZoom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 占位背景：跟随主题变化，避免加载时白屏 */
+  background: var(--app-bg-card);
+}
+
+/* 5. 电影字幕式文案 */
+.cinema-caption {
+  position: absolute;
+  bottom: 5vh;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  pointer-events: none; /* 点击事件穿透到父容器 */
+}
+
+.cinema-caption h3 {
+  font-weight: 300;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+/* 放大入场动画 */
+@keyframes cinemaZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 </style>

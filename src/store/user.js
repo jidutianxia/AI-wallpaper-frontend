@@ -5,7 +5,8 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
     info: null,
-    isLoggedIn: false
+    isLoggedIn: false,
+    fetchPromise: null
   }),
   
   getters: {
@@ -48,17 +49,27 @@ export const useUserStore = defineStore('user', {
     },
     
     async fetchUser() {
-      try {
-        const data = await getMe()
-        this.info = data
-        this.isLoggedIn = true
-      } catch (error) {
-        // If 401, the interceptor handles it, but we should also clean up
-        // However, getMe failure might be due to network, so don't auto-logout unless 401 (handled by interceptor event)
-        // But for safety, if we can't get user info, we are effectively not logged in fully
-        // Let's rely on the interceptor for 401 logout.
-        throw error
-      }
+      // Deduplicate requests
+      if (this.fetchPromise) return this.fetchPromise
+
+      this.fetchPromise = (async () => {
+        try {
+          const data = await getMe()
+          this.info = data
+          this.isLoggedIn = true
+          return data
+        } catch (error) {
+          // If 401, the interceptor handles it, but we should also clean up
+          // However, getMe failure might be due to network, so don't auto-logout unless 401 (handled by interceptor event)
+          // But for safety, if we can't get user info, we are effectively not logged in fully
+          // Let's rely on the interceptor for 401 logout.
+          throw error
+        } finally {
+          this.fetchPromise = null
+        }
+      })()
+
+      return this.fetchPromise
     },
     
     logout() {

@@ -16,8 +16,7 @@ import { useUserStore } from '@/store/user'
  */
 export function useInteraction() {
   const userStore = useUserStore()
-  const loading = ref(false)
-
+  
   // 统一交互处理
   // target: 响应式对象 (ref.value 或 reactive object)，必须包含 id, liked/isLiked, likes, favorited/isFavorited 等字段
   // type: 'like' | 'favorite'
@@ -28,8 +27,9 @@ export function useInteraction() {
       return false
     }
 
-    if (loading.value) return
-    loading.value = true
+    // Prevent duplicate clicks on the same target
+    if (target._interacting) return
+    target._interacting = true
 
     // 字段兼容处理
     // 后端返回字段可能不统一 (liked vs isLiked)，这里做归一化
@@ -75,7 +75,10 @@ export function useInteraction() {
       Object.assign(target, originalState)
       ElMessage.error('操作失败，请重试')
     } finally {
-      loading.value = false
+      // Throttle unlock
+      setTimeout(() => {
+        target._interacting = false
+      }, 500)
     }
   }
 

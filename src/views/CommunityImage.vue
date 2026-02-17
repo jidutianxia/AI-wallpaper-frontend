@@ -230,7 +230,7 @@ const download = async () => {
     } catch (error) {
       if (error.response?.status === 403) {
         ElMessage.warning('下载次数已达上限，请登录后继续')
-        setTimeout(() => router.push('/register'), 1500)
+        window.dispatchEvent(new Event('auth-required'))
       }
     }
   }

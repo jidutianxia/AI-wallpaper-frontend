@@ -20,7 +20,7 @@
               <template v-else>
                 <div class="avatar-lg placeholder"><el-icon><User /></el-icon></div>
                 <div class="creator"><div class="creator-name">请先登录</div><div class="creator-desc">登录后可发布内容</div></div>
-                <el-button class="publish-btn" type="primary" round :disabled="true" @click.stop="handlePublishClick">发布</el-button>
+                <el-button class="publish-btn" type="primary" round @click.stop="handlePublishClick">发布</el-button>
               </template>
             </div>
             <div class="stats-grid">
@@ -102,6 +102,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { Plus, EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
@@ -115,7 +116,7 @@ const posts = ref([])
 const userStore = useUserStore()
 const isAuthenticated = computed(() => userStore.isAuthenticated)
 const displayName = computed(() => userStore.info?.nickname || userStore.info?.username || '请先登录')
-const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '登录后可发布内容')
+const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '这个人很懒~')
 const avatarUrl = computed(() => userStore.info?.avatarUrl || 'https://i.pravatar.cc/80?u=user')
 const q = ref('')
 const tag = ref('')
@@ -174,9 +175,13 @@ const loadPosts = async () => {
 }
 
 // Watchers for search/filter/pagination
-watch([q, tag], () => {
+const debouncedLoadPosts = useDebounceFn(() => {
   page.value = 1
   loadPosts()
+}, 300)
+
+watch([q, tag], () => {
+  debouncedLoadPosts()
 })
 watch(page, loadPosts)
 
@@ -222,6 +227,9 @@ watch([posts, loading], async () => {
 })
 
 const toggleLike = async (p) => {
+  if (p.likeLoading) return
+  p.likeLoading = true
+
   const prev = { liked: p.liked, likes: p.likes }
   // Optimistic update
   p.liked = !p.liked
@@ -238,6 +246,8 @@ const toggleLike = async (p) => {
   } catch {
     // Revert on error
     p.liked = prev.liked; p.likes = prev.likes; ElMessage.error('点赞失败')
+  } finally {
+    setTimeout(() => { p.likeLoading = false }, 500)
   }
 }
 
@@ -270,6 +280,9 @@ const openComments = async (p) => {
 const commentCount = (p) => p.commentsCount || p.comments?.length || 0
 
 const toggleFavorite = async (p) => {
+  if (p.favLoading) return
+  p.favLoading = true
+
   const prev = { favorited: p.favorited, favorites: p.favorites }
   // Optimistic update
   p.favorited = !p.favorited
@@ -281,7 +294,11 @@ const toggleFavorite = async (p) => {
        if (typeof r.favorites !== 'undefined') p.favorites = r.favorites
     }
     ElMessage.success(p.favorited ? '已收藏' : '已取消收藏')
-  } catch { p.favorited = prev.favorited; p.favorites = prev.favorites; ElMessage.error('收藏失败') }
+  } catch { 
+    p.favorited = prev.favorited; p.favorites = prev.favorites; ElMessage.error('收藏失败') 
+  } finally {
+    setTimeout(() => { p.favLoading = false }, 500)
+  }
 }
 
 const sharePost = async (p) => {

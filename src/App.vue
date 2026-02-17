@@ -195,7 +195,7 @@ watch(showNotifyDialog, async (open) => {
               @keyup.enter="handleSearch"
             >
               <template #prefix>
-                <el-icon class="search-icon"><Search /></el-icon>
+                <el-icon class="search-icon" @click="handleSearch" style="cursor: pointer"><Search /></el-icon>
               </template>
             </el-input>
             

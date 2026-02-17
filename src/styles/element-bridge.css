@@ -55,6 +55,7 @@
   --el-input-border-color: var(--app-border);
   --el-input-placeholder-color: var(--app-text-secondary);
   --el-fill-color-blank: var(--app-bg-card);
+  --el-fill-color-light: var(--app-bg-hover); /* Map Element generic hover fill to our hover color */
 }
 
 /* --- Global Teleported Component Overrides --- */
