@@ -521,27 +521,23 @@ const toggleLike = async () => {
 // 下载壁纸
 const downloadWallpaper = async () => {
   try {
-    const res = await downloadWallpaperApi(wallpaper.value.id)
-    const url = res?.url || res
+    // 直接构造下载链接，避免 axios 自动跟随重定向导致的 CORS 问题
+    // 后端重定向到 OSS，浏览器对 XHR 请求的重定向资源有严格的 CORS 限制
+    // 使用 window.open 或直接导航可以绕过此限制
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+    const token = localStorage.getItem('token')
+    const url = `${baseUrl}/wallpapers/${wallpaper.value.id}/download${token ? `?token=${token}` : ''}`
     
-    if (url && typeof url === 'string') {
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${wallpaper.value.title}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      // 更新下载数
-      wallpaper.value.downloads++
-      ElMessage.success('开始下载')
-    }
+    // 在新窗口打开下载链接
+    window.open(url, '_blank')
+    
+    // 更新下载数 (乐观更新)
+    wallpaper.value.downloads++
+    ElMessage.success('开始下载')
+
   } catch (error) {
-    if (error.response?.status === 403) {
-      ElMessage.warning('下载次数已达上限，请登录后继续')
-      window.dispatchEvent(new Event('auth-required'))
-    }
-    
+    console.error('Download error:', error)
+    ElMessage.error('下载请求失败')
   }
 }
 

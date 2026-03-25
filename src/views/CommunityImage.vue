@@ -217,22 +217,15 @@ const goWallpaper = () => {
 }
 const download = async () => { 
   if (imageUrl.value) {
-    try {
-      const res = await downloadCommunityPostImage(postId, index)
-      const url = res?.url || res
-      
-      if (url && typeof url === 'string') {
-        window.open(url, '_blank')
-        
-        // Optimistically update download count if needed
-        // imageMeta.value.downloads++
-      }
-    } catch (error) {
-      if (error.response?.status === 403) {
-        ElMessage.warning('下载次数已达上限，请登录后继续')
-        window.dispatchEvent(new Event('auth-required'))
-      }
+    // Check if it is a wallpaper
+    if (imageMeta.value.wallpaperInfo) {
+      // If it is a wallpaper, guide user to the wallpaper detail page to download
+      router.push(`/detail/${imageMeta.value.wallpaperInfo.id}`)
+      return
     }
+    
+    // If not a wallpaper, show reminder
+    ElMessage.warning('该图片暂未收录为壁纸，可提醒作者上架')
   }
 }
 

@@ -845,8 +845,16 @@ watch(showNotifyDialog, async (open) => {
   border-color: var(--app-color-primary); 
 }
 .notify-card { margin-bottom: 8px; }
-.notify-title { font-weight: 600; }
-.notify-time { font-size: 12px; opacity: .8; }
+.notify-title { 
+  font-weight: 600; 
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+.notify-time { 
+  font-size: 12px; 
+  color: var(--el-text-color-secondary);
+  margin-top: 6px;
+}
 </style>
 
 
