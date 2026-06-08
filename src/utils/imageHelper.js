@@ -3,6 +3,8 @@
  * Handles both legacy string URLs and new object-based image structures
  */
 
+import { isSafeImageUrl } from './urlSecurity'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 // Extract origin from API_BASE_URL (e.g. http://localhost:8080/api -> http://localhost:8080)
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
@@ -14,11 +16,13 @@ const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
  */
 export const getFullUrl = (url) => {
   if (!url) return ''
-  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url
+  const normalized = String(url).trim()
+  if (!isSafeImageUrl(normalized)) return ''
+  if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:image/')) return normalized
   // If url starts with /, append to server origin
-  if (url.startsWith('/')) return `${SERVER_ORIGIN}${url}`
+  if (normalized.startsWith('/')) return `${SERVER_ORIGIN}${normalized}`
   // Otherwise assume it's relative to server origin as well (or handle edge cases)
-  return `${SERVER_ORIGIN}/${url}`
+  return `${SERVER_ORIGIN}/${normalized}`
 }
 
 /**

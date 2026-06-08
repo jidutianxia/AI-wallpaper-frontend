@@ -34,4 +34,10 @@ describe('imageHelper', () => {
     expect(getAvatarUrl('')).toBe('https://i.pravatar.cc/150?u=default')
     expect(normalizePostImages(post)).toBe(post)
   })
+
+  it('rejects unsafe image protocols', () => {
+    expect(getFullUrl('javascript:alert(1)')).toBe('')
+    expect(getFullUrl('data:text/html;base64,abc')).toBe('')
+    expect(getImageUrl({ url: 'vbscript:msgbox(1)' })).toBe('')
+  })
 })

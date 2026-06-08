@@ -21,9 +21,7 @@
 
         <!-- Error State -->
         <div v-if="isError" class="error-state">
-          <el-empty description="加载失败，请重试">
-            <el-button type="primary" @click="fetchWallpapers">重试</el-button>
-          </el-empty>
+          <AppState type="error" description="加载失败，请重试" retryable @retry="fetchWallpapers" />
         </div>
 
         <!-- Skeleton Loading -->
@@ -77,6 +75,7 @@ import { useRouter } from 'vue-router'
 import { Star, Download, Picture, Camera, Brush, Monitor, Phone } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import AppState from '@/components/AppState.vue'
 import { getWallpapers } from '@/api/wallpaper'
 import { formatAuthor, normalizePagedResult, normalizeWallpaper } from '@/utils'
 

@@ -27,7 +27,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{js,vue}'],
-      exclude: ['src/main.js', 'src/**/*.test.js', 'src/**/__tests__/**']
+      exclude: ['src/main.js', 'src/test/**', 'src/**/*.test.js', 'src/**/__tests__/**']
     }
   },
   build: {

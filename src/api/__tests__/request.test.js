@@ -76,7 +76,8 @@ describe('request api client', () => {
     })
 
     expect(axiosCreate).toHaveBeenCalledWith({
-      baseURL: 'http://localhost:8080/api'
+      baseURL: 'http://localhost:8080/api',
+      timeout: 15000
     })
 
     const config = requestHandlers[0].fulfilled({ headers: {} })
@@ -126,5 +127,34 @@ describe('request api client', () => {
     expect(removeLocalStorageItem).toHaveBeenCalledWith('token')
     expect(messageWarning).toHaveBeenCalled()
     expect(requestAuth).toHaveBeenCalledWith({ reason: 'unauthorized' })
+  })
+
+  it('deduplicates repeated 401 auth prompts in a short window', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(2000)
+    const {
+      messageWarning,
+      removeLocalStorageItem,
+      requestAuth,
+      responseHandlers
+    } = await loadRequestModule({ token: 'expired' })
+    const error = { response: { status: 401 } }
+
+    await expect(responseHandlers[0].rejected(error)).rejects.toBe(error)
+    await expect(responseHandlers[0].rejected(error)).rejects.toBe(error)
+
+    expect(removeLocalStorageItem).toHaveBeenCalledTimes(2)
+    expect(messageWarning).toHaveBeenCalledTimes(1)
+    expect(requestAuth).toHaveBeenCalledTimes(1)
+  })
+
+  it('classifies timeout and network errors into user-facing messages', async () => {
+    const { messageError, module, responseHandlers } = await loadRequestModule()
+
+    expect(module.getErrorMessage({ code: 'ECONNABORTED' })).toBe('请求超时，请稍后重试')
+    expect(module.getErrorMessage({ message: 'offline' })).toBe('网络连接异常，请稍后重试')
+
+    const error = { code: 'ECONNABORTED' }
+    await expect(responseHandlers[0].rejected(error)).rejects.toBe(error)
+    expect(messageError).toHaveBeenCalledWith('请求超时，请稍后重试')
   })
 })

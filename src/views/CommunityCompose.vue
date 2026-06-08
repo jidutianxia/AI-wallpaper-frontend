@@ -24,6 +24,7 @@
           </el-form-item>
           <el-form-item label="上传">
             <el-upload class="upload" v-model:file-list="fileList" :http-request="onHttpRequest"
+              :before-upload="beforeUpload"
               :on-success="onUploadSuccess" :on-error="onUploadError" :on-exceed="onExceed" :limit="10" multiple
               list-type="picture-card" accept="image/*">
               <template #default>
@@ -79,6 +80,7 @@ import { ElMessage } from 'element-plus'
 import { Plus, Delete, ArrowLeft, ArrowLeftBold } from '@element-plus/icons-vue'
 import { uploadCommunityImage, createCommunityPost, getCategories } from '@/api'
 import { useRouter } from 'vue-router'
+import { validateImageFile, validateUploadCount } from '@/utils'
 
 const router = useRouter()
 const goBack = () => router.push('/community')
@@ -98,9 +100,25 @@ const loadCategories = async () => {
 }
 loadCategories()
 
-const onExceed = () => { ElMessage.warning('最多只能上传 10 张图片') }
+const onExceed = (files) => {
+  const result = validateUploadCount([...(fileList.value || []), ...(files || [])], 10)
+  ElMessage.warning(result.message || '最多只能上传 10 张图片')
+}
+
+const beforeUpload = (file) => {
+  const result = validateImageFile(file, { maxSizeMB: 10 })
+  if (!result.valid) ElMessage.error(result.message)
+  return result.valid
+}
+
 const onHttpRequest = async (options) => {
   const { file, onSuccess, onError } = options
+  const validation = validateImageFile(file, { maxSizeMB: 10 })
+  if (!validation.valid) {
+    ElMessage.error(validation.message)
+    onError(new Error(validation.message))
+    return
+  }
   const fd = new FormData()
   fd.append('file', file)
   try {

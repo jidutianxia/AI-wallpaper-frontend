@@ -19,16 +19,16 @@ const activeMain = ref('hot')
 const mobileMenuOpen = ref(false)
 
 const mainCategories = [
-  { key: 'hot', label: '昨日热门' },
-  { key: 'type', label: '壁纸种类' },
+  { key: 'hot', label: '热门推荐' },
+  { key: 'type', label: '壁纸类型' },
   { key: 'class', label: '壁纸分类' },
   { key: 'ratio', label: '分辨率' },
   { key: 'color', label: '颜色分类' }
 ]
 
 const submap = {
-  hot: ['最新', '推荐的', '昨日热门', '近三天热门', '上周热门', '上月热门', '近半年热门', '去年热榜'],
-  type: ['插画', '二次元', '风景', '极简', '赛博朋克', '像素风', '3D渲染'],
+  hot: ['最新', '推荐', '昨日热门', '近三天热门', '上周热门', '上月热门', '近半年热门', '去年热门'],
+  type: ['插画', '二次元', '风景', '极简', '赛博朋克', '像素风', '3D 渲染'],
   class: ['人物', '动物', '植物', '建筑', '美食', '运动', '科技'],
   ratio: ['4K', '8K', '1080P', '2K', '超宽屏', '手机竖屏'],
   color: [
@@ -78,7 +78,7 @@ const closeMobileMenu = () => {
         <el-button class="hamburger" text @click="mobileMenuOpen = !mobileMenuOpen">
           <el-icon><Menu /></el-icon>
         </el-button>
-        <router-link to="/" class="nav-brand">AI壁纸</router-link>
+        <router-link to="/" class="nav-brand">AI 壁纸</router-link>
         <div class="nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/category" class="nav-link">分类</router-link>

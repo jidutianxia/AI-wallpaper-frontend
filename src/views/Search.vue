@@ -98,7 +98,7 @@
 
       <!-- 无结果提示 -->
       <div v-if="!loading && wallpapers.length === 0" class="no-results">
-        <el-empty description="没有找到相关壁纸" />
+        <AppState description="没有找到相关壁纸" />
       </div>
 
       <!-- 分页 -->
@@ -122,6 +122,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Search, ArrowDown, Right, ArrowRight } from '@element-plus/icons-vue'
 import { ClickOutside as vClickOutside } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import AppState from '@/components/AppState.vue'
 import { getWallpapers, getCategories } from '@/api'
 import { formatAuthor } from '@/utils'
 

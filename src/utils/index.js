@@ -3,6 +3,8 @@
  */
 
 export * from './normalizers'
+export * from './uploadValidation'
+export * from './urlSecurity'
 
 // 格式化日期
 export const formatDate = (date, format = 'YYYY-MM-DD') => {

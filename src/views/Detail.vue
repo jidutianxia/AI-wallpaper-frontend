@@ -230,7 +230,7 @@ import {
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories } from '@/api'
-import { normalizePagedResult, normalizeWallpaper } from '@/utils'
+import { appendTokenParam, normalizePagedResult, normalizeWallpaper, openSecureWindow } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
 import { getLocalStorageItem } from '@/utils/storage'
 
@@ -513,11 +513,10 @@ const downloadWallpaper = async () => {
     // 使用 window.open 或直接导航可以绕过此限制
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
     const token = getLocalStorageItem('token')
-    const safeToken = token ? encodeURIComponent(token) : ''
-    const url = `${baseUrl}/wallpapers/${wallpaper.value.id}/download${safeToken ? `?token=${safeToken}` : ''}`
+    const url = appendTokenParam(`${baseUrl}/wallpapers/${wallpaper.value.id}/download`, token)
     
     // 在新窗口打开下载链接
-    window.open(url, '_blank', 'noopener,noreferrer')
+    if (!openSecureWindow(url)) throw new Error('Invalid download URL')
     
     // 更新下载数 (乐观更新)
     wallpaper.value.downloads++

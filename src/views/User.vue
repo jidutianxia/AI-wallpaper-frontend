@@ -306,7 +306,7 @@ import {
 } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
-import { normalizePagedResult, normalizePost, normalizeWallpaper } from '@/utils'
+import { normalizePagedResult, normalizePost, normalizeWallpaper, validateImageFile } from '@/utils'
 import { notifyAuthChanged } from '@/utils/authEvents'
 
 const router = useRouter()
@@ -634,16 +634,12 @@ const uploadAvatar = async (opt) => {
 
 // 头像上传前验证
 const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-  
-  if (!isJPG) {
-    ElMessage.error('头像只能是 JPG/PNG 格式!')
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
-  }
-  return isJPG && isLt2M
+  const result = validateImageFile(file, {
+    allowedTypes: ['image/jpeg', 'image/png'],
+    maxSizeMB: 2
+  })
+  if (!result.valid) ElMessage.error(result.message)
+  return result.valid
 }
 
 // 壁纸上传成功
@@ -654,16 +650,9 @@ const handleUploadSuccess = (response) => {
 
 // 壁纸上传前验证
 const beforeUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt10M = file.size / 1024 / 1024 < 10
-  
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
-  }
-  if (!isLt10M) {
-    ElMessage.error('图片大小不能超过 10MB!')
-  }
-  return isImage && isLt10M
+  const result = validateImageFile(file, { maxSizeMB: 10 })
+  if (!result.valid) ElMessage.error(result.message)
+  return result.valid
 }
 
 // 提交上传

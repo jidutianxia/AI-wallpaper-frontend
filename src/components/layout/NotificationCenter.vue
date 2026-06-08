@@ -1,10 +1,13 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { getUserReceivedComments, getUserReceivedLikes } from '@/api'
+import AppState from '@/components/AppState.vue'
 
 const visible = defineModel({ type: Boolean, default: false })
 
 const activeNotify = ref('comments')
+const loading = ref(false)
+const failed = ref(false)
 const notifyGroups = [
   { key: 'comments', label: '评论/回复' },
   { key: 'likes', label: '点赞/收藏' },
@@ -14,8 +17,9 @@ const notifyGroups = [
 ]
 const notifyData = ref({ comments: [], likes: [], followers: [], help: [], system: [] })
 
-watch(visible, async (open) => {
-  if (!open) return
+const loadNotifications = async () => {
+  loading.value = true
+  failed.value = false
   try {
     const [comments, likes] = await Promise.all([
       getUserReceivedComments({ page: 1, size: 10 }),
@@ -23,7 +27,16 @@ watch(visible, async (open) => {
     ])
     notifyData.value.comments = comments.items || []
     notifyData.value.likes = likes.items || []
-  } catch {}
+  } catch (error) {
+    failed.value = true
+    console.error('Failed to load notifications:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(visible, (open) => {
+  if (open) loadNotifications()
 })
 </script>
 
@@ -42,10 +55,15 @@ watch(visible, async (open) => {
         </button>
       </div>
       <div class="notify-content">
-        <el-card v-for="item in notifyData[activeNotify]" :key="item.id" shadow="never" class="notify-card">
-          <div class="notify-title">{{ item.title || item.content || '通知' }}</div>
-          <div class="notify-time">{{ item.createdAt || item.time }}</div>
-        </el-card>
+        <AppState v-if="loading" type="loading" :rows="3" />
+        <AppState v-else-if="failed" type="error" description="通知加载失败" retryable @retry="loadNotifications" />
+        <template v-else-if="notifyData[activeNotify].length">
+          <el-card v-for="item in notifyData[activeNotify]" :key="item.id" shadow="never" class="notify-card">
+            <div class="notify-title">{{ item.title || item.content || '通知' }}</div>
+            <div class="notify-time">{{ item.createdAt || item.time }}</div>
+          </el-card>
+        </template>
+        <AppState v-else description="暂无通知" />
       </div>
     </div>
   </el-dialog>

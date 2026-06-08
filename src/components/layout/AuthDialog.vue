@@ -54,7 +54,7 @@ const submit = async () => {
   <el-dialog v-model="visible" title="用户登录" width="420px" class="login-dialog">
     <div class="auth-banner">
       <el-icon class="banner-icon"><User /></el-icon>
-      <div class="banner-text">欢迎回来，请登录以发布与收藏</div>
+      <div class="banner-text">欢迎回来，登录后可发布、点赞与收藏</div>
     </div>
     <el-form :model="form" label-width="80px" size="large" class="login-form">
       <el-form-item label="用户名">
