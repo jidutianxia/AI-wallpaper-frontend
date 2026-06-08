@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({ 
@@ -88,14 +88,13 @@ const onError = (e) => { e.target.src = placeholder }
 const onLoad = () => { isLoaded.value = true }
 
 const go = () => {
-  const targetPath = displayTo.value;
+  const targetPath = displayTo.value
   
   if (targetPath && typeof targetPath === 'string' && !targetPath.includes('[object Object]')) {
-    router.push(targetPath);
+    router.push(targetPath)
   } else {
-    console.error("无效的路由路径:", targetPath);
+    console.error('无效的路由路径:', targetPath)
   }
-  if (displayTo.value) router.push(displayTo.value) 
 }
 
 const likesNum = computed(() => typeof props.likes === 'number' || typeof props.likes === 'string' ? Number(props.likes) : null)
@@ -127,6 +126,10 @@ const stopSlideshow = () => {
   }
   currentImgSrc.value = initialCover.value
 }
+
+onBeforeUnmount(() => {
+  if (slideTimer) clearInterval(slideTimer)
+})
 </script>
 
 <style scoped>

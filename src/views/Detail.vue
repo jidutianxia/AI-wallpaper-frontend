@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, reactive,nextTick, computed, onMounted, watch, onBeforeUnmount } from 'vue'
+import { ref, reactive,nextTick, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -229,11 +229,15 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getWallpaper, likeWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories } from '@/api'
+import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories } from '@/api'
+import { normalizePagedResult, normalizeWallpaper } from '@/utils'
+import { useInteraction } from '@/composables/useInteraction'
+import { getLocalStorageItem } from '@/utils/storage'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const { toggleInteraction } = useInteraction()
 
 const isMounted = ref(true)
 onBeforeUnmount(() => {
@@ -410,7 +414,7 @@ const fetchWallpaper = async (id) => {
   try {
     const response = await getWallpaper(id)
     if (!isMounted.value) return
-    wallpaper.value = response
+    wallpaper.value = normalizeWallpaper(response)
     
     // 获取相关推荐
     fetchRelatedWallpapers()
@@ -458,7 +462,7 @@ const fetchRelatedWallpapers = async () => {
       exclude: wallpaper.value?.id
     })
     if (!isMounted.value) return
-    relatedWallpapers.value = response.data || []
+    relatedWallpapers.value = normalizePagedResult(response, normalizeWallpaper).items
   } catch (error) {
     if (!isMounted.value) return
     // 模拟数据
@@ -490,29 +494,12 @@ const fetchRelatedWallpapers = async () => {
 
 // 切换点赞
 const toggleLike = async () => {
-  if (!userStore.isAuthenticated) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  
-  const prevLiked = wallpaper.value.liked
-  const prevLikes = wallpaper.value.likes
-
-  // Optimistic update
-  wallpaper.value.liked = !prevLiked
-  wallpaper.value.likes += wallpaper.value.liked ? 1 : -1
-  
+  if (!wallpaper.value) return
   likeLoading.value = true
   try {
-    await likeWallpaper(wallpaper.value.id)
-    if (!isMounted.value) return
-    ElMessage.success(wallpaper.value.liked ? '点赞成功' : '取消点赞')
-  } catch (error) {
-    if (!isMounted.value) return
-    // Rollback
-    wallpaper.value.liked = prevLiked
-    wallpaper.value.likes = prevLikes
-    ElMessage.error('操作失败')
+    await toggleInteraction(wallpaper.value, 'like', 'wallpaper', {
+      successMessage: (item) => item.liked ? '点赞成功' : '取消点赞'
+    })
   } finally {
     if (isMounted.value) likeLoading.value = false
   }
@@ -525,11 +512,12 @@ const downloadWallpaper = async () => {
     // 后端重定向到 OSS，浏览器对 XHR 请求的重定向资源有严格的 CORS 限制
     // 使用 window.open 或直接导航可以绕过此限制
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const token = localStorage.getItem('token')
-    const url = `${baseUrl}/wallpapers/${wallpaper.value.id}/download${token ? `?token=${token}` : ''}`
+    const token = getLocalStorageItem('token')
+    const safeToken = token ? encodeURIComponent(token) : ''
+    const url = `${baseUrl}/wallpapers/${wallpaper.value.id}/download${safeToken ? `?token=${safeToken}` : ''}`
     
     // 在新窗口打开下载链接
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
     
     // 更新下载数 (乐观更新)
     wallpaper.value.downloads++
@@ -586,14 +574,6 @@ watch(() => route.params.id, (newId) => {
     fetchWallpaper(newId)
   }
 }, { immediate: true })
-
-// 组件挂载
-onMounted(() => {
-  const id = route.params.id
-  if (id) {
-    fetchWallpaper(id)
-  }
-})
 
 // 处理标签变化
 const handleTagChange = (newTags) => {

@@ -145,10 +145,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Download, ArrowLeftBold, Star, StarFilled, Calendar, ArrowRight, Picture as IconPicture } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostImageMeta, likeCommunityPostImage, favoriteCommunityPostImage, downloadCommunityPostImage, submitWallpaperFromPost, getCategories } from '@/api'
+import { Download, ArrowLeftBold, Calendar, ArrowRight, Picture as IconPicture, Upload } from '@element-plus/icons-vue'
+import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, submitWallpaperFromPost, getCategories } from '@/api'
 import { useUserStore } from '@/store/user'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
+import { normalizePost } from '@/utils'
+import { useShare } from '@/composables/useShare'
 
 const route = useRoute()
 const postId = Number(route.params.id)
@@ -156,6 +158,7 @@ const index = Number(route.params.index)
 const rawImage = ref('') // Store raw image data (string or object)
 const imageUrl = computed(() => getImageUrl(rawImage.value)) // Computed safe URL
 const post = ref(null)
+const { share } = useShare()
 const loading = ref(true)
 const imageMeta = ref({ width: 0, height: 0, fileSize: null, format: '', views: 0, downloads: 0, liked: false, likes: 0, favorited: false, favorites: 0, wallpaperInfo: null })
 const previewVisible = ref(false)
@@ -179,8 +182,8 @@ loadCategories()
 onMounted(async () => {
   try {
     const p = await getCommunityPost(postId)
-    post.value = p
-    rawImage.value = p?.images?.[index] || ''
+    post.value = normalizePost(p)
+    rawImage.value = post.value?.images?.[index] || ''
     try {
       const meta = await getCommunityPostImageMeta(postId, index)
       imageMeta.value = {
@@ -289,17 +292,11 @@ const recordDownload = async () => {
 }
 
 const shareImage = async () => {
-  const url = `${location.origin}/community/post/${postId}/image/${index}`
-  try {
-    if (navigator.share) {
-      await navigator.share({ title: post.value?.title, text: '查看帖子图片', url })
-    } else if (navigator.clipboard) {
-      await navigator.clipboard.writeText(url)
-      ElMessage.success('链接已复制到剪贴板')
-    } else {
-      const inp = document.createElement('input'); inp.value = url; document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp); ElMessage.success('链接已复制到剪贴板')
-    }
-  } catch (e) { ElMessage.error('分享失败：' + (e.message || '未知错误')) }
+  await share({
+    title: post.value?.title,
+    text: '查看帖子图片',
+    url: `${location.origin}/community/post/${postId}/image/${index}`
+  })
 }
 </script>
 

@@ -1,38 +1,48 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/views/Home.vue'
-import Detail from '@/views/Detail.vue'
-import Category from '@/views/Category.vue'
-import Search from '@/views/Search.vue'
-import User from '@/views/User.vue'
-import Community from '@/views/Community.vue'
-import CommunityDetail from '@/views/CommunityDetail.vue'
-import CommunityImage from '@/views/CommunityImage.vue'
-import UserProfile from '@/views/UserProfile.vue'
-import CommunityCompose from '@/views/CommunityCompose.vue'
-import Register from '@/views/Register.vue'
+import { useUserStore } from '@/store/user'
+import { requestAuth } from '@/utils/authEvents'
+
+const view = (name) => () => import(`@/views/${name}.vue`)
 
 const routes = [
-  { path: '/', component: Home },
-  { path: '/detail/:id', component: Detail },
-  { path: '/category/:id', component: Category },
-  { path: '/category', component: Category },
-  { path: '/search', component: Search },
-  { path: '/user', component: User },
-  { path: '/community', component: Community },
-  { path: '/community/post/:id', component: CommunityDetail },
-  { path: '/community/post/:id/image/:index', component: CommunityImage },
-  { path: '/community/compose', component: CommunityCompose, beforeEnter: () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      window.dispatchEvent(new CustomEvent('auth-required'))
-      return '/community'
-    }
-  } },
-  { path: '/register', component: Register },
-  { path: '/profile/:id', component: UserProfile },
+  { path: '/', component: view('Home') },
+  { path: '/detail/:id', component: view('Detail') },
+  { path: '/category/:id', component: view('Category') },
+  { path: '/category', component: view('Category') },
+  { path: '/search', component: view('Search') },
+  { path: '/user', component: view('User'), meta: { requiresAuth: true, authFallback: '/' } },
+  { path: '/community', component: view('Community') },
+  { path: '/community/post/:id', component: view('CommunityDetail') },
+  { path: '/community/post/:id/image/:index', component: view('CommunityImage') },
+  {
+    path: '/community/compose',
+    component: view('CommunityCompose'),
+    meta: { requiresAuth: true, authFallback: '/community' }
+  },
+  { path: '/register', component: view('Register') },
+  { path: '/profile/:id', component: view('UserProfile') }
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth) return true
+
+  const userStore = useUserStore()
+  if (userStore.isAuthenticated) return true
+
+  if (userStore.token && !userStore.info) {
+    try {
+      await userStore.fetchUser()
+      if (userStore.isAuthenticated) return true
+    } catch {}
+  }
+
+  requestAuth({ reason: 'route', redirect: to.fullPath })
+  return to.meta.authFallback || '/'
+})
+
+export default router

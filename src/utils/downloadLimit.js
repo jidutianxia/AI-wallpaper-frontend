@@ -1,3 +1,5 @@
+import { getLocalStorageItem, setLocalStorageItem } from './storage'
+
 const STORAGE_KEY_PREFIX = 'guest_download_count_';
 const MAX_DOWNLOADS = 5;
 
@@ -10,13 +12,13 @@ export const checkGuestDownloadLimit = () => {
   const today = new Date().toISOString().split('T')[0];
   const key = `${STORAGE_KEY_PREFIX}${today}`;
   
-  const currentCount = parseInt(localStorage.getItem(key) || '0', 10);
+  const currentCount = parseInt(getLocalStorageItem(key, '0'), 10);
   
   if (currentCount >= MAX_DOWNLOADS) {
     return false;
   }
   
-  localStorage.setItem(key, (currentCount + 1).toString());
+  setLocalStorageItem(key, (currentCount + 1).toString());
   return true;
 };
 
@@ -27,6 +29,6 @@ export const checkGuestDownloadLimit = () => {
 export const getGuestRemainingDownloads = () => {
   const today = new Date().toISOString().split('T')[0];
   const key = `${STORAGE_KEY_PREFIX}${today}`;
-  const currentCount = parseInt(localStorage.getItem(key) || '0', 10);
+  const currentCount = parseInt(getLocalStorageItem(key, '0'), 10);
   return Math.max(0, MAX_DOWNLOADS - currentCount);
 };

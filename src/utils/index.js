@@ -2,6 +2,8 @@
  * 工具函数库
  */
 
+export * from './normalizers'
+
 // 格式化日期
 export const formatDate = (date, format = 'YYYY-MM-DD') => {
   const d = new Date(date)

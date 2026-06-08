@@ -302,11 +302,12 @@ import {
   getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites,
   getMyCommunityPosts, deleteCommunityPost, updateCommunityPost,
   deleteWallpaper as apiDeleteWallpaper, getUserUploads, getMyFavoriteCommunityImages,
-  getMyLikedWallpapers
+  getMyLikedWallpapers, updateMe, uploadFile
 } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
-import request from '@/api'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
+import { normalizePagedResult, normalizePost, normalizeWallpaper } from '@/utils'
+import { notifyAuthChanged } from '@/utils/authEvents'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -380,20 +381,6 @@ const uploadForm = reactive({
   file: null
 })
 
-// Helper to normalize post images (handle string vs object)
-const normalizePost = (p) => {
-  if (p.images && Array.isArray(p.images)) {
-    p.images = p.images.map(img => {
-      if (typeof img === 'string') return img
-      return img?.url || img?.src || img?.path || ''
-    }).filter(Boolean)
-  }
-  if (p.cover && typeof p.cover === 'object') {
-     p.cover = p.cover.url || p.cover.src || p.cover.path || ''
-  }
-  return p
-}
-
 // 获取统计数据
 const fetchUserStats = async () => {
   try {
@@ -419,9 +406,9 @@ const fetchMyPosts = async () => {
   try {
     const response = await getMyCommunityPosts({ page: 1, size: 50 })
     if (!isMounted.value) return
-    const list = Array.isArray(response) ? response : (response.items || [])
-    posts.value = list.map(normalizePost)
-    if (userStats.posts === 0) userStats.posts = response.total || posts.value.length
+    const pageData = normalizePagedResult(response, normalizePost)
+    posts.value = pageData.items
+    if (userStats.posts === 0) userStats.posts = pageData.total
     
     // Sync avatar from posts if missing in store
     if (posts.value.length > 0 && userStore.info && !userStore.info.avatarUrl) {
@@ -444,8 +431,7 @@ const fetchFavorites = async () => {
   try {
     const response = await getMyPostFavorites()
     if (!isMounted.value) return
-    const list = Array.isArray(response) ? response : (response.items || [])
-    favorites.value = list.map(normalizePost)
+    favorites.value = normalizePagedResult(response, normalizePost).items
   } catch (error) {
     if (!isMounted.value) return
     favorites.value = []
@@ -460,7 +446,7 @@ const fetchWallpaperFavorites = async () => {
   try {
     const response = await getMyWallpaperFavorites()
     if (!isMounted.value) return
-    wallpaperFavorites.value = Array.isArray(response) ? response : (response.items || [])
+    wallpaperFavorites.value = normalizePagedResult(response, normalizeWallpaper).items
   } catch (error) {
     if (!isMounted.value) return
     wallpaperFavorites.value = []
@@ -475,7 +461,7 @@ const fetchWallpaperLikes = async () => {
   try {
     const response = await getMyLikedWallpapers()
     if (!isMounted.value) return
-    wallpaperLikes.value = Array.isArray(response) ? response : (response.items || [])
+    wallpaperLikes.value = normalizePagedResult(response, normalizeWallpaper).items
   } catch (error) {
     if (!isMounted.value) return
     wallpaperLikes.value = []
@@ -490,8 +476,7 @@ const fetchLikes = async () => {
   try {
     const response = await getUserLikes({ page: 1, size: 50 })
     if (!isMounted.value) return
-    const list = Array.isArray(response) ? response : (response.items || [])
-    likes.value = list.map(normalizePost)
+    likes.value = normalizePagedResult(response, normalizePost).items
   } catch (error) {
     if (!isMounted.value) return
     likes.value = []
@@ -508,7 +493,7 @@ const fetchUploads = async () => {
   try {
     const response = await getUserUploads()
     if (!isMounted.value) return
-    uploads.value = response || []
+    uploads.value = normalizePagedResult(response, normalizeWallpaper).items
   } catch (error) {
     if (!isMounted.value) return
     uploads.value = []
@@ -614,11 +599,11 @@ const saveProfile = async () => {
     if (editForm.nickname) payload.nickname = editForm.nickname
     if (editForm.signature) payload.signature = editForm.signature
     
-    await request.put('/auth/me', payload)
+    await updateMe(payload)
     if (!isMounted.value) return
     await userStore.fetchUser()
     if (!isMounted.value) return
-    try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'profile-updated' } })) } catch {}
+    notifyAuthChanged({ type: 'profile-updated' })
     showEditDialog.value = false
     ElMessage.success('保存成功')
   } catch (error) {
@@ -634,9 +619,9 @@ const saveProfile = async () => {
 const uploadAvatar = async (opt) => {
   try {
     const fd = new FormData(); fd.append('file', opt.file)
-    const res = await request.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const res = await uploadFile(fd)
     if (!isMounted.value) return
-    const url = res?.data?.data?.url || res?.data?.url || res?.url
+    const url = res?.url || res?.thumbUrl
     if (url) editForm.avatarUrl = url
     ElMessage.success('头像上传成功')
     opt.onSuccess && opt.onSuccess(res)

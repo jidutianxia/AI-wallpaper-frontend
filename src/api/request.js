@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { requestAuth } from '@/utils/authEvents'
+import { getLocalStorageItem, removeLocalStorageItem } from '@/utils/storage'
 
 const request = axios.create({ 
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
@@ -8,7 +10,7 @@ const request = axios.create({
 // 请求拦截器 - 添加token
 request.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
+    const token = getLocalStorageItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -34,9 +36,9 @@ request.interceptors.response.use(
   error => {
     const status = error.response?.status
     if (status === 401) {
-      localStorage.removeItem('token')
+      removeLocalStorageItem('token')
       try { ElMessage.warning('请先登录后再进行操作') } catch {}
-      window.dispatchEvent(new CustomEvent('auth-required'))
+      requestAuth({ reason: 'unauthorized' })
     } else {
       const msg = error.response?.data?.message || error.message
       try { ElMessage.error(msg) } catch {}

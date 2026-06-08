@@ -1,356 +1,50 @@
 <script setup>
-import { ref, onMounted, watch, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Search, Menu, Sunny, Moon, Top, Setting, Bell, User } from '@element-plus/icons-vue'
-import { getUserReceivedComments, getUserReceivedLikes } from '@/api'
-import { useUserStore } from '@/store/user'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useTheme } from '@/composables/useTheme'
-import { getAvatarUrl } from '@/utils/imageHelper'
-import { ClickOutside as vClickOutside } from 'element-plus'
+import { useAuthSession } from '@/composables/useAuthSession'
+import AppNavbar from '@/components/layout/AppNavbar.vue'
+import FloatingActions from '@/components/layout/FloatingActions.vue'
+import AppFooter from '@/components/layout/AppFooter.vue'
+import AuthDialog from '@/components/layout/AuthDialog.vue'
+import NotificationCenter from '@/components/layout/NotificationCenter.vue'
 
-const router = useRouter()
-const userStore = useUserStore()
-const { isDark, toggleTheme, initTheme } = useTheme()
-
-// 搜索相关
-const searchKeyword = ref('')
-const isSearchFocused = ref(false)
-const activeMain = ref('hot')
-const mobileMenuOpen = ref(false)
-
-// 模拟数据
-const mainCategories = [
-  { key: 'hot', label: '昨日热门' },
-  { key: 'type', label: '壁纸种类' },
-  { key: 'class', label: '壁纸分类' },
-  { key: 'ratio', label: '分辨率' },
-  { key: 'color', label: '颜色分类' }
-]
-
-const submap = {
-  hot: ['最新', '推荐的', '昨日热门', '近三天热门', '上周热门', '上月热门', '近半年热门', '去年热榜'],
-  type: ['插画', '二次元', '风景', '极简', '赛博朋克', '像素风', '3D渲染'],
-  class: ['人物', '动物', '植物', '建筑', '美食', '运动', '科技'],
-  ratio: ['4K', '8K', '1080P', '2K', '超宽屏', '手机竖屏'],
-  color: [
-    { label: '红色', color: '#ff4d4f' },
-    { label: '橙色', color: '#fa8c16' },
-    { label: '黄色', color: '#fadb14' },
-    { label: '绿色', color: '#52c41a' },
-    { label: '青色', color: '#13c2c2' },
-    { label: '蓝色', color: '#1890ff' },
-    { label: '紫色', color: '#722ed1' },
-    { label: '黑白', color: '#000000' }
-  ]
-}
-
-// 登录相关
 const showLoginDialog = ref(false)
-const loginLoading = ref(false)
-const loginForm = ref({
-  username: '',
-  password: ''
-})
-
-watch(showLoginDialog, (v) => {
-  const el = document.documentElement
-  if (v) el.classList.add('dialog-open')
-  else el.classList.remove('dialog-open')
-})
-onUnmounted(() => {
-  document.documentElement.classList.remove('dialog-open')
-  const h = (window).__authHandler
-  if (h) window.removeEventListener('auth-required', h)
-})
-
-// 搜索处理
-const handleSearch = () => {
-  if (searchKeyword.value.trim()) {
-    router.push({
-      path: '/search',
-      query: { q: searchKeyword.value.trim() }
-    })
-    closeSearch()
-  }
-}
-
-const handleSearchFocus = () => {
-  isSearchFocused.value = true
-}
-
-const closeSearch = () => {
-  isSearchFocused.value = false
-}
-
-const selectSub = (sub) => {
-  const cat = activeMain.value
-  router.push({ path: '/search', query: { q: searchKeyword.value, cat, sub } })
-  closeSearch()
-}
-
-const toggleMobileMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value
-}
-
-// 登录处理
-const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    ElMessage.warning('请输入用户名和密码')
-    return
-  }
-  
-  loginLoading.value = true
-  try {
-    await userStore.login(loginForm.value)
-    ElMessage.success('登录成功')
-    showLoginDialog.value = false
-    loginForm.value = { username: '', password: '' }
-  } catch (error) {
-    ElMessage.error('登录失败：' + (error.response?.data?.message || error.message))
-  } finally {
-    loginLoading.value = false
-  }
-}
-
-// 退出登录
-const handleLogout = () => {
-  userStore.logout()
-  ElMessage.success('已退出登录')
-  router.push('/')
-}
-
-// 初始化用户状态
-onMounted(() => {
-  initTheme()
-  userStore.initAuth()
-  const handleAuthRequired = () => { showLoginDialog.value = true }
-  window.addEventListener('auth-required', handleAuthRequired)
-  ;(window).__authHandler = handleAuthRequired
-  const handleAuthChanged = () => {
-    try {
-      const current = router.currentRoute.value
-      router.replace({ path: current.path, query: current.query, hash: current.hash })
-    } catch {}
-  }
-  window.addEventListener('auth-changed', handleAuthChanged)
-  ;(window).__authChangedHandler = handleAuthChanged
-})
-
-const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-const actionsSide = ref('right')
-const toggleActionsSide = () => {
-  actionsSide.value = actionsSide.value === 'right' ? 'left' : 'right'
-}
 const showSettingsDrawer = ref(false)
 const showNotifyDialog = ref(false)
-const activeNotify = ref('comments')
-const notifyGroups = [
-  { key: 'comments', label: '评论/回复' },
-  { key: 'likes', label: '点赞/收藏' },
-  { key: 'followers', label: '新增粉丝' },
-  { key: 'help', label: '收到帮助' },
-  { key: 'system', label: '系统通知' }
-]
-const notifyData = ref({ comments: [], likes: [], followers: [], help: [], system: [] })
-watch(showNotifyDialog, async (open) => {
-  if (!open) return
-  try {
-    const [comments, likes] = await Promise.all([
-      getUserReceivedComments({ page: 1, size: 10 }),
-      getUserReceivedLikes({ page: 1, size: 10 })
-    ])
-    notifyData.value.comments = comments.items || []
-    notifyData.value.likes = likes.items || []
-  } catch {}
+const { initTheme } = useTheme()
+const { handleLogout } = useAuthSession({
+  onAuthRequired: () => {
+    showLoginDialog.value = true
+  }
+})
+
+onMounted(() => {
+  initTheme()
+})
+
+onBeforeUnmount(() => {
+  document.documentElement.classList.remove('dialog-open')
 })
 </script>
 
 <template>
-  <div id="app" :class="{ 'search-active': isSearchFocused }">
-    <nav class="navbar">
-      <div class="nav-container">
-        <!-- Logo & Links (Hidden when searching) -->
-        <div class="nav-left" :class="{ 'nav-hidden': isSearchFocused }">
-          <router-link to="/" class="nav-brand">AI壁纸</router-link>
-          <div class="nav-links">
-            <router-link to="/" class="nav-link">首页</router-link>
-            <router-link to="/category" class="nav-link">分类</router-link>
-            <router-link to="/community" class="nav-link">社区</router-link>
-          </div>
-        </div>
-        
-        <!-- Search Area (Expands) -->
-        <div class="nav-center" :class="{ 'expanded': isSearchFocused }" v-click-outside="closeSearch">
-          <div class="search-wrapper">
-            <el-input
-              v-model="searchKeyword"
-              placeholder="搜索壁纸..."
-              class="search-input"
-              :class="{ 'input-expanded': isSearchFocused }"
-              @focus="handleSearchFocus"
-              @keyup.enter="handleSearch"
-            >
-              <template #prefix>
-                <el-icon class="search-icon" @click="handleSearch" style="cursor: pointer"><Search /></el-icon>
-              </template>
-            </el-input>
-            
-            <!-- Categories (Visible only when focused) -->
-            <transition name="fade">
-              <div class="search-categories" v-if="isSearchFocused">
-                <!-- Main Categories with relative positioning for sub-dropdowns -->
-                <div class="main-cats">
-                  <div 
-                    v-for="cat in mainCategories" 
-                    :key="cat.key"
-                    class="cat-group"
-                    @mouseenter="activeMain = cat.key"
-                  >
-                    <button 
-                      class="cat-pill"
-                      :class="{ active: activeMain === cat.key }"
-                    >
-                      {{ cat.label }}
-                    </button>
-                    
-                    <!-- Sub Categories Dropdown (Nested for positioning) -->
-                    <transition name="fade-list">
-                      <div class="sub-dropdown" v-if="activeMain === cat.key && submap[cat.key]">
-                        <div class="sub-list">
-                          <button 
-                            v-for="sub in submap[cat.key]" 
-                            :key="typeof sub === 'object' ? sub.label : sub"
-                            class="sub-item"
-                            @click.stop="selectSub(typeof sub === 'object' ? sub.label : sub)"
-                          >
-                            <span v-if="typeof sub === 'object'" class="color-dot" :style="{ background: sub.color }"></span>
-                            {{ typeof sub === 'object' ? sub.label : sub }}
-                          </button>
-                        </div>
-                      </div>
-                    </transition>
-                  </div>
-                </div>
-              </div>
-            </transition>
-          </div>
-        </div>
-        
-        <!-- Right: User & Theme -->
-      <div class="nav-right">
-        <template v-if="userStore.isAuthenticated">
-          <el-button class="notify-btn" @click="showNotifyDialog = true" circle>
-            <el-icon><Bell /></el-icon>
-          </el-button>
-          <router-link to="/user" class="nav-link">
-            <el-avatar :src="getAvatarUrl(userStore.info?.avatarUrl)" size="small" class="nav-avatar" />
-            {{ userStore.info?.username }}
-          </router-link>
-          <el-button @click="handleLogout" size="small">退出</el-button>
-        </template>
-        <template v-else>
-          <el-button @click="showLoginDialog = true" size="small">登录</el-button>
-        </template>
-        <el-switch v-model="isDark" class="theme-switch glow" inline-prompt active-text="暗色" inactive-text="浅色" />
-      </div>
-    </div>
-    </nav>
-    <transition name="fade">
-      <div class="mobile-menu" v-if="mobileMenuOpen">
-        <router-link to="/" class="mobile-link" @click="mobileMenuOpen=false">首页</router-link>
-        <router-link to="/category" class="mobile-link" @click="mobileMenuOpen=false">分类</router-link>
-        <router-link to="/community" class="mobile-link" @click="mobileMenuOpen=false">社区</router-link>
-      </div>
-    </transition>
+  <div id="app">
+    <AppNavbar
+      @login="showLoginDialog = true"
+      @logout="handleLogout"
+      @notify="showNotifyDialog = true"
+    />
 
-    <div class="floating-actions" :class="actionsSide">
-      <el-button class="fab" circle @click="toggleTheme()">
-        <el-icon v-if="isDark"><Sunny /></el-icon>
-        <el-icon v-else><Moon /></el-icon>
-      </el-button>
-      <el-button class="fab" circle @click="toggleActionsSide"><span class="icon-text">↔</span></el-button>
-      <el-button class="fab" circle @click="showSettingsDrawer=true"><el-icon><Setting /></el-icon></el-button>
-      <el-button class="fab" circle @click="scrollToTop">
-        <el-icon><Top /></el-icon>
-      </el-button>
-    </div>
-    
+    <FloatingActions @settings="showSettingsDrawer = true" />
+
     <main class="main-content">
       <router-view />
     </main>
-    
-    <!-- 全局页脚 -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-content">
-          <div class="footer-brand">
-            <h3>PixFlow</h3>
-            <p>发现、分享和创造美好的设计作品。我们致力于为创作者提供最优质的平台。</p>
-          </div>
-          
-          <div class="footer-links">
-            <div class="link-group">
-              <h4>创作相关</h4>
-              <ul>
-                <li><a href="#">首页</a></li>
-                <li><a href="#">分类</a></li>
-                <li><a href="#">关于我们</a></li>
-              </ul>
-            </div>
-            
-            <div class="link-group">
-              <h4>帮助支持</h4>
-              <ul>
-                <li><a href="#">帮助中心</a></li>
-                <li><a href="#">联系我们</a></li>
-                <li><a href="#">意见反馈</a></li>
-                <li><a href="#">服务条款</a></li>
-              </ul>
-            </div>
-            
-            <div class="link-group">
-              <h4>订阅邮件</h4>
-              <p>订阅我们的邮件，获取最新的设计灵感和作品推荐。</p>
-              <div class="newsletter">
-                <el-input placeholder="输入邮箱地址..." />
-                <el-button type="primary">订阅</el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="footer-bottom">
-          <p>© 2023 PixFlow. 保留所有权利。</p>
-        </div>
-      </div>
-    </footer>
-    
-    <!-- 登录对话框 -->
-    <el-dialog v-model="showLoginDialog" title="用户登录" width="420px" class="login-dialog">
-      <div class="auth-banner">
-        <el-icon class="banner-icon"><User /></el-icon>
-        <div class="banner-text">欢迎回来，请登录以发布与收藏</div>
-      </div>
-      <el-form :model="loginForm" label-width="80px" size="large" class="login-form">
-        <el-form-item label="用户名">
-          <el-input v-model="loginForm.username" placeholder="请输入用户名" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="login-btn-group">
-          <el-button class="login-btn" @click="showLoginDialog = false">取消</el-button>
-          <el-button class="login-btn" @click="router.push('/register'); showLoginDialog=false">注册</el-button>
-          <el-button class="login-btn" type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
-        </div>
-      </template>
-    </el-dialog>
+
+    <AppFooter />
+    <AuthDialog v-model="showLoginDialog" />
+    <NotificationCenter v-model="showNotifyDialog" />
+
     <el-drawer v-model="showSettingsDrawer" title="快捷设置" direction="rtl" size="240px">
       <div class="settings">
         <div class="settings-item" style="justify-content: center; color: #909399; padding: 20px 0;">
@@ -358,23 +52,10 @@ watch(showNotifyDialog, async (open) => {
         </div>
       </div>
     </el-drawer>
-    <el-dialog v-model="showNotifyDialog" title="通知中心" width="800px" class="notify-dialog">
-      <div class="notify-container">
-        <div class="notify-nav">
-          <button v-for="g in notifyGroups" :key="g.key" class="notify-item" :class="{active: activeNotify===g.key}" @click="activeNotify=g.key">{{ g.label }}</button>
-        </div>
-        <div class="notify-content">
-          <el-card v-for="n in notifyData[activeNotify]" :key="n.id" shadow="never" class="notify-card">
-            <div class="notify-title">{{ n.title || n.content || '通知' }}</div>
-            <div class="notify-time">{{ n.createdAt || n.time }}</div>
-          </el-card>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
-<style scoped>
+<style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -441,6 +122,13 @@ watch(showNotifyDialog, async (open) => {
   align-items: center;
   gap: 2rem;
   white-space: nowrap;
+}
+
+.hamburger {
+  display: none;
+  margin-right: 12px;
+  font-size: 20px;
+  cursor: pointer;
 }
 
 .nav-center {
@@ -628,7 +316,7 @@ watch(showNotifyDialog, async (open) => {
   justify-content: flex-end;
   gap: 12px;
 }
-:deep(.el-dialog__footer) {
+.login-dialog .el-dialog__footer {
   padding-top: 10px;
   padding-bottom: 24px;
 }

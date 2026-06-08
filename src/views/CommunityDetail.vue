@@ -68,18 +68,21 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeftBold, Star, StarFilled, Share, ChatLineSquare } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostComments, likeCommunityPost, commentCommunityPost, favoriteCommunityPost, getCommunityPostImageMeta } from '@/api'
-import { useUserStore } from '@/store/user'
+import { ArrowLeftBold, Star, StarFilled, Share } from '@element-plus/icons-vue'
+import { getCommunityPost, commentCommunityPost, getCommunityPostImageMeta } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
 import { getImageUrl } from '@/utils/imageHelper'
+import { normalizePost } from '@/utils'
+import { useInteraction } from '@/composables/useInteraction'
+import { useShare } from '@/composables/useShare'
 
 const route = useRoute()
 const id = Number(route.params.id)
 const post = ref(null)
 const loadingPost = ref(true)
 const newComment = ref('')
-const userStore = useUserStore()
+const { toggleInteraction } = useInteraction()
+const { share } = useShare()
 
 const isMounted = ref(true)
 onBeforeUnmount(() => {
@@ -90,11 +93,7 @@ onMounted(async () => {
   try {
     const res = await getCommunityPost(id)
     if (!isMounted.value) return
-    post.value = res
-    if (typeof post.value.likes !== 'number') post.value.likes = 0
-    if (typeof post.value.favorites !== 'number') post.value.favorites = 0
-    post.value.liked = !!post.value.liked
-    post.value.favorited = !!post.value.favorited
+    post.value = normalizePost(res)
   } catch { 
     if (!isMounted.value) return
     ElMessage.error('加载失败') 
@@ -103,9 +102,6 @@ onMounted(async () => {
   }
 })
 
-import { useInteraction } from '@/composables/useInteraction'
-
-const { toggleInteraction } = useInteraction()
 const toggleLike = async () => {
   await toggleInteraction(post.value, 'like', 'post')
 }
@@ -153,14 +149,11 @@ const toggleFavorite = async () => {
 }
 
 const shareDetail = async () => {
-  const url = `${location.origin}/community/post/${id}`
-  try {
-    if (navigator.share) { await navigator.share({ title: post.value?.title, text: (post.value?.content || '').slice(0,80), url }) }
-    else if (navigator.clipboard) { await navigator.clipboard.writeText(url); ElMessage.success('链接已复制到剪贴板') }
-    else {
-      const inp = document.createElement('input'); inp.value = url; document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp); ElMessage.success('链接已复制到剪贴板')
-    }
-  } catch (e) { ElMessage.error('分享失败：' + (e.message || '未知错误')) }
+  await share({
+    title: post.value?.title,
+    text: (post.value?.content || '').slice(0, 80),
+    url: `${location.origin}/community/post/${id}`
+  })
 }
 </script>
 

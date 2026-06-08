@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import { login, register, getMe } from '@/api/user'
+import { notifyAuthChanged } from '@/utils/authEvents'
+import {
+  getLocalStorageItem,
+  getLocalStorageKeys,
+  removeLocalStorageItem,
+  setLocalStorageItem
+} from '@/utils/storage'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
+    token: getLocalStorageItem('token'),
     info: null,
     isLoggedIn: false,
     fetchPromise: null
@@ -21,7 +28,7 @@ export const useUserStore = defineStore('user', {
         if (!token) throw new Error('登录响应缺少 token')
         
         this.token = token
-        localStorage.setItem('token', this.token)
+        setLocalStorageItem('token', this.token)
         
         // Login response might contain userInfo, update it directly if available
         if (data.userInfo) {
@@ -33,7 +40,7 @@ export const useUserStore = defineStore('user', {
         // This solves the issue where avatar might be missing after re-login
         await this.fetchUser()
         
-        try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'login' } })) } catch {}
+        notifyAuthChanged({ type: 'login' })
         return data
       } catch (error) {
         throw error
@@ -72,18 +79,23 @@ export const useUserStore = defineStore('user', {
       return this.fetchPromise
     },
     
-    logout() {
+    clearSession(options = {}) {
+      const { notify = true, type = 'logout' } = options
       this.token = ''
       this.info = null
       this.isLoggedIn = false
-      localStorage.removeItem('token')
+      removeLocalStorageItem('token')
       try {
-        const keys = Object.keys(localStorage)
+        const keys = getLocalStorageKeys()
         keys.forEach(k => {
-          if (k.startsWith('community_interactions_')) localStorage.removeItem(k)
+          if (k.startsWith('community_interactions_')) removeLocalStorageItem(k)
         })
       } catch {}
-      try { window.dispatchEvent(new CustomEvent('auth-changed', { detail: { type: 'logout' } })) } catch {}
+      if (notify) notifyAuthChanged({ type })
+    },
+
+    logout() {
+      this.clearSession({ type: 'logout' })
     },
     
     async initAuth() {
@@ -92,10 +104,9 @@ export const useUserStore = defineStore('user', {
         try {
           await this.fetchUser()
         } catch (error) {
-           // If fetchUser fails (e.g. 401), interceptor will trigger auth-required
-           // If it's 401, we should clear token.
-           // Since we can't easily check status here without raw error object which might be wrapped.
-           // We rely on interceptor.
+          if (error?.response?.status === 401 || !getLocalStorageItem('token')) {
+            this.clearSession({ notify: false })
+          }
         }
       }
     }

@@ -28,6 +28,7 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { requestAuth } from '@/utils/authEvents'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -41,12 +42,15 @@ const submit = async () => {
     await userStore.register(form.value)
     ElMessage.success('注册成功，请登录')
     router.push('/')
-    window.dispatchEvent(new CustomEvent('auth-required'))
+    requestAuth({ reason: 'registered' })
   } catch (e) {
     ElMessage.error(e.response?.data?.message || e.message)
   } finally { loading.value = false }
 }
-const goLogin = () => { router.push('/'); window.dispatchEvent(new CustomEvent('auth-required')) }
+const goLogin = () => {
+  router.push('/')
+  requestAuth({ reason: 'login-link' })
+}
 </script>
 
 <style scoped>

@@ -33,7 +33,14 @@ app.directive('lazy', {
     // 占位背景以减轻白屏
     el.style.background = 'linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.15))'
     el.style.minHeight = '80px'
+    el._lazyObserver = observer
     observer.observe(el)
+  },
+  beforeUnmount(el) {
+    if (el._lazyObserver) {
+      el._lazyObserver.disconnect()
+      delete el._lazyObserver
+    }
   }
 })
 app.mount('#app')

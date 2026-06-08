@@ -101,23 +101,28 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { Plus, EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
+import { EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, likeCommunityPost, commentCommunityPost, getMyCommunityPosts, favoriteCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta } from '@/api'
+import { getCommunityPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta } from '@/api'
 import { getCommunityPost } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
+import { requestAuth } from '@/utils/authEvents'
+import { normalizePagedResult, normalizePost } from '@/utils'
+import { useInteraction } from '@/composables/useInteraction'
+import { useShare } from '@/composables/useShare'
 
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
 const posts = ref([])
 const userStore = useUserStore()
+const { toggleInteraction } = useInteraction()
+const { share } = useShare()
 const isAuthenticated = computed(() => userStore.isAuthenticated)
 const displayName = computed(() => userStore.info?.nickname || userStore.info?.username || '请先登录')
 const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '这个人很懒~')
-const avatarUrl = computed(() => userStore.info?.avatarUrl || 'https://i.pravatar.cc/80?u=user')
 const q = ref('')
 const tag = ref('')
 const page = ref(1)
@@ -136,7 +141,7 @@ const recentUsers = computed(() => recentUsersSource.value)
 const loadHot = async () => {
   try {
     const hot = await getCommunityPosts({ page: 1, size: 5, sort: 'popular', includeCounts: true })
-    hotPostsSource.value = hot.items || []
+    hotPostsSource.value = normalizePagedResult(hot, normalizePost).items
   } catch {}
 }
 const loadRecentUsers = async () => {
@@ -147,30 +152,13 @@ loadHot(); loadRecentUsers()
 // 持久化到本地，供详情页读取
 const loading = ref(false)
 
-const applyInteractions = () => {
-    posts.value = (posts.value || []).map(p => {
-      p.liked = !!p.liked
-      p.favorited = !!p.favorited
-      // Ensure likes/comments/favorites are Numbers. If null/undefined, default to 0.
-      p.likes = typeof p.likes === 'number' ? p.likes : 0
-      p.favorites = typeof p.favorites === 'number' ? p.favorites : 0
-      p.commentsCount = typeof p.commentsCount === 'number' ? p.commentsCount : 0
-      return p
-    })
-  }
-
 const loadPosts = async () => {
   loading.value = true
   try {
-    const list = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest', includeCounts: true })
-    if (Array.isArray(list)) {
-      posts.value = list
-      total.value = list.length
-    } else {
-      posts.value = list.items || []
-      total.value = list.total || 0
-    }
-    applyInteractions()
+    const response = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest', includeCounts: true })
+    const pageData = normalizePagedResult(response, normalizePost)
+    posts.value = pageData.items
+    total.value = pageData.total
   } finally { loading.value = false }
 }
 
@@ -202,7 +190,7 @@ watch(isAuthenticated, (v) => { if (v) loadMyStats(); else myStat.value = { post
 const handlePublishClick = () => {
   if (!isAuthenticated.value) {
     ElMessage.warning('请先登录后再发布')
-    window.dispatchEvent(new CustomEvent('auth-required'))
+    requestAuth({ reason: 'publish' })
     return
   }
   goCompose()
@@ -219,6 +207,13 @@ onMounted(() => {
   }, { threshold: 0.12 })
 })
 
+onBeforeUnmount(() => {
+  if (io) {
+    io.disconnect()
+    io = null
+  }
+})
+
 watch([posts, loading], async () => {
   await nextTick()
   if (!postsRef.value || !io || loading.value) return
@@ -227,28 +222,9 @@ watch([posts, loading], async () => {
 })
 
 const toggleLike = async (p) => {
-  if (p.likeLoading) return
-  p.likeLoading = true
-
-  const prev = { liked: p.liked, likes: p.likes }
-  // Optimistic update
-  p.liked = !p.liked
-  p.likes = (prev.likes || 0) + (p.liked ? 1 : -1)
-  
-  try {
-    const r = await likeCommunityPost(p.id)
-    if (r && typeof r === 'object') {
-      // Backend should return the definitive state
-      if (typeof r.liked !== 'undefined') p.liked = !!r.liked
-      if (typeof r.likes !== 'undefined') p.likes = r.likes
-    }
-    ElMessage.success(p.liked ? '点赞成功' : '已取消点赞')
-  } catch {
-    // Revert on error
-    p.liked = prev.liked; p.likes = prev.likes; ElMessage.error('点赞失败')
-  } finally {
-    setTimeout(() => { p.likeLoading = false }, 500)
-  }
+  await toggleInteraction(p, 'like', 'post', {
+    successMessage: (post) => post.liked ? '点赞成功' : '已取消点赞'
+  })
 }
 
 const addComment = async (p) => {
@@ -280,46 +256,17 @@ const openComments = async (p) => {
 const commentCount = (p) => p.commentsCount || p.comments?.length || 0
 
 const toggleFavorite = async (p) => {
-  if (p.favLoading) return
-  p.favLoading = true
-
-  const prev = { favorited: p.favorited, favorites: p.favorites }
-  // Optimistic update
-  p.favorited = !p.favorited
-  p.favorites = (prev.favorites || 0) + (p.favorited ? 1 : -1)
-  try {
-    const r = await favoriteCommunityPost(p.id)
-    if (r && typeof r === 'object') {
-       if (typeof r.favorited !== 'undefined') p.favorited = !!r.favorited
-       if (typeof r.favorites !== 'undefined') p.favorites = r.favorites
-    }
-    ElMessage.success(p.favorited ? '已收藏' : '已取消收藏')
-  } catch { 
-    p.favorited = prev.favorited; p.favorites = prev.favorites; ElMessage.error('收藏失败') 
-  } finally {
-    setTimeout(() => { p.favLoading = false }, 500)
-  }
+  await toggleInteraction(p, 'favorite', 'post', {
+    successMessage: (post) => post.favorited ? '已收藏' : '已取消收藏'
+  })
 }
 
 const sharePost = async (p) => {
-  const url = `${location.origin}/community/post/${p.id}`
-  try {
-    if (navigator.share) {
-      await navigator.share({ title: p.title, text: (p.content || '').slice(0, 80), url })
-    } else if (navigator.clipboard) {
-      await navigator.clipboard.writeText(url)
-      ElMessage.success('链接已复制到剪贴板')
-    } else {
-      const inp = document.createElement('input')
-      inp.value = url
-      document.body.appendChild(inp)
-      inp.select(); document.execCommand('copy')
-      document.body.removeChild(inp)
-      ElMessage.success('链接已复制到剪贴板')
-    }
-  } catch (e) {
-    ElMessage.error('分享失败：' + (e.message || '未知错误'))
-  }
+  await share({
+    title: p.title,
+    text: (p.content || '').slice(0, 80),
+    url: `${location.origin}/community/post/${p.id}`
+  })
 }
 
 // 跳转函数
@@ -354,7 +301,7 @@ const refreshPost = async (id) => {
   try {
     const fresh = await getCommunityPost(id)
     const idx = posts.value.findIndex(x => String(x.id) === String(id))
-    if (idx >= 0) { posts.value[idx] = { ...posts.value[idx], ...fresh }; applyInteractions() }
+    if (idx >= 0) posts.value[idx] = normalizePost({ ...posts.value[idx], ...fresh })
   } catch {}
 }
 </script>

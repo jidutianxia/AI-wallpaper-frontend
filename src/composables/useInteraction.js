@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { 
   likeWallpaper, 
@@ -9,6 +8,7 @@ import {
   favoriteCommunityPostImage
 } from '@/api'
 import { useUserStore } from '@/store/user'
+import { requestAuth } from '@/utils/authEvents'
 
 /**
  * 通用交互逻辑 (Optimistic UI)
@@ -24,11 +24,12 @@ export function useInteraction() {
   const toggleInteraction = async (target, type, scope = 'wallpaper', options = {}) => {
     if (!userStore.isAuthenticated) {
       ElMessage.warning('请先登录')
+      requestAuth({ reason: 'interaction' })
       return false
     }
 
     // Prevent duplicate clicks on the same target
-    if (target._interacting) return
+    if (target._interacting) return false
     target._interacting = true
 
     // 字段兼容处理
@@ -48,32 +49,54 @@ export function useInteraction() {
     if (type === 'like') {
       const newVal = !target[keyLiked]
       target[keyLiked] = newVal
-      target.likes = (target.likes || 0) + (newVal ? 1 : -1)
+      target.likes = Math.max(0, (target.likes || 0) + (newVal ? 1 : -1))
     } else if (type === 'favorite') {
       const newVal = !target[keyFavorited]
       target[keyFavorited] = newVal
       if (typeof target.favorites === 'number') {
-        target.favorites = target.favorites + (newVal ? 1 : -1)
+        target.favorites = Math.max(0, target.favorites + (newVal ? 1 : -1))
       }
     }
 
     try {
       // 发送请求
+      let result
       if (scope === 'wallpaper') {
-        if (type === 'like') await likeWallpaper(target.id)
-        else await favoriteWallpaper(target.id)
+        if (type === 'like') result = await likeWallpaper(target.id)
+        else result = await favoriteWallpaper(target.id)
       } else if (scope === 'post') {
-        if (type === 'like') await likeCommunityPost(target.id)
-        else await favoriteCommunityPost(target.id)
+        if (type === 'like') result = await likeCommunityPost(target.id)
+        else result = await favoriteCommunityPost(target.id)
+      } else if (scope === 'image') {
+        const postId = options.postId ?? target.postId
+        const imageIndex = options.imageIndex ?? target.index
+        if (type === 'like') result = await likeCommunityPostImage(postId, imageIndex)
+        else result = await favoriteCommunityPostImage(postId, imageIndex)
       }
-      
-      // 成功：不做任何事，保持 UI 状态
+
+      if (result && typeof result === 'object') {
+        if (typeof result.liked !== 'undefined') target[keyLiked] = !!result.liked
+        if (typeof result.isLiked !== 'undefined') target[keyLiked] = !!result.isLiked
+        if (typeof result.likes !== 'undefined') target.likes = result.likes
+        if (typeof result.favorited !== 'undefined') target[keyFavorited] = !!result.favorited
+        if (typeof result.isFavorited !== 'undefined') target[keyFavorited] = !!result.isFavorited
+        if (typeof result.favorites !== 'undefined') target.favorites = result.favorites
+      }
+
+      if (options.successMessage) {
+        const message = typeof options.successMessage === 'function'
+          ? options.successMessage(target)
+          : options.successMessage
+        if (message) ElMessage.success(message)
+      }
+      return true
       
     } catch (error) {
       // 失败：回滚状态
       console.error(`[Interaction] ${type} failed:`, error)
       Object.assign(target, originalState)
       ElMessage.error('操作失败，请重试')
+      return false
     } finally {
       // Throttle unlock
       setTimeout(() => {

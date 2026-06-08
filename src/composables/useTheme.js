@@ -1,4 +1,5 @@
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
+import { getLocalStorageItem, setLocalStorageItem } from '@/utils/storage'
 
 const isDark = ref(false)
 
@@ -7,7 +8,7 @@ export function useTheme() {
   // or checks localStorage if DOM isn't ready yet (though App.vue script runs early)
   
   const initTheme = () => {
-    const saved = localStorage.getItem('theme')
+    const saved = getLocalStorageItem('theme')
     const html = document.documentElement
     
     // Check if class is already there (from App.vue early script)
@@ -38,10 +39,10 @@ export function useTheme() {
     const html = document.documentElement
     if (val) {
       html.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
+      setLocalStorageItem('theme', 'dark')
     } else {
       html.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
+      setLocalStorageItem('theme', 'light')
     }
   }, { flush: 'post' })
 

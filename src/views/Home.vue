@@ -78,7 +78,7 @@ import { Star, Download, Picture, Camera, Brush, Monitor, Phone } from '@element
 import { ElMessage } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import { getWallpapers } from '@/api/wallpaper'
-import { formatAuthor } from '@/utils'
+import { formatAuthor, normalizePagedResult, normalizeWallpaper } from '@/utils'
 
 const router = useRouter()
 
@@ -91,6 +91,7 @@ const page = ref(1)
 const size = ref(9)
 const sentinel = ref(null)
 let observer = null
+let observeTimer = null
 
 const categories = ref([
   { id: 1, name: '手绘设计', icon: Brush },
@@ -128,7 +129,8 @@ const fetchWallpapers = async (append = false) => {
     }
     
     const res = await getWallpapers(params)
-    const items = res.items || []
+    const pageData = normalizePagedResult(res, normalizeWallpaper)
+    const items = pageData.items
     
     if (append) {
       featuredWallpapers.value.push(...items)
@@ -137,7 +139,7 @@ const fetchWallpapers = async (append = false) => {
     }
     
     // Check if we have more pages
-    const total = res.total || 0
+    const total = pageData.total
     hasMore.value = featuredWallpapers.value.length < total
   } catch (error) {
     console.error('Failed to fetch wallpapers:', error)
@@ -148,7 +150,8 @@ const fetchWallpapers = async (append = false) => {
     // Re-observe if needed
     if (hasMore.value && !isError.value && sentinel.value && observer) {
        // Small delay to ensure DOM updated
-       setTimeout(() => {
+       if (observeTimer) clearTimeout(observeTimer)
+       observeTimer = setTimeout(() => {
          observer.unobserve(sentinel.value)
          observer.observe(sentinel.value)
        }, 100)
@@ -189,12 +192,14 @@ onMounted(() => {
   }, { rootMargin: '200px' })
   
   // We need to wait for DOM update to observe sentinel
-  setTimeout(() => {
+  if (observeTimer) clearTimeout(observeTimer)
+  observeTimer = setTimeout(() => {
     if (sentinel.value) observer.observe(sentinel.value)
   }, 500)
 })
 
 onUnmounted(() => {
+  if (observeTimer) clearTimeout(observeTimer)
   if (observer) observer.disconnect()
 })
 

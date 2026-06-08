@@ -6,6 +6,9 @@ export const register = (payload) => request.post('/auth/register', payload).the
 export const getMe = () => request.get('/auth/me').then(unwrap)
 export const updateMe = (payload) => request.put('/auth/me', payload).then(unwrap) // Added missing API
 export const githubLogin = (code) => request.post('/auth/github', { code }).then(unwrap)
+export const uploadFile = (formData) => request.post('/upload', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+}).then(unwrap)
 
 // User Stats
 export const getUserStats = () => request.get('/user/stats').then(unwrap)
