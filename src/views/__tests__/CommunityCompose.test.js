@@ -81,4 +81,23 @@ describe('CommunityCompose view', () => {
     expect(ElMessage.error).toHaveBeenCalledWith('第 1 张图片上传失败，请重传后再发布')
     expect(createCommunityPost).not.toHaveBeenCalled()
   })
+
+  it('navigates with the router after a successful publish', async () => {
+    const wrapper = mount(CommunityCompose, mountOptions())
+    await flushPromises()
+
+    wrapper.vm.form.title = 'Share'
+    wrapper.vm.form.content = 'Content'
+
+    await wrapper.vm.publish()
+
+    expect(createCommunityPost).toHaveBeenCalledWith({
+      title: 'Share',
+      content: 'Content',
+      tags: [],
+      images: [],
+      wallpaperSubmissions: undefined
+    })
+    expect(push).toHaveBeenCalledWith('/community')
+  })
 })

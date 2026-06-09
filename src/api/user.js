@@ -1,4 +1,5 @@
 import request, { unwrap } from './request'
+import { normalizePagedResult, normalizePost } from '@/utils/normalizers'
 
 // Auth APIs
 export const login = (payload) => request.post('/auth/login', payload).then(unwrap)
@@ -21,13 +22,13 @@ export const getMyPosts = (params) => request.get('/community/my/posts', { param
 export const getMyPostFavorites = (params) => request.get('/community/my/favorites', { params }).then(unwrap) // My Favorites (Posts)
 export const getUserUploads = (params) => request.get('/community/my/posts', { params }).then(r => {
   const res = unwrap(r)
-  const items = Array.isArray(res) ? res : (res.items || [])
-  return items.map(p => ({
+  const pageData = normalizePagedResult(res, normalizePost)
+  return pageData.items.map(p => ({
     id: p.id,
     title: p.title,
-    thumbUrl: p.images?.[0] || '',
-    status: 'approved',
-    ...p
+    ...p,
+    thumbUrl: p.thumbUrl || p.cover || p.images?.[0] || '',
+    status: p.status || 'approved'
   }))
 }) // My Uploads (Mapped from My Posts)
 

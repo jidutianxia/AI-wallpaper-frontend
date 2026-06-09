@@ -307,7 +307,7 @@ const publish = async () => {
     await createCommunityPost(payload)
     reset()
     ElMessage.success('发布成功')
-    location.assign('/community')
+    router.push('/community')
   } catch (e) {
     if (e.message !== 'Validation failed') ElMessage.error('发布失败')
   } finally { publishing.value = false }

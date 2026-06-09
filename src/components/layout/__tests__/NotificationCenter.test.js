@@ -12,10 +12,10 @@ vi.mock('@/api', () => ({
 describe('NotificationCenter', () => {
   beforeEach(() => {
     vi.mocked(getUserReceivedComments).mockResolvedValue({
-      items: [{ id: 1, title: 'comment notice', createdAt: 'today' }]
+      records: [{ id: 1, title: 'comment notice', createdAt: 'today' }]
     })
     vi.mocked(getUserReceivedLikes).mockResolvedValue({
-      items: [{ id: 2, content: 'like notice', time: 'now' }]
+      list: [{ id: 2, content: 'like notice', time: 'now' }]
     })
   })
 

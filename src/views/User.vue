@@ -400,106 +400,95 @@ const fetchUserStats = async () => {
   }
 }
 
+const loadPagedResource = async ({ loadingKey, target, request, normalizeItem, onLoaded }) => {
+  loading[loadingKey] = true
+  try {
+    const response = await request()
+    if (!isMounted.value) return null
+    const pageData = normalizePagedResult(response, normalizeItem)
+    target.value = pageData.items
+    onLoaded?.(pageData)
+    return pageData
+  } catch (error) {
+    if (!isMounted.value) return null
+    target.value = []
+    return null
+  } finally {
+    if (isMounted.value) loading[loadingKey] = false
+  }
+}
+
 // 获取我发布的作品
 const fetchMyPosts = async () => {
-  loading.posts = true
-  try {
-    const response = await getMyCommunityPosts({ page: 1, size: 50 })
-    if (!isMounted.value) return
-    const pageData = normalizePagedResult(response, normalizePost)
-    posts.value = pageData.items
-    if (userStats.posts === 0) userStats.posts = pageData.total
-    
-    // Sync avatar from posts if missing in store
-    if (posts.value.length > 0 && userStore.info && !userStore.info.avatarUrl) {
-      const authorAvatar = posts.value[0].author?.avatarUrl
-      if (authorAvatar) {
-        userStore.info.avatarUrl = authorAvatar
+  await loadPagedResource({
+    loadingKey: 'posts',
+    target: posts,
+    request: () => getMyCommunityPosts({ page: 1, size: 50 }),
+    normalizeItem: normalizePost,
+    onLoaded: (pageData) => {
+      if (userStats.posts === 0) userStats.posts = pageData.total
+
+      // Sync avatar from posts if missing in store
+      if (posts.value.length > 0 && userStore.info && !userStore.info.avatarUrl) {
+        const authorAvatar = posts.value[0].author?.avatarUrl
+        if (authorAvatar) {
+          userStore.info.avatarUrl = authorAvatar
+        }
       }
     }
-  } catch (error) {
-    if (!isMounted.value) return
-    posts.value = []
-  } finally {
-    if (isMounted.value) loading.posts = false
-  }
+  })
 }
 
 // 获取用户收藏 (帖子)
 const fetchFavorites = async () => {
-  loading.favorites = true
-  try {
-    const response = await getMyPostFavorites()
-    if (!isMounted.value) return
-    favorites.value = normalizePagedResult(response, normalizePost).items
-  } catch (error) {
-    if (!isMounted.value) return
-    favorites.value = []
-  } finally {
-    if (isMounted.value) loading.favorites = false
-  }
+  await loadPagedResource({
+    loadingKey: 'favorites',
+    target: favorites,
+    request: () => getMyPostFavorites(),
+    normalizeItem: normalizePost
+  })
 }
 
 // 获取用户偏爱壁纸
 const fetchWallpaperFavorites = async () => {
-  loading.wallpaperFavorites = true
-  try {
-    const response = await getMyWallpaperFavorites()
-    if (!isMounted.value) return
-    wallpaperFavorites.value = normalizePagedResult(response, normalizeWallpaper).items
-  } catch (error) {
-    if (!isMounted.value) return
-    wallpaperFavorites.value = []
-  } finally {
-    if (isMounted.value) loading.wallpaperFavorites = false
-  }
+  await loadPagedResource({
+    loadingKey: 'wallpaperFavorites',
+    target: wallpaperFavorites,
+    request: () => getMyWallpaperFavorites(),
+    normalizeItem: normalizeWallpaper
+  })
 }
 
 // 获取用户点赞的壁纸
 const fetchWallpaperLikes = async () => {
-  loading.wallpaperLikes = true
-  try {
-    const response = await getMyLikedWallpapers()
-    if (!isMounted.value) return
-    wallpaperLikes.value = normalizePagedResult(response, normalizeWallpaper).items
-  } catch (error) {
-    if (!isMounted.value) return
-    wallpaperLikes.value = []
-  } finally {
-    if (isMounted.value) loading.wallpaperLikes = false
-  }
+  await loadPagedResource({
+    loadingKey: 'wallpaperLikes',
+    target: wallpaperLikes,
+    request: () => getMyLikedWallpapers(),
+    normalizeItem: normalizeWallpaper
+  })
 }
 
 // 获取用户点赞 (帖子)
 const fetchLikes = async () => {
-  loading.likes = true
-  try {
-    const response = await getUserLikes({ page: 1, size: 50 })
-    if (!isMounted.value) return
-    likes.value = normalizePagedResult(response, normalizePost).items
-  } catch (error) {
-    if (!isMounted.value) return
-    likes.value = []
-  } finally {
-    if (isMounted.value) loading.likes = false
-  }
+  await loadPagedResource({
+    loadingKey: 'likes',
+    target: likes,
+    request: () => getUserLikes({ page: 1, size: 50 }),
+    normalizeItem: normalizePost
+  })
 }
 
 // 获取用户上传
 const fetchUploads = async () => {
   if (userStore.info?.role !== 'admin') return
-  
-  loading.uploads = true
-  try {
-    const response = await getUserUploads()
-    if (!isMounted.value) return
-    uploads.value = normalizePagedResult(response, normalizeWallpaper).items
-  } catch (error) {
-    if (!isMounted.value) return
-    uploads.value = []
-  } finally {
-    if (isMounted.value) loading.uploads = false
-  }
+
+  await loadPagedResource({
+    loadingKey: 'uploads',
+    target: uploads,
+    request: () => getUserUploads(),
+    normalizeItem: normalizeWallpaper
+  })
 }
 
 // 获取分类列表

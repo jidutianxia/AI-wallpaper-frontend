@@ -1,14 +1,15 @@
 <template>
-  <div class="detail" v-loading="loading">
+  <div class="detail">
     <div class="topbar">
       <el-button size="small" :icon="ArrowLeft" @click="goBack">返回</el-button>
     </div>
-    <div v-if="wallpaper" class="detail-content">
+    <AppState v-if="loading" type="loading" :rows="5" />
+    <div v-else-if="wallpaper" class="detail-content">
       <!-- 壁纸展示区 -->
       <div class="wallpaper-display">
         <div class="wallpaper-container">
           <img 
-            :src="wallpaper.url || wallpaper.thumbUrl" 
+            :src="getImageUrl(wallpaper.url || wallpaper.thumbUrl)"
             :alt="wallpaper.title"
             class="wallpaper-image"
             @click="previewImage"
@@ -122,7 +123,7 @@
     </div>
 
     <!-- 相关推荐 -->
-    <div class="related-section" v-if="relatedWallpapers.length">
+    <div class="related-section" v-if="!loading && relatedWallpapers.length">
       <h2>相关推荐</h2>
       <div class="related-grid">
         <div 
@@ -131,7 +132,7 @@
           class="related-item"
           @click="viewDetail(item.id)"
         >
-          <img :src="item.thumbUrl" :alt="item.title" />
+          <img :src="getImageUrl(item.thumbUrl || item.url)" :alt="item.title" />
           <div class="related-info">
             <h4>{{ item.title }}</h4>
             <div class="related-stats">
@@ -204,7 +205,7 @@
    <el-dialog v-model="showPreview" :show-close="false" :align-center="true" class="cinema-preview-dialog" width="100%"
       :transition-drop-down="false" transition="cinema-fade">
       <div class="cinema-wrapper" @click="showPreview = false">
-        <img :src="wallpaper?.url || wallpaper?.thumbUrl" :alt="wallpaper?.title" class="cinema-image" />
+        <img :src="getImageUrl(wallpaper?.url || wallpaper?.thumbUrl)" :alt="wallpaper?.title" class="cinema-image" />
         <!-- <div class="cinema-caption">
           <h3>{{ wallpaper?.title }}</h3>
           <p>{{ wallpaper?.width }} × {{ wallpaper?.height }}</p>
@@ -233,6 +234,8 @@ import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, upd
 import { appendTokenParam, normalizePagedResult, normalizeWallpaper, openSecureWindow } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
 import { getLocalStorageItem } from '@/utils/storage'
+import AppState from '@/components/AppState.vue'
+import { getImageUrl } from '@/utils/imageHelper'
 
 const route = useRoute()
 const router = useRouter()

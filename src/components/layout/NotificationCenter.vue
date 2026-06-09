@@ -1,13 +1,13 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { getUserReceivedComments, getUserReceivedLikes } from '@/api'
 import AppState from '@/components/AppState.vue'
+import { useAsyncState } from '@/composables/useAsyncState'
+import { normalizePagedResult } from '@/utils'
 
 const visible = defineModel({ type: Boolean, default: false })
 
 const activeNotify = ref('comments')
-const loading = ref(false)
-const failed = ref(false)
 const notifyGroups = [
   { key: 'comments', label: '评论/回复' },
   { key: 'likes', label: '点赞/收藏' },
@@ -15,24 +15,29 @@ const notifyGroups = [
   { key: 'help', label: '收到帮助' },
   { key: 'system', label: '系统通知' }
 ]
-const notifyData = ref({ comments: [], likes: [], followers: [], help: [], system: [] })
+const emptyNotifyData = { comments: [], likes: [], followers: [], help: [], system: [] }
+
+const notificationsState = useAsyncState(async () => {
+  const [comments, likes] = await Promise.all([
+    getUserReceivedComments({ page: 1, size: 10 }),
+    getUserReceivedLikes({ page: 1, size: 10 })
+  ])
+
+  return {
+    ...emptyNotifyData,
+    comments: normalizePagedResult(comments).items,
+    likes: normalizePagedResult(likes).items
+  }
+}, { initialData: emptyNotifyData })
+
+const notifyData = notificationsState.data
+const loading = notificationsState.loading
+const failed = computed(() => Boolean(notificationsState.error.value))
 
 const loadNotifications = async () => {
-  loading.value = true
-  failed.value = false
   try {
-    const [comments, likes] = await Promise.all([
-      getUserReceivedComments({ page: 1, size: 10 }),
-      getUserReceivedLikes({ page: 1, size: 10 })
-    ])
-    notifyData.value.comments = comments.items || []
-    notifyData.value.likes = likes.items || []
-  } catch (error) {
-    failed.value = true
-    console.error('Failed to load notifications:', error)
-  } finally {
-    loading.value = false
-  }
+    await notificationsState.run()
+  } catch {}
 }
 
 watch(visible, (open) => {

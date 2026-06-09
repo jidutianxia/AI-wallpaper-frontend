@@ -114,6 +114,8 @@ import { Star, ChatLineSquare } from '@element-plus/icons-vue'
 import { getUserProfile, getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, followUser, unfollowUser } from '@/api'
 import { useUserStore } from '@/store/user'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import { useAsyncState } from '@/composables/useAsyncState'
+import { normalizePagedResult, normalizePost } from '@/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -122,9 +124,6 @@ const userId = route.params.id
 const userPosts = ref([])
 const likedPosts = ref([])
 const favoritePosts = ref([])
-const loadingProfile = ref(true)
-const loadingLikes = ref(true)
-const loadingFavorites = ref(true)
 const activeTab = ref('posts')
 const username = ref('用户')
 const avatarUrl = ref('')
@@ -137,84 +136,86 @@ onBeforeUnmount(() => {
   isMounted.value = false
 })
 
-// Helper to normalize post images
-const normalizePost = (p) => {
-  if (p.images && Array.isArray(p.images)) {
-    p.images = p.images.map(img => {
-      if (typeof img === 'string') return img
-      return img?.url || img?.src || img?.path || ''
-    }).filter(Boolean)
-  }
-  if (p.cover && typeof p.cover === 'object') {
-     p.cover = p.cover.url || p.cover.src || p.cover.path || ''
-  }
-  return p
-}
-
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+const normalizePostPage = (response) => normalizePagedResult(response, normalizePost).items
+
+const profileState = useAsyncState(async () => {
+  isSelf.value = userStore.info?.id && String(userStore.info.id) === String(userId)
+
+  try {
+    if (!isSelf.value) {
+      const profile = await getUserProfile(userId)
+      if (!isMounted.value) return userPosts.value
+      username.value = profile.nickname || profile.username || '用户'
+      avatarUrl.value = profile.avatarUrl || ''
+      isFollowing.value = !!profile.isFollowing
+    } else {
+      username.value = userStore.info?.nickname || userStore.info?.username || '我'
+      avatarUrl.value = userStore.info?.avatarUrl || ''
+    }
+  } catch (e) {
+    console.error('Failed to load profile', e)
+  }
+
+  const res = isSelf.value
+    ? await getMyCommunityPosts({ page: 1, size: 20 })
+    : await getUserCommunityPosts(userId, { page: 1, size: 20 })
+  if (!isMounted.value) return userPosts.value
+
+  userPosts.value = normalizePostPage(res)
+
+  if ((!username.value || username.value === '用户') && userPosts.value.length > 0) {
+    const author = userPosts.value[0]?.author
+    if (author) {
+      username.value = author.nickname || author.username || '用户'
+      avatarUrl.value = author.avatarUrl || ''
+    }
+  }
+
+  return userPosts.value
+}, { initialData: [] })
+
+const likesState = useAsyncState(async () => {
+  const likes = isSelf.value
+    ? await getUserLikes({ page: 1, size: 20 })
+    : await getOtherUserLikedPosts(userId, { page: 1, size: 20 })
+  if (!isMounted.value) return likedPosts.value
+  likedPosts.value = normalizePostPage(likes)
+  return likedPosts.value
+}, { initialData: [] })
+
+const favoritesState = useAsyncState(async () => {
+  const favorites = isSelf.value
+    ? await getUserPostFavorites({ page: 1, size: 20 })
+    : await getOtherUserPostFavorites(userId, { page: 1, size: 20 })
+  if (!isMounted.value) return favoritePosts.value
+  favoritePosts.value = normalizePostPage(favorites)
+  return favoritePosts.value
+}, { initialData: [] })
+
+const loadingProfile = profileState.loading
+const loadingLikes = likesState.loading
+const loadingFavorites = favoritesState.loading
+
 onMounted(async () => {
   try {
-    isSelf.value = userStore.info?.id && String(userStore.info.id) === String(userId)
-    
-    // Fetch User Profile First
-    try {
-      if (!isSelf.value) {
-        const profile = await getUserProfile(userId)
-        if (!isMounted.value) return
-        username.value = profile.nickname || profile.username || '用户'
-        avatarUrl.value = profile.avatarUrl || ''
-        isFollowing.value = !!profile.isFollowing
-        // followersCount.value = profile.stats?.followers || 0
-      } else {
-        username.value = userStore.info?.nickname || userStore.info?.username || '我'
-        avatarUrl.value = userStore.info?.avatarUrl || ''
-      }
-    } catch (e) {
-      console.error('Failed to load profile', e)
-    }
-
-    const res = isSelf.value ? await getMyCommunityPosts({ page: 1, size: 20 }) : await getUserCommunityPosts(userId, { page: 1, size: 20 })
-    if (!isMounted.value) return
-    const list = res.items || []
-    userPosts.value = list.map(normalizePost)
-    
-    if ((!username.value || username.value === '用户') && userPosts.value.length > 0) {
-      const a = userPosts.value[0]?.author
-      if (a) {
-        username.value = a.nickname || a.username || '用户'
-        avatarUrl.value = a.avatarUrl || ''
-      }
-    }
+    await profileState.run()
   } catch (e) {
     if (!isMounted.value) return
     ElMessage.error(e.response?.data?.message || '加载用户公开帖子失败')
-  } finally { if (isMounted.value) loadingProfile.value = false }
+  }
 
   try {
-    // For Likes (Community Posts)
-    const likes = isSelf.value 
-      ? await getUserLikes({ page: 1, size: 20 }) 
-      : await getOtherUserLikedPosts(userId, { page: 1, size: 20 })
-    if (!isMounted.value) return
-    const list = likes.items || []
-    likedPosts.value = list.map(normalizePost)
+    await likesState.run()
   } catch {}
-  finally { if (isMounted.value) loadingLikes.value = false }
 
   try {
-    // For Favorites (Community Posts)
-    const favs = isSelf.value 
-      ? await getUserPostFavorites({ page: 1, size: 20 }) 
-      : await getOtherUserPostFavorites(userId, { page: 1, size: 20 })
-    if (!isMounted.value) return
-    const list = favs.items || []
-    favoritePosts.value = list.map(normalizePost)
+    await favoritesState.run()
   } catch {}
-  finally { if (isMounted.value) loadingFavorites.value = false }
 })
 
 const goPost = (id) => router.push(`/community/post/${id}`)

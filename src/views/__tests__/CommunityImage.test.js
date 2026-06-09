@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CommunityImage from '../CommunityImage.vue'
 import {
+  downloadCommunityPostImage,
   getCategories,
   getCommunityPost,
   getCommunityPostImageMeta,
@@ -75,7 +76,9 @@ describe('CommunityImage view', () => {
       likes: 3,
       wallpaperInfo: { id: 99 }
     })
+    vi.mocked(downloadCommunityPostImage).mockResolvedValue({ downloadUrl: 'https://example.com/download.jpg' })
     vi.mocked(submitWallpaperFromPost).mockResolvedValue({})
+    window.open = vi.fn()
   })
 
   it('loads image metadata and routes wallpaper downloads to detail', async () => {
@@ -95,5 +98,28 @@ describe('CommunityImage view', () => {
 
     await wrapper.vm.goWallpaper()
     expect(ElMessage.success).toHaveBeenCalledWith('该图片已收录为壁纸')
+  })
+
+  it('opens safe post image downloads when the image is not a wallpaper', async () => {
+    vi.mocked(getCommunityPostImageMeta).mockResolvedValueOnce({
+      width: 1920,
+      height: 1080,
+      fileSize: 2048,
+      format: 'JPG',
+      likes: 3,
+      wallpaperInfo: null
+    })
+    const wrapper = mount(CommunityImage, mountOptions())
+    await flushPromises()
+
+    await wrapper.vm.download()
+
+    expect(downloadCommunityPostImage).toHaveBeenCalledWith(5, 0)
+    expect(window.open).toHaveBeenCalledWith(
+      'https://example.com/download.jpg',
+      '_blank',
+      'noopener,noreferrer'
+    )
+    expect(ElMessage.success).toHaveBeenCalledWith('开始下载')
   })
 })

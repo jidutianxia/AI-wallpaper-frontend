@@ -260,9 +260,10 @@ const openComments = async (p) => {
   if (!p.comments || p.comments.length === 0) {
     try {
       const res = await getCommunityPostComments(p.id, { page: 1, size: 10 })
-      p.comments = res.items || []
+      const pageData = normalizePagedResult(res)
+      p.comments = pageData.items
       // Update count if server returns a total count
-      if (typeof res.total !== 'undefined') p.commentsCount = res.total
+      if (typeof pageData.total !== 'undefined') p.commentsCount = pageData.total
     } catch {}
   }
 }

@@ -149,7 +149,7 @@ import { Download, ArrowLeftBold, Calendar, ArrowRight, Picture as IconPicture, 
 import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, submitWallpaperFromPost, getCategories } from '@/api'
 import { useUserStore } from '@/store/user'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
-import { normalizePost } from '@/utils'
+import { normalizePost, openSecureWindow } from '@/utils'
 import { useShare } from '@/composables/useShare'
 
 const route = useRoute()
@@ -218,6 +218,12 @@ const goWallpaper = () => {
     ElMessage.success('该图片已收录为壁纸')
   }
 }
+
+const getDownloadUrl = (response) => {
+  if (typeof response === 'string') return response
+  return response?.downloadUrl || response?.url || response?.href || response?.data?.downloadUrl || response?.data?.url || ''
+}
+
 const download = async () => { 
   if (imageUrl.value) {
     // Check if it is a wallpaper
@@ -226,9 +232,19 @@ const download = async () => {
       router.push(`/detail/${imageMeta.value.wallpaperInfo.id}`)
       return
     }
-    
-    // If not a wallpaper, show reminder
-    ElMessage.warning('该图片暂未收录为壁纸，可提醒作者上架')
+
+    try {
+      const response = await downloadCommunityPostImage(postId, index)
+      const downloadUrl = getDownloadUrl(response)
+      if (!downloadUrl || !openSecureWindow(downloadUrl)) {
+        ElMessage.warning('下载地址不可用')
+        return
+      }
+      imageMeta.value.downloads = Number(imageMeta.value.downloads || 0) + 1
+      ElMessage.success('开始下载')
+    } catch {
+      ElMessage.warning('该图片暂未收录为壁纸，可提醒作者上架')
+    }
   }
 }
 
@@ -285,10 +301,6 @@ const toggleImageLike = async () => {
 }
 const toggleImageFavorite = async () => {
   await toggleInteraction(imageMeta.value, 'favorite', 'image', { postId, imageIndex: index })
-}
-
-const recordDownload = async () => { 
-  // try { await downloadCommunityPostImage(postId, index) } catch {} 
 }
 
 const shareImage = async () => {
