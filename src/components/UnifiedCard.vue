@@ -89,7 +89,6 @@ const setCurrentImage = (src) => {
   const nextSrc = src || placeholder
   lastRequestedImage.value = nextSrc
   hasImageError.value = false
-  isLoaded.value = false
   currentImgSrc.value = nextSrc
 }
 
@@ -199,7 +198,7 @@ onBeforeUnmount(() => {
   width: 100%; 
   height: 100%; 
   object-fit: cover; 
-  opacity: 0; /* Hidden by default for fade-in */
+  opacity: 1;
   transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.3s ease, opacity 0.5s ease;
 }
 
@@ -260,7 +259,7 @@ onBeforeUnmount(() => {
 
 .badge .icon { width: 14px; height: 14px; }
 .badge .star { font-size: 12px; }
-.overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.8) 100%); opacity: 0; transition: opacity .3s ease; }
+.overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; background: linear-gradient(to bottom, transparent 20%, rgba(0,0,0,.58) 100%); opacity: 0; transition: opacity .3s ease; }
 .item-card:hover .overlay { opacity: 1; }
 .info { color: #fff; margin-bottom: 8px; }
 .info h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }

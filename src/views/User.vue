@@ -306,7 +306,8 @@ import {
 } from '@/api'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
-import { normalizePagedResult, normalizePost, normalizeWallpaper, validateImageFile } from '@/utils'
+import { normalizePost, normalizeWallpaper, validateImageFile } from '@/utils'
+import { usePagedResourceLoader } from '@/composables/usePagedResourceLoader'
 import { notifyAuthChanged } from '@/utils/authEvents'
 
 const router = useRouter()
@@ -343,6 +344,10 @@ const loading = reactive({
   wallpaperLikes: false,
   uploads: false,
   imageFavorites: false
+})
+const { loadPagedResource } = usePagedResourceLoader({
+  loading,
+  isActive: () => isMounted.value
 })
 
 // 数据列表
@@ -397,24 +402,6 @@ const fetchUserStats = async () => {
     userStats.posts = posts.value.length
     userStats.favorites = favorites.value.length
     userStats.likes = likes.value.length
-  }
-}
-
-const loadPagedResource = async ({ loadingKey, target, request, normalizeItem, onLoaded }) => {
-  loading[loadingKey] = true
-  try {
-    const response = await request()
-    if (!isMounted.value) return null
-    const pageData = normalizePagedResult(response, normalizeItem)
-    target.value = pageData.items
-    onLoaded?.(pageData)
-    return pageData
-  } catch (error) {
-    if (!isMounted.value) return null
-    target.value = []
-    return null
-  } finally {
-    if (isMounted.value) loading[loadingKey] = false
   }
 }
 

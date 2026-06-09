@@ -81,9 +81,9 @@
             <div class="info-section">
               <h3>图片信息</h3>
               <div class="info-grid">
-                <div class="info-item"><label>分辨率:</label><span>{{ imageMeta.width }} × {{ imageMeta.height }}</span></div>
+                <div class="info-item"><label>分辨率:</label><span>{{ formatResolution(imageMeta.width, imageMeta.height) }}</span></div>
                 <div class="info-item"><label>文件大小:</label><span>{{ formatFileSize(imageMeta.fileSize) }}</span></div>
-                <div class="info-item"><label>格式:</label><span>{{ imageMeta.format || 'JPG' }}</span></div>
+                <div class="info-item"><label>格式:</label><span>{{ formatImageFormat(imageMeta.format) }}</span></div>
                 <div class="info-item"><label>浏览:</label><span>{{ imageMeta.views ?? 0 }}</span></div>
                 <div class="info-item"><label>下载:</label><span>{{ imageMeta.downloads ?? 0 }}</span></div>
               </div>
@@ -278,15 +278,26 @@ const formatDate = (s) => { try { return s ? new Date(s).toLocaleDateString('zh-
 const guessFormat = (url) => {
   try {
     const m = (url || '').toLowerCase().match(/\.([a-z0-9]+)(?:\?|$)/)
-    return (m && m[1] || 'JPG').toUpperCase()
-  } catch { return 'JPG' }
+    return (m && m[1] || '').toUpperCase()
+  } catch { return '' }
+}
+
+const formatResolution = (width, height) => {
+  const w = Number(width)
+  const h = Number(height)
+  return w > 0 && h > 0 ? `${w} × ${h}` : '未知'
+}
+
+const formatImageFormat = (format) => {
+  return format ? String(format).toUpperCase() : '未知'
 }
 
 const formatFileSize = (bytes) => {
-  if (!bytes && bytes !== 0) return '未知'
+  const value = Number(bytes)
+  if (!Number.isFinite(value) || value <= 0) return '未知'
   const sizes = ['B','KB','MB','GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+  const i = Math.min(Math.floor(Math.log(value) / Math.log(1024)), sizes.length - 1)
+  return Math.round(value / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 import { useInteraction } from '@/composables/useInteraction'

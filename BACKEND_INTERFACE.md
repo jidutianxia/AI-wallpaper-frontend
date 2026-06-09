@@ -79,9 +79,14 @@ All successful responses (HTTP 200) **MUST** follow this structure:
 ### 2.6 User Interactions Lists
 - **My Liked Posts**: `GET /community/my/likes?page=1&size=20` (Returns List of Community Posts)
 - **Other User's Liked Posts**: `GET /users/{id}/likes?page=1&size=20`
-- **My Favorited Wallpapers**: `GET /wallpapers/my/favorites` (Returns List of Wallpapers)
+- **My Favorited Wallpapers**: `GET /user/favorites` (Returns List of Wallpapers)
 - **My Favorited Posts**: `GET /community/my/favorites` (Returns List of Community Posts)
-- **Other User's Favorited Posts**: `GET /users/{id}/post-favorites`
+- **Other User's Favorited Posts**: `GET /users/{id}/favorites`
+
+### 2.7 Debug Users
+- **Endpoint**: `GET /auth/debug-users`
+- **Default**: Disabled. Backend returns `404` unless `DEBUG_USERS_ENDPOINT_ENABLED=true`.
+- **Auth**: Requires `Authorization: Bearer <token>` when explicitly enabled.
 
 ---
 
@@ -150,12 +155,30 @@ All successful responses (HTTP 200) **MUST** follow this structure:
 
 ### 4.4 Interactions
 - **Like**: `POST /community/posts/{id}/like` -> Returns `{ "liked": true, "likes": 21 }`
-- **Favorite**: `POST /community/posts/{id}/favorite` -> Returns `{ "favorited": true }`
+- **Favorite**: `POST /community/posts/{id}/favorite` -> Returns `{ "favorited": true, "favorites": 8 }`
 - **Comment**: `POST /community/posts/{id}/comments` -> Body `{ "content": "..." }`
 
 ### 4.5 Get Comments
 - **Endpoint**: `GET /community/posts/{id}/comments`
 - **Response**: `{ "items": [ { "id": 1, "content": "...", "author": {...}, "createdAt": "..." } ], "total": 10 }`
+
+### 4.6 Post Images
+- **List**: `GET /community/posts/{id}/images?page=1&size=20`
+- **Detail**: `GET /community/posts/{id}/images/{index}`
+- **Download**: `POST /community/posts/{id}/images/{index}/download`
+- **List Response**: Uses the standard envelope; paged data is under `data`:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "items": [],
+      "total": 0,
+      "page": 1,
+      "size": 20
+    }
+  }
+  ```
 
 ---
 

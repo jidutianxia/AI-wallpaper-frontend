@@ -147,10 +147,6 @@ const {
   initialPageSize: 10
 })
 
-// Removed frontend filtering logic to rely on backend
-// const filteredPosts = computed(...) 
-// const pagedPosts = computed(...)
-
 const myStat = ref({ posts: 0, likes: 0, comments: 0 })
 const hotPostsSource = ref([])
 const hotPosts = computed(() => hotPostsSource.value)
@@ -528,8 +524,8 @@ const refreshPost = async (id) => {
 .user .uextra { font-size: 0.75rem; color: var(--app-text-secondary); }
 
 /* Animation */
-.post { opacity: 0; transform: translateY(10px); }
-.post.in-view { opacity: 1; transform: translateY(0); transition: opacity .4s ease, transform .4s ease; }
+.post { opacity: 1; transform: none; }
+.post.in-view { transition: opacity .4s ease, transform .4s ease; }
 .fade-list-enter-active, .fade-list-leave-active { transition: opacity .25s ease; }
 .fade-list-enter-from, .fade-list-leave-to { opacity: 0; }
 

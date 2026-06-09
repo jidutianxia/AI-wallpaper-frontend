@@ -96,7 +96,7 @@ describe('api wrappers', () => {
     expect(request.get).toHaveBeenCalledWith('/community/posts/7/images/1')
     expect(request.post).toHaveBeenCalledWith('/community/posts/7/images/1/like')
     expect(request.post).toHaveBeenCalledWith('/community/posts/7/images/1/favorite')
-    expect(request.get).toHaveBeenCalledWith('/community/posts/7/images/1/download')
+    expect(request.post).toHaveBeenCalledWith('/community/posts/7/images/1/download')
     expect(request.get).toHaveBeenCalledWith('/community/tags')
     expect(request.get).toHaveBeenCalledWith('/community/recent-users')
     expect(request.get).toHaveBeenCalledWith('/community/my/favorite-images', { params: { page: 1 } })

@@ -356,8 +356,7 @@ const handleEdit = async () => {
   await fetchCategories()
   editForm.title = wallpaper.value.title || ''
   editForm.description = wallpaper.value.description || ''
-  editForm.category = wallpaper.value.category || '' // Assuming category name is stored
-  // Ensure tags is an array
+  editForm.category = wallpaper.value.category || ''
   editForm.tagsList = Array.isArray(wallpaper.value.tags) ? [...wallpaper.value.tags] : []
   editDialogVisible.value = true
 }

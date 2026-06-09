@@ -5,7 +5,7 @@ import { normalizePagedResult, normalizePost } from '@/utils/normalizers'
 export const login = (payload) => request.post('/auth/login', payload).then(unwrap)
 export const register = (payload) => request.post('/auth/register', payload).then(unwrap)
 export const getMe = () => request.get('/auth/me').then(unwrap)
-export const updateMe = (payload) => request.put('/auth/me', payload).then(unwrap) // Added missing API
+export const updateMe = (payload) => request.put('/auth/me', payload).then(unwrap)
 export const githubLogin = (code) => request.post('/auth/github', { code }).then(unwrap)
 export const uploadFile = (formData) => request.post('/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
@@ -43,10 +43,10 @@ export const unfollowUser = (id) => request.delete(`/users/${id}/follow`).then(u
 export const getUserFollowers = (id, params) => request.get(`/users/${id}/followers`, { params }).then(unwrap)
 export const getUserFollowing = (id, params) => request.get(`/users/${id}/following`, { params }).then(unwrap)
 
-// Other User's Data (Restored/Assumed)
+// Public user resources
 export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(unwrap)
 export const getOtherUserLikedPosts = (userId, params) => request.get(`/users/${userId}/likes`, { params }).then(unwrap)
-export const getOtherUserPostFavorites = (userId, params) => request.get(`/users/${userId}/favorites`, { params }).then(unwrap) // Assuming favorites
+export const getOtherUserPostFavorites = (userId, params) => request.get(`/users/${userId}/favorites`, { params }).then(unwrap)
 
 // Aliases
 export const getMyFavorites = getMyWallpapers
