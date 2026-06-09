@@ -25,6 +25,7 @@ export const downloadCommunityPostImage = (postId, index) => request.get(`/commu
 export const getCommunityTags = () => request.get('/community/tags').then(unwrap)
 export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(unwrap)
 export const getMyFavoriteCommunityImages = (params) => request.get('/community/my/favorite-images', { params }).then(unwrap) // Added v3.5 API
-export const uploadCommunityImage = (formData) => request.post('/upload', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
+export const uploadCommunityImage = (formData, config = {}) => request.post('/upload', formData, {
+  ...config,
+  headers: { 'Content-Type': 'multipart/form-data', ...(config.headers || {}) }
 }).then(unwrap)

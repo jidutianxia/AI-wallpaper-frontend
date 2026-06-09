@@ -87,7 +87,16 @@
         <h2 class="section-title">{{ sectionTitle }}</h2>
       </div>
       
-      <div class="wallpaper-grid-preview" v-loading="loading">
+      <AppState v-if="loading" type="loading" :rows="3" />
+      <AppState
+        v-else-if="listError"
+        type="error"
+        description="搜索加载失败，请重试"
+        retryable
+        @retry="fetchWallpapers"
+      />
+
+      <div v-else-if="wallpapers.length > 0" class="wallpaper-grid-preview">
         <UnifiedCard
           v-for="wallpaper in wallpapers"
           :key="wallpaper.id"
@@ -97,7 +106,7 @@
       </div>
 
       <!-- 无结果提示 -->
-      <div v-if="!loading && wallpapers.length === 0" class="no-results">
+      <div v-else class="no-results">
         <AppState description="没有找到相关壁纸" />
       </div>
 
@@ -124,7 +133,8 @@ import { ClickOutside as vClickOutside } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import AppState from '@/components/AppState.vue'
 import { getWallpapers, getCategories } from '@/api'
-import { formatAuthor } from '@/utils'
+import { formatAuthor, normalizeWallpaper } from '@/utils'
+import { isStaleRequestError, usePagedList } from '@/composables/usePagedList'
 
 const router = useRouter()
 const route = useRoute()
@@ -134,12 +144,7 @@ const isInteractionActive = ref(false)
 const searchQuery = ref('')
 const activeTab = ref('hot')
 const activeSub = ref('')
-const loading = ref(false)
-const wallpapers = ref([])
 const categories = ref([])
-const total = ref(0)
-const currentPage = ref(1)
-const pageSize = ref(12) // Show more for the grid
 
 // 筛选器
 const filters = reactive({
@@ -161,7 +166,39 @@ const colors = [
   { name: '白色', value: '#ffffff', key: 'white' },
 ]
 
-// 计算属性
+const {
+  items: wallpapers,
+  total,
+  page: currentPage,
+  pageSize,
+  loading,
+  error: listError,
+  load: loadWallpapers
+} = usePagedList({
+  fetcher: getWallpapers,
+  getParams: () => {
+    const params = {
+      resolution: filters.resolution,
+      sortBy: filters.sortBy
+    }
+
+    if (searchQuery.value) params.q = searchQuery.value
+
+    if (activeTab.value === 'category' && activeSub.value) {
+      params.category = activeSub.value
+    } else if (activeTab.value === 'color' && activeSub.value) {
+      params.color = activeSub.value
+    } else if (activeTab.value === 'hot' && activeSub.value) {
+      params.tag = activeSub.value
+    }
+
+    return params
+  },
+  normalizeItem: normalizeWallpaper,
+  initialPageSize: 12
+})
+
+// 标题由路由查询和筛选状态推导，保持搜索结果区与 URL 同步。
 const sectionTitle = computed(() => {
   if (route.query.q) return `搜索结果: "${route.query.q}"`
   if (activeTab.value === 'category' && activeSub.value) {
@@ -222,11 +259,11 @@ const handleResolutionSelect = (res) => {
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
-  fetchWallpapers()
+  updateURL()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// API请求
+// 分类数据仅用于快速导航，失败时不影响搜索主流程。
 const fetchCategoriesData = async () => {
   try {
     const res = await getCategories()
@@ -236,38 +273,17 @@ const fetchCategoriesData = async () => {
   }
 }
 
+// 搜索接口只从当前 URL/筛选状态组装参数，避免输入框状态和结果列表脱节。
 const fetchWallpapers = async () => {
-  loading.value = true
   try {
-    const params = {
-      page: currentPage.value,
-      size: pageSize.value,
-      resolution: filters.resolution,
-      sortBy: filters.sortBy
-    }
-
-    if (searchQuery.value) params.q = searchQuery.value
-    
-    if (activeTab.value === 'category' && activeSub.value) {
-      params.category = activeSub.value
-    } else if (activeTab.value === 'color' && activeSub.value) {
-      params.color = activeSub.value
-    } else if (activeTab.value === 'hot' && activeSub.value) {
-      params.tag = activeSub.value
-    }
-
-    const res = await getWallpapers(params)
-    wallpapers.value = res.items || []
-    total.value = res.total || 0
+    await loadWallpapers({ page: currentPage.value })
   } catch (error) {
+    if (isStaleRequestError(error)) return
     console.error(error)
-    wallpapers.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
   }
 }
 
+// 与首页复用同一张卡片字段契约，兼容后端 thumbUrl/url 差异。
 const toCard = (w) => ({
   id: w.id,
   title: w.title,
@@ -287,16 +303,19 @@ const updateURL = () => {
   if (activeTab.value !== 'hot') query.cat = activeTab.value
   if (activeSub.value) query.sub = activeSub.value
   if (filters.resolution) query.res = filters.resolution
+  if (currentPage.value > 1) query.page = String(currentPage.value)
   
   router.push({ path: '/search', query })
 }
 
-// 监听路由变化
+// URL 是搜索页的单一入口，前进后退和直接打开链接都会触发列表刷新。
 watch(() => route.query, () => {
   searchQuery.value = route.query.q || ''
   activeTab.value = route.query.cat || 'hot'
   activeSub.value = route.query.sub || ''
   filters.resolution = route.query.res || ''
+  filters.sortBy = activeTab.value === 'hot' ? 'likes' : 'created_at'
+  currentPage.value = Math.max(1, Number(route.query.page) || 1)
   
   fetchWallpapers()
 }, { immediate: true })

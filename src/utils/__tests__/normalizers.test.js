@@ -54,6 +54,22 @@ describe('normalizers', () => {
     expect(page.total).toBe(6)
   })
 
+  it('normalizes nested and alternate paged response aliases', () => {
+    const page = normalizePagedResult({
+      data: {
+        rows: [{ wallpaperId: 9, imageUrl: '/wallpaper.jpg' }],
+        count: '12',
+        pageNum: '3',
+        limit: '4'
+      }
+    }, normalizeWallpaper)
+
+    expect(page.items[0]).toMatchObject({ id: 9, url: '/wallpaper.jpg' })
+    expect(page.total).toBe(12)
+    expect(page.page).toBe(3)
+    expect(page.size).toBe(4)
+  })
+
   it('normalizes string users', () => {
     expect(normalizeUser('guest')).toMatchObject({ username: 'guest' })
   })

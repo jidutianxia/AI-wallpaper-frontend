@@ -86,11 +86,15 @@ export const normalizeWallpaper = (wallpaper = {}) => {
 }
 
 export const normalizePagedResult = (result, itemNormalizer = (item) => item) => {
-  const items = Array.isArray(result) ? result : (result?.items || result?.records || result?.list || [])
+  const source = Array.isArray(result)
+    ? result
+    : (result?.data && typeof result.data === 'object' ? result.data : result)
+  const items = Array.isArray(source) ? source : (source?.items || source?.records || source?.list || source?.rows || [])
+
   return {
     items: items.map(itemNormalizer),
-    total: toNumber(result?.total ?? result?.totalCount ?? items.length, items.length),
-    page: toNumber(result?.page ?? result?.current),
-    size: toNumber(result?.size ?? result?.pageSize ?? items.length, items.length)
+    total: toNumber(source?.total ?? source?.totalCount ?? source?.count ?? source?.totalElements ?? items.length, items.length),
+    page: toNumber(source?.page ?? source?.current ?? source?.pageNum),
+    size: toNumber(source?.size ?? source?.pageSize ?? source?.limit ?? items.length, items.length)
   }
 }

@@ -46,6 +46,17 @@
                     <el-checkbox v-model="file.isWallpaper" label="收录为壁纸" size="small"
                       @change="(val) => handleWallpaperCheck(val, file)" />
                   </div>
+                  <div v-if="file.uploadStatus === 'uploading'" class="upload-progress">
+                    <el-progress :percentage="file.uploadPercent || 0" :show-text="false" />
+                  </div>
+                  <button
+                    v-if="file.uploadStatus === 'fail'"
+                    type="button"
+                    class="upload-retry"
+                    @click.stop="retryUpload(file)"
+                  >
+                    重传
+                  </button>
                 </div>
                 <div v-if="file.isWallpaper" class="wallpaper-form">
                   <el-select v-model="file.wallpaperCategory" placeholder="壁纸分类(必填)" size="small"
@@ -75,21 +86,58 @@
 </template>
 
 <script setup>
-import { ref, reactive ,nextTick} from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, ArrowLeft, ArrowLeftBold } from '@element-plus/icons-vue'
 import { uploadCommunityImage, createCommunityPost, getCategories } from '@/api'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { validateImageFile, validateUploadCount } from '@/utils'
 
 const router = useRouter()
-const goBack = () => router.push('/community')
 
 const form = ref({ title: '', content: '', tags: [], images: [] })
 const fileList = ref([]) // Manually manage file list for custom rendering
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
 const wallpaperCategories = ref([])
 const publishing = ref(false)
+
+const isDirty = computed(() => {
+  return Boolean(
+    form.value.title ||
+    form.value.content ||
+    form.value.tags.length > 0 ||
+    fileList.value.length > 0
+  )
+})
+
+const shouldConfirmLeave = () => !publishing.value && isDirty.value
+
+const confirmLeave = () => {
+  return !shouldConfirmLeave() || window.confirm('内容尚未发布，确定离开吗？')
+}
+
+const goBack = () => {
+  if (confirmLeave()) router.push('/community')
+}
+
+const handleBeforeUnload = (event) => {
+  if (!shouldConfirmLeave()) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (confirmLeave()) next()
+  else next(false)
+})
 
 // Fetch wallpaper categories
 const loadCategories = async () => {
@@ -100,6 +148,7 @@ const loadCategories = async () => {
 }
 loadCategories()
 
+// 上传入口统一使用 validateImageFile/validateUploadCount，保持拖拽、超限和手动请求的错误提示一致。
 const onExceed = (files) => {
   const result = validateUploadCount([...(fileList.value || []), ...(files || [])], 10)
   ElMessage.warning(result.message || '最多只能上传 10 张图片')
@@ -111,25 +160,45 @@ const beforeUpload = (file) => {
   return result.valid
 }
 
+const findUploadFile = (rawFile) => {
+  return fileList.value.find(item => item.raw === rawFile || item.uid === rawFile?.uid || item.name === rawFile?.name)
+}
+
+const updateUploadState = (rawFile, patch) => {
+  const uploadFile = findUploadFile(rawFile)
+  if (uploadFile) Object.assign(uploadFile, patch)
+}
+
 const onHttpRequest = async (options) => {
-  const { file, onSuccess, onError } = options
+  const { file, onSuccess, onError, onProgress } = options
+  // 自定义 http-request 再校验一次，避免绕过 before-upload 时把非法文件送到后端。
   const validation = validateImageFile(file, { maxSizeMB: 10 })
   if (!validation.valid) {
     ElMessage.error(validation.message)
+    updateUploadState(file, { uploadStatus: 'fail', uploadError: validation.message })
     onError(new Error(validation.message))
     return
   }
   const fd = new FormData()
   fd.append('file', file)
+  updateUploadState(file, { uploadStatus: 'uploading', uploadPercent: 0, uploadError: '' })
   try {
-    const r = await uploadCommunityImage(fd)
+    const r = await uploadCommunityImage(fd, {
+      onUploadProgress: (event) => {
+        const percent = event.total ? Math.round((event.loaded / event.total) * 100) : 0
+        updateUploadState(file, { uploadStatus: 'uploading', uploadPercent: percent })
+        onProgress?.({ percent })
+      }
+    })
     // Custom file object augmentation
     // Note: We don't push to fileList here because v-model:file-list handles it.
     // We just need to return data for onSuccess.
     // Since uploadCommunityImage already unwraps response (returning data object directly),
     // we pass r directly instead of r.data
+    updateUploadState(file, { uploadStatus: 'success', uploadPercent: 100, uploadError: '' })
     onSuccess(r)
   } catch (e) {
+    updateUploadState(file, { uploadStatus: 'fail', uploadError: e.message || '上传失败' })
     onError(e)
   }
 }
@@ -140,6 +209,9 @@ const onUploadSuccess = (response, file) => {
     file.wallpaperCategory = ''
     file.wallpaperTags = []
   }
+  file.uploadStatus = 'success'
+  file.uploadPercent = 100
+  file.uploadError = ''
 
   // Sync URL: Always override blob URL with remote URL from backend
   const remoteUrl = response?.data?.url || response?.url || (typeof response?.data === 'string' ? response.data : null)
@@ -148,7 +220,32 @@ const onUploadSuccess = (response, file) => {
     file.url = remoteUrl
   }
 }
-const onUploadError = () => { ElMessage.error('上传失败，请检查登录权限或后端服务') }
+const onUploadError = (_error, file) => {
+  if (file) file.uploadStatus = 'fail'
+  ElMessage.error('上传失败，请检查登录权限或后端服务')
+}
+
+const retryUpload = (file) => {
+  if (!file?.raw) {
+    ElMessage.warning('请删除后重新选择该图片')
+    return
+  }
+
+  onHttpRequest({
+    file: file.raw,
+    onProgress: ({ percent }) => {
+      file.uploadPercent = percent
+    },
+    onSuccess: (response) => {
+      file.status = 'success'
+      onUploadSuccess(response, file)
+    },
+    onError: (error) => {
+      file.status = 'fail'
+      onUploadError(error, file)
+    }
+  })
+}
 
 const handleRemove = (file) => {
   const idx = fileList.value.indexOf(file)
@@ -168,17 +265,25 @@ const publish = async () => {
   const submissions = []
   const validImages = []
 
-  fileList.value.forEach((f, index) => {
+  for (const [index, f] of fileList.value.entries()) {
     if (f.url) {
+      if (f.uploadStatus === 'uploading') {
+        ElMessage.error(`第 ${index + 1} 张图片仍在上传，请稍后再发布`)
+        return
+      }
+      if (f.uploadStatus === 'fail') {
+        ElMessage.error(`第 ${index + 1} 张图片上传失败，请重传后再发布`)
+        return
+      }
       if (f.url.startsWith('blob:')) {
         ElMessage.error(`第 ${index + 1} 张图片上传未完成或失败，请删除后重试`)
-        throw new Error('Validation failed')
+        return
       }
       validImages.push(f.url)
       if (f.isWallpaper) {
         if (!f.wallpaperCategory) {
           ElMessage.warning(`请为第 ${index + 1} 张图片选择壁纸分类`)
-          throw new Error('Validation failed')
+          return
         }
         submissions.push({
           imageIndex: index,
@@ -188,7 +293,7 @@ const publish = async () => {
         })
       }
     }
-  })
+  }
 
   publishing.value = true
   try {
@@ -199,7 +304,6 @@ const publish = async () => {
       images: validImages,
       wallpaperSubmissions: submissions.length > 0 ? submissions : undefined
     }
-    console.log('Publish Payload:', payload) // Debug: Check payload structure
     await createCommunityPost(payload)
     reset()
     ElMessage.success('发布成功')
@@ -317,6 +421,33 @@ const handleWallpaperTagChange = (val) => {
   padding: 2px 4px;
   display: flex;
   justify-content: center;
+}
+
+.upload-progress {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 32px;
+  z-index: 3;
+}
+
+.upload-retry {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.upload-retry:hover {
+  background: rgba(0, 0, 0, 0.82);
 }
 
 /* --- 壁纸信息悬浮表单适配 --- */

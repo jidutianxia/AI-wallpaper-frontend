@@ -42,14 +42,15 @@
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
           </div>
-          <template v-if="loading">
-            <div class="posts">
-              <el-card v-for="i in 3" :key="i" class="post">
-                <el-skeleton animated :rows="3" />
-              </el-card>
-            </div>
-          </template>
-          <transition name="fade-list" v-else><div class="posts" ref="postsRef">
+          <AppState v-if="loading" type="loading" :rows="3" />
+          <AppState
+            v-else-if="postsError"
+            type="error"
+            description="帖子加载失败，请重试"
+            retryable
+            @retry="loadPosts(page)"
+          />
+          <transition name="fade-list" v-else-if="posts.length > 0"><div class="posts" ref="postsRef">
             <el-card v-for="p in posts" :key="p.id" class="post">
               <div class="post-header">
                 <div class="author" @click="goProfile(p.author?.id)"><img :src="getAvatarUrl(p.author?.avatarUrl)" class="avatar" /><span class="name">{{ p.author?.username || '匿名' }}</span></div>
@@ -88,7 +89,7 @@
               </div>
             </el-card>
           </div></transition>
-          <div v-if="!loading && posts.length === 0" class="empty">暂无帖子，去发布一条吧</div>
+          <AppState v-else description="暂无帖子，去发布一条吧" />
           <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="total" v-model:current-page="page" /></div>
         </main>
         <aside class="right">
@@ -108,15 +109,16 @@ import { EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element
 import { useUserStore } from '@/store/user'
 import { getCommunityPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta } from '@/api'
 import { getCommunityPost } from '@/api'
+import AppState from '@/components/AppState.vue'
 import CommentItem from '@/components/CommentItem.vue'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 import { requestAuth } from '@/utils/authEvents'
 import { normalizePagedResult, normalizePost } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
 import { useShare } from '@/composables/useShare'
+import { isStaleRequestError, usePagedList } from '@/composables/usePagedList'
 
 const tagOptions = ['插画', '风景', '极简', '赛博', '像素', '摄影']
-const posts = ref([])
 const userStore = useUserStore()
 const { toggleInteraction } = useInteraction()
 const { share } = useShare()
@@ -125,9 +127,25 @@ const displayName = computed(() => userStore.info?.nickname || userStore.info?.u
 const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '这个人很懒~')
 const q = ref('')
 const tag = ref('')
-const page = ref(1)
-const pageSize = ref(10) // Changed to 10 for better view
-const total = ref(0)
+const {
+  items: posts,
+  total,
+  page,
+  pageSize,
+  loading,
+  error: postsError,
+  load: loadPostList
+} = usePagedList({
+  fetcher: getCommunityPosts,
+  getParams: () => ({
+    q: q.value || undefined,
+    tag: tag.value || undefined,
+    sort: 'latest',
+    includeCounts: true
+  }),
+  normalizeItem: normalizePost,
+  initialPageSize: 10
+})
 
 // Removed frontend filtering logic to rely on backend
 // const filteredPosts = computed(...) 
@@ -149,29 +167,25 @@ const loadRecentUsers = async () => {
 }
 loadHot(); loadRecentUsers()
 
-// 持久化到本地，供详情页读取
-const loading = ref(false)
-
-const loadPosts = async () => {
-  loading.value = true
+const loadPosts = async (requestedPage = page.value) => {
   try {
-    const response = await getCommunityPosts({ page: page.value, size: pageSize.value, q: q.value || undefined, tag: tag.value || undefined, sort: 'latest', includeCounts: true })
-    const pageData = normalizePagedResult(response, normalizePost)
-    posts.value = pageData.items
-    total.value = pageData.total
-  } finally { loading.value = false }
+    await loadPostList({ page: requestedPage })
+  } catch (error) {
+    if (isStaleRequestError(error)) return
+    console.error('Failed to fetch community posts:', error)
+  }
 }
 
 // Watchers for search/filter/pagination
 const debouncedLoadPosts = useDebounceFn(() => {
-  page.value = 1
-  loadPosts()
+  if (page.value !== 1) page.value = 1
+  else loadPosts(1)
 }, 300)
 
 watch([q, tag], () => {
   debouncedLoadPosts()
 })
-watch(page, loadPosts)
+watch(page, (nextPage) => loadPosts(nextPage))
 
 // Initial load
 loadPosts()

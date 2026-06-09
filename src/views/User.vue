@@ -632,7 +632,7 @@ const uploadAvatar = async (opt) => {
   }
 }
 
-// 头像上传前验证
+// 头像和壁纸上传共用 validateImageFile，通过不同 options 区分尺寸和格式限制。
 const beforeAvatarUpload = (file) => {
   const result = validateImageFile(file, {
     allowedTypes: ['image/jpeg', 'image/png'],

@@ -19,6 +19,9 @@
         <svg viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
         <span>{{ imageCount }}</span>
       </div>
+      <button v-if="hasImageError" class="image-retry" type="button" @click.stop="retryImage">
+        重试
+      </button>
     </div>
     
     <div class="badges">
@@ -74,18 +77,38 @@ const initialCover = computed(() => displayCover.value)
 const currentImgSrc = ref(initialCover.value)
 const isHovering = ref(false)
 const isLoaded = ref(false)
+const hasImageError = ref(false)
+const lastRequestedImage = ref(initialCover.value)
+const lastFailedImage = ref('')
 const slideIndex = ref(0)
 let slideTimer = null
 
 const hasMultipleImages = computed(() => (props.images && props.images.length > 1) || props.imageCount > 1)
 
+const setCurrentImage = (src) => {
+  const nextSrc = src || placeholder
+  lastRequestedImage.value = nextSrc
+  hasImageError.value = false
+  isLoaded.value = false
+  currentImgSrc.value = nextSrc
+}
+
 // Watch props change to update cover
 watch(initialCover, (val) => {
-  if (!isHovering.value) currentImgSrc.value = val
+  if (!isHovering.value) setCurrentImage(val)
 })
 
-const onError = (e) => { e.target.src = placeholder }
+const onError = () => {
+  lastFailedImage.value = lastRequestedImage.value
+  hasImageError.value = true
+  isLoaded.value = true
+  currentImgSrc.value = placeholder
+}
 const onLoad = () => { isLoaded.value = true }
+
+const retryImage = () => {
+  setCurrentImage(lastFailedImage.value || initialCover.value)
+}
 
 const go = () => {
   const targetPath = displayTo.value
@@ -113,7 +136,7 @@ const startSlideshow = () => {
     
     slideTimer = setInterval(() => {
       slideIndex.value = (slideIndex.value + 1) % maxSlides
-      currentImgSrc.value = props.images[slideIndex.value]
+      setCurrentImage(props.images[slideIndex.value])
     }, 1200) // Switch every 1.2s
   }
 }
@@ -124,7 +147,7 @@ const stopSlideshow = () => {
     clearInterval(slideTimer)
     slideTimer = null
   }
-  currentImgSrc.value = initialCover.value
+  setCurrentImage(initialCover.value)
 }
 
 onBeforeUnmount(() => {
@@ -209,6 +232,25 @@ onBeforeUnmount(() => {
 .multi-badge .icon {
   width: 14px;
   height: 14px;
+}
+
+.image-retry {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  transform: translate(-50%, 50%);
+  z-index: 3;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.62);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.image-retry:hover {
+  background: rgba(0,0,0,0.76);
 }
 
 .badges { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; z-index: 2; }

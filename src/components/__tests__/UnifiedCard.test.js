@@ -79,4 +79,22 @@ describe('UnifiedCard', () => {
 
     expect(wrapper.find('img').attributes('src')).toBe('/a.jpg')
   })
+
+  it('shows a placeholder and retry control when an image fails', async () => {
+    const wrapper = mount(UnifiedCard, mountOptions({
+      props: {
+        title: 'Broken image',
+        cover: '/missing.jpg'
+      }
+    }))
+
+    await wrapper.find('img').trigger('error')
+
+    expect(wrapper.find('img').attributes('src')).toContain('data:image/svg+xml')
+    expect(wrapper.find('.image-retry').exists()).toBe(true)
+
+    await wrapper.find('.image-retry').trigger('click')
+
+    expect(wrapper.find('img').attributes('src')).toBe('/missing.jpg')
+  })
 })

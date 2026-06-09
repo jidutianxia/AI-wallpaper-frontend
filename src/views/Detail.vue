@@ -515,7 +515,7 @@ const downloadWallpaper = async () => {
     const token = getLocalStorageItem('token')
     const url = appendTokenParam(`${baseUrl}/wallpapers/${wallpaper.value.id}/download`, token)
     
-    // 在新窗口打开下载链接
+    // appendTokenParam 只负责拼 token，openSecureWindow 再做协议校验和 noopener 打开。
     if (!openSecureWindow(url)) throw new Error('Invalid download URL')
     
     // 更新下载数 (乐观更新)

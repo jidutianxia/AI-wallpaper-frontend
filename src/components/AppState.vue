@@ -11,6 +11,7 @@
 </template>
 
 <script setup>
+// retryable=true 时父组件必须监听 retry，用于错误态重新拉取数据。
 defineEmits(['retry'])
 
 defineProps({

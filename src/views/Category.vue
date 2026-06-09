@@ -82,7 +82,7 @@
     </div>
 
     <!-- 预览展示区域 (网格) - 默认一直显示 -->
-    <div class="preview-section" v-loading="loading">
+    <div class="preview-section">
       <div class="section-header">
         <h2 class="section-title">{{ previewTitle }}</h2>
         <div class="view-more" @click="viewMore">
@@ -90,7 +90,16 @@
         </div>
       </div>
       
-      <div class="wallpaper-grid-preview">
+      <AppState v-if="loading" type="loading" :rows="3" />
+      <AppState
+        v-else-if="previewError"
+        type="error"
+        description="推荐加载失败，请重试"
+        retryable
+        @retry="fetchPreview(previewParams)"
+      />
+
+      <div v-else-if="previewWallpapers.length > 0" class="wallpaper-grid-preview">
         <UnifiedCard
           v-for="wallpaper in previewWallpapers"
           :key="wallpaper.id"
@@ -99,8 +108,8 @@
         />
       </div>
       
-      <div v-if="!loading && previewWallpapers.length === 0" class="no-results">
-        <el-empty description="暂无相关推荐" />
+      <div v-else class="no-results">
+        <AppState description="暂无相关推荐" />
       </div>
     </div>
   </div>
@@ -112,8 +121,10 @@ import { useRouter } from 'vue-router'
 import { Search, ArrowDown, Right, ArrowRight } from '@element-plus/icons-vue'
 import { ClickOutside as vClickOutside } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
+import AppState from '@/components/AppState.vue'
 import { getWallpapers, getCategories } from '@/api'
-import { formatAuthor } from '@/utils'
+import { formatAuthor, normalizeWallpaper } from '@/utils'
+import { isStaleRequestError, usePagedList } from '@/composables/usePagedList'
 
 const router = useRouter()
 
@@ -122,9 +133,8 @@ const isInteractionActive = ref(false)
 const searchQuery = ref('')
 const activeTab = ref('hot')
 const activeSub = ref('')
-const loading = ref(false)
-const previewWallpapers = ref([])
 const categories = ref([])
+const previewParams = ref({ sortBy: 'likes' })
 
 // 筛选器
 const filters = reactive({
@@ -144,6 +154,21 @@ const colors = [
   { name: '黑色', value: '#303133', key: 'black' },
   { name: '白色', value: '#ffffff', key: 'white' },
 ]
+
+const {
+  items: previewWallpapers,
+  loading,
+  error: previewError,
+  load: loadPreview
+} = usePagedList({
+  fetcher: getWallpapers,
+  getParams: () => ({
+    resolution: filters.resolution,
+    ...previewParams.value
+  }),
+  normalizeItem: normalizeWallpaper,
+  initialPageSize: 9
+})
 
 // 计算属性
 const previewTitle = computed(() => {
@@ -229,19 +254,12 @@ const fetchCategoriesData = async () => {
 }
 
 const fetchPreview = async (params = {}) => {
-  loading.value = true
+  previewParams.value = params
   try {
-    const res = await getWallpapers({
-      page: 1,
-      size: 9, // 3列 x 3行
-      resolution: filters.resolution,
-      ...params
-    })
-    previewWallpapers.value = res.items || []
+    await loadPreview({ page: 1 })
   } catch (error) {
+    if (isStaleRequestError(error)) return
     console.error(error)
-  } finally {
-    loading.value = false
   }
 }
 

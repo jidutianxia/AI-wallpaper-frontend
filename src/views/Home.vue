@@ -77,17 +77,13 @@ import { ElMessage } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import AppState from '@/components/AppState.vue'
 import { getWallpapers } from '@/api/wallpaper'
-import { formatAuthor, normalizePagedResult, normalizeWallpaper } from '@/utils'
+import { formatAuthor, normalizeWallpaper } from '@/utils'
+import { isStaleRequestError, usePagedList } from '@/composables/usePagedList'
 
 const router = useRouter()
 
 // 响应式数据
 const activeTab = ref('latest')
-const loading = ref(false)
-const isError = ref(false)
-const hasMore = ref(true)
-const page = ref(1)
-const size = ref(9)
 const sentinel = ref(null)
 let observer = null
 let observeTimer = null
@@ -107,46 +103,43 @@ const tabs = ref([
   { key: 'featured', label: '精选' }
 ])
 
-const featuredWallpapers = ref([])
+const sortMap = {
+  'latest': 'latest',
+  'popular': 'hot',
+  'featured': 'download'
+}
 
-// 获取壁纸列表
-const fetchWallpapers = async (append = false) => {
+const {
+  items: featuredWallpapers,
+  page,
+  pageSize: size,
+  loading,
+  error: listError,
+  hasMore,
+  load: loadWallpapers
+} = usePagedList({
+  fetcher: getWallpapers,
+  getParams: () => ({
+    sort: sortMap[activeTab.value] || 'latest'
+  }),
+  normalizeItem: normalizeWallpaper,
+  initialPageSize: 9
+})
+
+const isError = computed(() => Boolean(listError.value && featuredWallpapers.value.length === 0))
+
+// append=true 用于无限滚动追加；重试或切换标签时替换列表，避免重复卡片。
+const fetchWallpapers = async (append = false, requestedPage = page.value) => {
   if (loading.value) return
-  loading.value = true
-  isError.value = false
   
   try {
-    const sortMap = {
-      'latest': 'latest',
-      'popular': 'hot',
-      'featured': 'download'
-    }
-    const params = {
-      page: page.value,
-      size: size.value,
-      sort: sortMap[activeTab.value] || 'latest'
-    }
-    
-    const res = await getWallpapers(params)
-    const pageData = normalizePagedResult(res, normalizeWallpaper)
-    const items = pageData.items
-    
-    if (append) {
-      featuredWallpapers.value.push(...items)
-    } else {
-      featuredWallpapers.value = items
-    }
-    
-    // Check if we have more pages
-    const total = pageData.total
-    hasMore.value = featuredWallpapers.value.length < total
+    await loadWallpapers({ append, page: requestedPage })
   } catch (error) {
+    if (isStaleRequestError(error)) return
     console.error('Failed to fetch wallpapers:', error)
-    if (!append) isError.value = true
     ElMessage.error('获取壁纸失败，请稍后重试')
   } finally {
-    loading.value = false
-    // Re-observe if needed
+    // 哨兵元素重挂载后重新 observe，保证追加列表时无限滚动还能继续触发。
     if (hasMore.value && !isError.value && sentinel.value && observer) {
        // Small delay to ensure DOM updated
        if (observeTimer) clearTimeout(observeTimer)
@@ -161,14 +154,12 @@ const fetchWallpapers = async (append = false) => {
 // 切换标签
 const handleTabChange = (tab) => {
   activeTab.value = tab
-  page.value = 1
-  fetchWallpapers()
+  fetchWallpapers(false, 1)
 }
 
 // 加载更多
 const loadMore = () => {
-  page.value++
-  fetchWallpapers(true)
+  fetchWallpapers(true, page.value + 1)
 }
 
 // 方法
@@ -202,7 +193,7 @@ onUnmounted(() => {
   if (observer) observer.disconnect()
 })
 
-// 首页 Hero 背景
+// 统一把后端壁纸模型适配为 UnifiedCard 所需字段，页面不再关心兼容字段名。
 const mapCard = (w) => ({
   id: w.id,
   title: w.title,
