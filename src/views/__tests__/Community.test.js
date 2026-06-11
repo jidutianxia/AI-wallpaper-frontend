@@ -6,6 +6,8 @@ import {
   getCommunityPostImageMeta,
   getCommunityPosts,
   getCommunityRecentUsers,
+  getFollowingPosts,
+  getRecommendedUsers,
   getUserStats
 } from '@/api'
 import { requestAuth } from '@/utils/authEvents'
@@ -33,8 +35,13 @@ vi.mock('@/api', () => ({
   getCommunityPostImageMeta: vi.fn(),
   getCommunityPosts: vi.fn(),
   getCommunityRecentUsers: vi.fn(),
+  getCommunityTags: vi.fn(),
+  getFollowingPosts: vi.fn(),
+  getRecommendedUsers: vi.fn(),
   getUserStats: vi.fn(),
-  commentCommunityPost: vi.fn()
+  commentCommunityPost: vi.fn(),
+  followUser: vi.fn(),
+  reportContent: vi.fn()
 }))
 
 vi.mock('@/utils/authEvents', () => ({
@@ -89,6 +96,8 @@ describe('Community view', () => {
       })
     })
     vi.mocked(getCommunityRecentUsers).mockResolvedValue([{ id: 3, username: 'recent' }])
+    vi.mocked(getRecommendedUsers).mockResolvedValue({ items: [{ id: 8, username: 'creator', postCount: 2, followersCount: 1 }] })
+    vi.mocked(getFollowingPosts).mockResolvedValue({ items: [], total: 0 })
     vi.mocked(getUserStats).mockResolvedValue({ postCount: 1, likeCount: 2, receivedLikes: 3 })
     vi.mocked(getCommunityPostComments).mockResolvedValue({ items: [{ id: 4, content: 'comment' }] })
     vi.mocked(getCommunityPostImageMeta).mockResolvedValue({ wallpaperInfo: { id: 99 } })
@@ -122,5 +131,16 @@ describe('Community view', () => {
     await wrapper.find('.publish-btn').trigger('click')
 
     expect(routerPush).toHaveBeenCalledWith('/community/compose')
+  })
+
+  it('asks guests to authenticate before opening following feed', async () => {
+    const wrapper = mount(Community, mountOptions())
+    await flushPromises()
+
+    wrapper.vm.feedMode = 'following'
+    await flushPromises()
+
+    expect(requestAuth).toHaveBeenCalledWith({ reason: 'following-feed' })
+    expect(getFollowingPosts).not.toHaveBeenCalled()
   })
 })

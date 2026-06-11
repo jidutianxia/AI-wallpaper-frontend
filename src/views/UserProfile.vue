@@ -153,9 +153,11 @@ const profileState = useAsyncState(async () => {
       username.value = profile.nickname || profile.username || '用户'
       avatarUrl.value = profile.avatarUrl || ''
       isFollowing.value = !!profile.isFollowing
+      followersCount.value = profile.stats?.followersCount ?? profile.followersCount ?? 0
     } else {
       username.value = userStore.info?.nickname || userStore.info?.username || '我'
       avatarUrl.value = userStore.info?.avatarUrl || ''
+      followersCount.value = userStore.info?.stats?.followersCount ?? 0
     }
   } catch (e) {
     console.error('Failed to load profile', e)

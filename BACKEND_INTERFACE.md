@@ -5,6 +5,7 @@ This document serves as the **Single Source of Truth** for the frontend-backend 
 ## 0. Current Implementation Scope
 
 - Current production scope is wallpaper browsing, community posts, upload, interactions, user center, and notifications.
+- User growth v1 includes following-feed posts, recommended users, and follower notifications.
 - AI generation, workflow orchestration, moderation console, and operations/admin dashboards are future modules and must not be assumed by frontend routes or API wrappers until matching backend endpoints exist.
 - Frontend pages should render recoverable `loading / empty / error / retry` states for every network-backed view instead of falling back to mock data.
 
@@ -188,6 +189,12 @@ Paged payloads must be inside `data` and should use `items`, `total`, `page`, an
   }
   ```
 
+### 4.7 Following Feed
+- **Endpoint**: `GET /community/following/posts`
+- **Auth**: Required.
+- **Params**: `page`, `size`.
+- **Response**: Standard paged post response using the same item shape as `GET /community/posts`; only visible posts from followed users are returned.
+
 ---
 
 ## 5. Upload Module
@@ -231,8 +238,13 @@ Paged payloads must be inside `data` and should use `items`, `total`, `page`, an
 
 ---
 
-## 7. Follow Module (Future)
+## 7. Follow & Growth Module
 
 - **Follow**: `POST /users/{id}/follow`
 - **Unfollow**: `DELETE /users/{id}/follow`
 - **Followers**: `GET /users/{id}/followers`
+- **Following**: `GET /users/{id}/following`
+- **Recommended Users**: `GET /users/recommended?page=1&size=20`
+- **Follower Notifications**: `GET /notifications?type=followers&page=1&size=10`
+
+Recommended user items include `id`, `username`, `nickname`, `avatarUrl`, `postCount`, `likeCount`, `followersCount`, `isFollowing`, and `reason`.

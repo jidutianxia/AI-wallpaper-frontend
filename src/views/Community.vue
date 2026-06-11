@@ -37,11 +37,15 @@
         </aside>
         <main class="center">
           <div class="filters">
-            <el-input v-model="q" placeholder="搜索标题或内容" class="filter-input" prefix-icon="Search" />
-            <el-select v-model="tag" placeholder="按标签筛选" class="filter-select" clearable>
+            <el-radio-group v-model="feedMode" class="feed-toggle">
+              <el-radio-button label="all">广场</el-radio-button>
+              <el-radio-button label="following">关注</el-radio-button>
+            </el-radio-group>
+            <el-input v-if="feedMode === 'all'" v-model="q" placeholder="搜索标题或内容" class="filter-input" prefix-icon="Search" />
+            <el-select v-if="feedMode === 'all'" v-model="tag" placeholder="按标签筛选" class="filter-select" clearable>
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
-            <el-select v-model="sort" class="filter-select" aria-label="sort">
+            <el-select v-if="feedMode === 'all'" v-model="sort" class="filter-select" aria-label="sort">
               <el-option label="Latest" value="latest" />
               <el-option label="Popular" value="popular" />
             </el-select>
@@ -97,12 +101,40 @@
               </div>
             </el-card>
           </div></transition>
+          <div v-else-if="feedMode === 'following'" class="following-empty">
+            <AppState description="关注创作者后，这里会展示他们的最新分享" />
+            <div v-if="recommendedUsers.length" class="inline-recommendations">
+              <div v-for="u in recommendedUsers" :key="u.id" class="recommend-user">
+                <img :src="getAvatarUrl(u.avatarUrl)" class="avatar" @click="goProfile(u.id)" />
+                <div class="uinfo" @click="goProfile(u.id)">
+                  <div class="uname">{{ u.nickname || u.username }}</div>
+                  <div class="uextra">帖子 {{ u.postCount || 0 }} | 粉丝 {{ u.followersCount || 0 }}</div>
+                </div>
+                <el-button size="small" type="primary" round :loading="u.followingLoading" @click="followRecommended(u)">关注</el-button>
+              </div>
+            </div>
+          </div>
           <AppState v-else description="暂无帖子，去发布一条吧" />
           <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="total" v-model:current-page="page" /></div>
         </main>
         <aside class="right">
           <el-card class="hot"><h4>热门帖子</h4><ol class="hot-list"><li v-for="(h,i) in hotPosts" :key="h.id" @click="goPost(h.id)">{{ i+1 }}. {{ h.title }}</li></ol></el-card>
           <el-card class="recent"><h4>近期分享者</h4><div class="users"><div class="user" v-for="u in recentUsers" :key="u.id" @click="goProfile(u.id)"><img :src="getAvatarUrl(u.avatarUrl)" class="avatar" /><div class="uinfo"><div class="uname">{{ u.username }}</div><div class="uextra">帖子 {{ u.postCount }} | 获赞 {{ u.likeCount }}</div></div></div></div></el-card>
+          <el-card v-if="isAuthenticated" class="recommended">
+            <h4>推荐关注</h4>
+            <AppState v-if="recommendedLoading" type="loading" :rows="2" />
+            <div v-else class="users">
+              <div class="user recommend-row" v-for="u in recommendedUsers" :key="u.id">
+                <img :src="getAvatarUrl(u.avatarUrl)" class="avatar" @click="goProfile(u.id)" />
+                <div class="uinfo" @click="goProfile(u.id)">
+                  <div class="uname">{{ u.nickname || u.username }}</div>
+                  <div class="uextra">帖子 {{ u.postCount || 0 }} | 粉丝 {{ u.followersCount || 0 }}</div>
+                </div>
+                <el-button size="small" type="primary" link :loading="u.followingLoading" @click.stop="followRecommended(u)">关注</el-button>
+              </div>
+              <AppState v-if="!recommendedUsers.length" description="暂无推荐" />
+            </div>
+          </el-card>
         </aside>
       </div>
     </div>
@@ -115,7 +147,7 @@ import { useDebounceFn } from '@vueuse/core'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { EditPen, Star, StarFilled, ChatLineSquare, User, Share, Warning } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta, getCommunityTags, reportContent } from '@/api'
+import { getCommunityPosts, getFollowingPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta, getCommunityTags, getRecommendedUsers, followUser, reportContent } from '@/api'
 import { getCommunityPost } from '@/api'
 import AppState from '@/components/AppState.vue'
 import CommentItem from '@/components/CommentItem.vue'
@@ -136,6 +168,9 @@ const signature = computed(() => userStore.info?.signature || userStore.info?.bi
 const q = ref('')
 const tag = ref('')
 const sort = ref('latest')
+const feedMode = ref('all')
+const recommendedUsers = ref([])
+const recommendedLoading = ref(false)
 const {
   items: posts,
   total,
@@ -145,12 +180,16 @@ const {
   error: postsError,
   load: loadPostList
 } = usePagedList({
-  fetcher: getCommunityPosts,
+  fetcher: (params) => feedMode.value === 'following' ? getFollowingPosts(params) : getCommunityPosts(params),
   getParams: () => ({
-    q: q.value || undefined,
-    tag: tag.value || undefined,
-    sort: sort.value,
-    includeCounts: true
+    ...(feedMode.value === 'all'
+      ? {
+          q: q.value || undefined,
+          tag: tag.value || undefined,
+          sort: sort.value,
+          includeCounts: true
+        }
+      : {})
   }),
   normalizeItem: normalizePost,
   initialPageSize: 10
@@ -179,6 +218,22 @@ const loadTags = async () => {
 }
 loadHot(); loadRecentUsers(); loadTags()
 
+const loadRecommendedUsers = async () => {
+  if (!isAuthenticated.value) {
+    recommendedUsers.value = []
+    return
+  }
+  recommendedLoading.value = true
+  try {
+    const res = await getRecommendedUsers({ page: 1, size: 5 })
+    recommendedUsers.value = normalizePagedResult(res).items
+  } catch {
+    recommendedUsers.value = []
+  } finally {
+    recommendedLoading.value = false
+  }
+}
+
 const loadPosts = async (requestedPage = page.value) => {
   try {
     await loadPostList({ page: requestedPage })
@@ -195,7 +250,17 @@ const debouncedLoadPosts = useDebounceFn(() => {
 }, 300)
 
 watch([q, tag, sort], () => {
-  debouncedLoadPosts()
+  if (feedMode.value === 'all') debouncedLoadPosts()
+})
+watch(feedMode, (mode) => {
+  if (mode === 'following' && !isAuthenticated.value) {
+    requestAuth({ reason: 'following-feed' })
+    feedMode.value = 'all'
+    return
+  }
+  if (page.value !== 1) page.value = 1
+  else loadPosts(1)
+  if (mode === 'following') loadRecommendedUsers()
 })
 watch(page, (nextPage) => loadPosts(nextPage))
 
@@ -212,7 +277,16 @@ const loadMyStats = async () => {
   } catch { myStat.value = { posts: 0, likes: 0, comments: 0 } }
 }
 loadMyStats()
-watch(isAuthenticated, (v) => { if (v) loadMyStats(); else myStat.value = { posts: 0, likes: 0, comments: 0 } })
+watch(isAuthenticated, (v) => {
+  if (v) {
+    loadMyStats()
+    loadRecommendedUsers()
+  } else {
+    myStat.value = { posts: 0, likes: 0, comments: 0 }
+    recommendedUsers.value = []
+    if (feedMode.value === 'following') feedMode.value = 'all'
+  }
+})
 const handlePublishClick = () => {
   if (!isAuthenticated.value) {
     ElMessage.warning('请先登录后再发布')
@@ -296,6 +370,26 @@ const sharePost = async (p) => {
   })
 }
 
+const followRecommended = async (u) => {
+  if (!isAuthenticated.value) {
+    requestAuth({ reason: 'follow' })
+    return
+  }
+  const previous = [...recommendedUsers.value]
+  u.followingLoading = true
+  try {
+    await followUser(u.id)
+    recommendedUsers.value = recommendedUsers.value.filter(item => String(item.id) !== String(u.id))
+    ElMessage.success('已关注')
+    if (feedMode.value === 'following' && posts.value.length === 0) loadPosts(1)
+  } catch {
+    recommendedUsers.value = previous
+    ElMessage.error('关注失败')
+  } finally {
+    u.followingLoading = false
+  }
+}
+
 // 跳转函数
 const reportPost = async (p) => {
   if (!isAuthenticated.value) {
@@ -345,7 +439,7 @@ const goProfile = (uid) => {
 
 const currentAvatar = 'https://i.pravatar.cc/80?u=community'
 
-watch(() => userStore.info?.id, async () => { await loadPosts(); })
+watch(() => userStore.info?.id, async () => { await loadPosts(); await loadRecommendedUsers() })
 
 const refreshPost = async (id) => {
   try {
@@ -433,6 +527,9 @@ const refreshPost = async (id) => {
   border: 1px solid var(--app-border);
 }
 .filter-input { flex: 1; }
+.feed-toggle {
+  flex: 0 0 auto;
+}
 /* Force rounded pills for search inputs */
 .filter-input :deep(.el-input__wrapper) { 
   background: var(--app-bg-card) !important; 
@@ -518,16 +615,52 @@ const refreshPost = async (id) => {
 
 .pagination { margin-top: 3rem; display: flex; justify-content: center; }
 
+.following-empty {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-bg-card);
+}
+
+.inline-recommendations {
+  display: grid;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.recommend-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-bg-hover);
+}
+
+.recommend-user .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.recommend-user .uinfo {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
 /* Right Sidebar */
 .right { display: flex; flex-direction: column; gap: 16px; }
-.hot, .recent {
+.hot, .recent, .recommended {
   border-radius: 12px;
   background: linear-gradient(var(--app-bg-card), var(--app-bg-card)) padding-box,
               linear-gradient(135deg, var(--app-brand-gradient-start), var(--app-brand-gradient-end)) border-box;
   border: 1px solid transparent;
   color: var(--app-text-main);
 }
-.hot h4, .recent h4 { margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; }
+.hot h4, .recent h4, .recommended h4 { margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; }
 
 .hot-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .hot-list li {
@@ -557,6 +690,10 @@ const refreshPost = async (id) => {
   color: var(--app-text-main);
 }
 .user:hover { transform: translateX(4px); background: var(--app-bg-hover); }
+.recommend-row { cursor: default; }
+.recommend-row:hover { transform: none; }
+.recommend-row .uinfo,
+.recommend-row .avatar { cursor: pointer; }
 .user .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 .user .uinfo { flex: 1; min-width: 0; }
 .user .uname { font-weight: 500; font-size: 0.9rem; color: var(--app-text-main); margin-bottom: 2px; }
@@ -572,6 +709,10 @@ const refreshPost = async (id) => {
   .grid { grid-template-columns: 1fr; }
   .images { grid-template-columns: repeat(3, 1fr); }
   .left, .right { display: none; }
+  .filters { flex-wrap: wrap; }
+  .feed-toggle { width: 100%; }
+  .feed-toggle :deep(.el-radio-button) { flex: 1; }
+  .feed-toggle :deep(.el-radio-button__inner) { width: 100%; }
 }
 
 @media (max-width: 600px) {

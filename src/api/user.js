@@ -42,6 +42,7 @@ export const followUser = (id) => request.post(`/users/${id}/follow`).then(unwra
 export const unfollowUser = (id) => request.delete(`/users/${id}/follow`).then(unwrap)
 export const getUserFollowers = (id, params) => request.get(`/users/${id}/followers`, { params }).then(unwrap)
 export const getUserFollowing = (id, params) => request.get(`/users/${id}/following`, { params }).then(unwrap)
+export const getRecommendedUsers = (params) => request.get('/users/recommended', { params }).then(unwrap)
 
 // Public user resources
 export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(unwrap)

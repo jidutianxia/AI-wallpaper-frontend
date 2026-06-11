@@ -2,6 +2,7 @@ import request, { unwrap } from './request'
 
 // Posts
 export const getCommunityPosts = (params) => request.get('/community/posts', { params }).then(unwrap)
+export const getFollowingPosts = (params) => request.get('/community/following/posts', { params }).then(unwrap)
 export const getCommunityPost = (id) => request.get(`/community/posts/${id}`).then(unwrap)
 export const createCommunityPost = (payload) => request.post('/community/posts', payload).then(unwrap)
 export const updateCommunityPost = (id, payload) => request.put(`/community/posts/${id}`, payload).then(unwrap)

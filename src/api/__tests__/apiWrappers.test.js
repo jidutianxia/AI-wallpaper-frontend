@@ -61,6 +61,7 @@ describe('api wrappers', () => {
 
   it('wraps community endpoints and preserves upload request config', async () => {
     await communityApi.getCommunityPosts({ tag: 'art' })
+    await communityApi.getFollowingPosts({ page: 1 })
     await communityApi.getCommunityPost(7)
     await communityApi.createCommunityPost({ title: 'Post' })
     await communityApi.updateCommunityPost(7, { title: 'Updated' })
@@ -85,6 +86,7 @@ describe('api wrappers', () => {
     })
 
     expect(request.get).toHaveBeenCalledWith('/community/posts', { params: { tag: 'art' } })
+    expect(request.get).toHaveBeenCalledWith('/community/following/posts', { params: { page: 1 } })
     expect(request.get).toHaveBeenCalledWith('/community/posts/7')
     expect(request.post).toHaveBeenCalledWith('/community/posts', { title: 'Post' })
     expect(request.put).toHaveBeenCalledWith('/community/posts/7', { title: 'Updated' })
@@ -140,6 +142,7 @@ describe('api wrappers', () => {
     await userApi.unfollowUser(8)
     await userApi.getUserFollowers(8, { page: 1 })
     await userApi.getUserFollowing(8, { page: 1 })
+    await userApi.getRecommendedUsers({ page: 1 })
     await userApi.getUserCommunityPosts(8, { page: 1 })
     await userApi.getOtherUserLikedPosts(8, { page: 1 })
     await userApi.getOtherUserPostFavorites(8, { page: 1 })
@@ -173,6 +176,7 @@ describe('api wrappers', () => {
     expect(request.delete).toHaveBeenCalledWith('/users/8/follow')
     expect(request.get).toHaveBeenCalledWith('/users/8/followers', { params: { page: 1 } })
     expect(request.get).toHaveBeenCalledWith('/users/8/following', { params: { page: 1 } })
+    expect(request.get).toHaveBeenCalledWith('/users/recommended', { params: { page: 1 } })
     expect(request.get).toHaveBeenCalledWith('/community/users/8/posts', { params: { page: 1 } })
     expect(request.get).toHaveBeenCalledWith('/users/8/likes', { params: { page: 1 } })
     expect(request.get).toHaveBeenCalledWith('/users/8/favorites', { params: { page: 1 } })

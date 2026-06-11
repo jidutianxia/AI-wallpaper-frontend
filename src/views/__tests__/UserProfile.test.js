@@ -50,7 +50,8 @@ describe('UserProfile view', () => {
       username: 'alice',
       nickname: 'Alice',
       avatarUrl: '/avatar.png',
-      isFollowing: false
+      isFollowing: false,
+      stats: { followersCount: 12 }
     })
     vi.mocked(getUserCommunityPosts).mockResolvedValue({
       items: [{ id: 10, title: 'Post A', content: 'hello', images: [{ url: '/a.jpg' }], tags: ['art'], author: { username: 'alice' } }]
@@ -71,6 +72,7 @@ describe('UserProfile view', () => {
     expect(getUserProfile).toHaveBeenCalledWith('7')
     expect(getUserCommunityPosts).toHaveBeenCalledWith('7', { page: 1, size: 20 })
     expect(wrapper.text()).toContain('Alice')
+    expect(wrapper.vm.followersCount).toBe(12)
     expect(wrapper.text()).toContain('Post A')
     expect(wrapper.text()).toContain('Liked Post')
     expect(wrapper.text()).toContain('Favorite Post')
