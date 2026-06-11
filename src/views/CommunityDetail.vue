@@ -49,8 +49,11 @@
           <el-icon :size="22" class="action-icon"><Share /></el-icon>
           <span class="count">分享</span>
         </el-button>
+        <el-button link @click="reportPost">
+          <el-icon :size="22" class="action-icon"><Warning /></el-icon>
+          <span class="count">Report</span>
+        </el-button>
       </div>
-
       <div class="comments">
         <h3>评论</h3>
         <CommentItem v-for="(c, i) in post.comments || []" :key="i" :comment="c" />
@@ -67,14 +70,16 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowLeftBold, Star, StarFilled, Share } from '@element-plus/icons-vue'
-import { getCommunityPost, commentCommunityPost, getCommunityPostImageMeta } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeftBold, Star, StarFilled, Share, Warning } from '@element-plus/icons-vue'
+import { getCommunityPost, commentCommunityPost, getCommunityPostImageMeta, reportContent } from '@/api'
 import CommentItem from '@/components/CommentItem.vue'
 import { getImageUrl } from '@/utils/imageHelper'
 import { normalizePost } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
 import { useShare } from '@/composables/useShare'
+import { requestAuth } from '@/utils/authEvents'
+import { getLocalStorageItem } from '@/utils/storage'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -154,6 +159,29 @@ const shareDetail = async () => {
     text: (post.value?.content || '').slice(0, 80),
     url: `${location.origin}/community/post/${id}`
   })
+}
+
+const reportPost = async () => {
+  if (!getLocalStorageItem('token')) {
+    requestAuth({ reason: 'report' })
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report post', {
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel',
+      inputPlaceholder: 'Spam, abuse, infringement, or unsafe content'
+    })
+    await reportContent({
+      targetType: 'post',
+      targetId: id,
+      reason: 'user_report',
+      description: value || ''
+    })
+    ElMessage.success('Report submitted')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+  }
 }
 </script>
 

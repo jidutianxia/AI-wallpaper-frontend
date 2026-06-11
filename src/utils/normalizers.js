@@ -62,7 +62,8 @@ export const normalizePost = (post = {}) => {
     favorited: Boolean(post.favorited ?? post.isFavorited),
     likes: toNumber(post.likes ?? post.likesCount),
     favorites: toNumber(post.favorites ?? post.favoriteCount ?? post.favoritesCount),
-    commentsCount: toNumber(post.commentsCount ?? post.commentCount ?? post.comments?.length)
+    commentsCount: toNumber(post.commentsCount ?? post.commentCount ?? post.comments?.length),
+    status: post.status ?? post.reviewStatus ?? post.auditStatus ?? post.state
   }
 }
 
@@ -81,7 +82,8 @@ export const normalizeWallpaper = (wallpaper = {}) => {
     likes: toNumber(wallpaper.likes ?? wallpaper.likesCount),
     favorites: toNumber(wallpaper.favorites ?? wallpaper.favoriteCount ?? wallpaper.favoritesCount),
     views: toNumber(wallpaper.views),
-    downloads: toNumber(wallpaper.downloads)
+    downloads: toNumber(wallpaper.downloads),
+    status: wallpaper.status || 'APPROVED'
   }
 }
 

@@ -6,6 +6,7 @@ export const getCommunityPost = (id) => request.get(`/community/posts/${id}`).th
 export const createCommunityPost = (payload) => request.post('/community/posts', payload).then(unwrap)
 export const updateCommunityPost = (id, payload) => request.put(`/community/posts/${id}`, payload).then(unwrap)
 export const deleteCommunityPost = (id) => request.delete(`/community/posts/${id}`).then(unwrap)
+export const reportContent = (payload) => request.post('/reports', payload).then(unwrap)
 
 // Post Interactions
 export const likeCommunityPost = (id) => request.post(`/community/posts/${id}/like`).then(unwrap)

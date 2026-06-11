@@ -41,6 +41,10 @@
             <el-select v-model="tag" placeholder="按标签筛选" class="filter-select" clearable>
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
+            <el-select v-model="sort" class="filter-select" aria-label="sort">
+              <el-option label="Latest" value="latest" />
+              <el-option label="Popular" value="popular" />
+            </el-select>
           </div>
           <AppState v-if="loading" type="loading" :rows="3" />
           <AppState
@@ -82,6 +86,10 @@
                   <el-icon :size="18" class="action-icon"><ChatLineSquare /></el-icon>
                   <span class="count">{{ commentCount(p) }}</span>
                 </el-button>
+                <el-button link size="small" @click="reportPost(p)">
+                  <el-icon :size="18" class="action-icon"><Warning /></el-icon>
+                  <span class="count">Report</span>
+                </el-button>
               </div>
               <div v-if="p.showComment" class="comments">
                 <CommentItem v-for="(c,i) in (p.comments||[])" :key="i" :comment="c" />
@@ -104,10 +112,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { ElMessage } from 'element-plus'
-import { EditPen, Star, StarFilled, ChatLineSquare, User, Share } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { EditPen, Star, StarFilled, ChatLineSquare, User, Share, Warning } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getCommunityPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta } from '@/api'
+import { getCommunityPosts, getCommunityRecentUsers, commentCommunityPost, getUserStats, getCommunityPostComments, getCommunityPostImageMeta, getCommunityTags, reportContent } from '@/api'
 import { getCommunityPost } from '@/api'
 import AppState from '@/components/AppState.vue'
 import CommentItem from '@/components/CommentItem.vue'
@@ -127,6 +135,7 @@ const displayName = computed(() => userStore.info?.nickname || userStore.info?.u
 const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '这个人很懒~')
 const q = ref('')
 const tag = ref('')
+const sort = ref('latest')
 const {
   items: posts,
   total,
@@ -140,7 +149,7 @@ const {
   getParams: () => ({
     q: q.value || undefined,
     tag: tag.value || undefined,
-    sort: 'latest',
+    sort: sort.value,
     includeCounts: true
   }),
   normalizeItem: normalizePost,
@@ -161,7 +170,14 @@ const loadHot = async () => {
 const loadRecentUsers = async () => {
   try { recentUsersSource.value = await getCommunityRecentUsers() } catch {}
 }
-loadHot(); loadRecentUsers()
+const loadTags = async () => {
+  try {
+    const rows = await getCommunityTags()
+    const tags = (rows || []).map(item => item.tag || item.name || item).filter(Boolean)
+    if (tags.length > 0) tagOptions.splice(0, tagOptions.length, ...tags)
+  } catch {}
+}
+loadHot(); loadRecentUsers(); loadTags()
 
 const loadPosts = async (requestedPage = page.value) => {
   try {
@@ -178,7 +194,7 @@ const debouncedLoadPosts = useDebounceFn(() => {
   else loadPosts(1)
 }, 300)
 
-watch([q, tag], () => {
+watch([q, tag, sort], () => {
   debouncedLoadPosts()
 })
 watch(page, (nextPage) => loadPosts(nextPage))
@@ -281,6 +297,29 @@ const sharePost = async (p) => {
 }
 
 // 跳转函数
+const reportPost = async (p) => {
+  if (!isAuthenticated.value) {
+    requestAuth({ reason: 'report' })
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report post', {
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel',
+      inputPlaceholder: 'Spam, abuse, infringement, or unsafe content'
+    })
+    await reportContent({
+      targetType: 'post',
+      targetId: p.id,
+      reason: 'user_report',
+      description: value || ''
+    })
+    ElMessage.success('Report submitted')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+  }
+}
+
 import { useRouter } from 'vue-router'
 const router = useRouter()
 const goPost = (id) => { router.push(`/community/post/${id}`) }

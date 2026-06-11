@@ -4,6 +4,13 @@
       <el-button size="small" :icon="ArrowLeft" @click="goBack">返回</el-button>
     </div>
     <AppState v-if="loading" type="loading" :rows="5" />
+    <AppState
+      v-else-if="loadError"
+      type="error"
+      description="壁纸详情加载失败"
+      retryable
+      @retry="fetchWallpaper(route.params.id)"
+    />
     <div v-else-if="wallpaper" class="detail-content">
       <!-- 壁纸展示区 -->
       <div class="wallpaper-display">
@@ -41,6 +48,14 @@
                   :loading="likeLoading"
                 >
                   {{ wallpaper.liked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
+                </el-button>
+                <el-button
+                  class="btn-ghost-grey"
+                  size="large"
+                  :icon="Warning"
+                  @click="reportWallpaper"
+                >
+                  Report
                 </el-button>
               </div>
              <!-- Author Actions (Only visible to author) -->
@@ -227,15 +242,17 @@ import {
   ArrowLeft,
   ArrowRight,
   Edit,
-  Delete
+  Delete,
+  Warning
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories } from '@/api'
+import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories, reportContent } from '@/api'
 import { appendTokenParam, normalizePagedResult, normalizeWallpaper, openSecureWindow } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
 import { getLocalStorageItem } from '@/utils/storage'
 import AppState from '@/components/AppState.vue'
 import { getImageUrl } from '@/utils/imageHelper'
+import { requestAuth } from '@/utils/authEvents'
 
 const route = useRoute()
 const router = useRouter()
@@ -249,6 +266,7 @@ onBeforeUnmount(() => {
 
 // 响应式数据
 const loading = ref(true)
+const loadError = ref(null)
 const likeLoading = ref(false)
 const showPreview = ref(false)
 const wallpaper = ref(null)
@@ -413,6 +431,7 @@ const handleDelete = async () => {
 // 获取壁纸详情
 const fetchWallpaper = async (id) => {
   loading.value = true
+  loadError.value = null
   try {
     const response = await getWallpaper(id)
     if (!isMounted.value) return
@@ -422,34 +441,10 @@ const fetchWallpaper = async (id) => {
     fetchRelatedWallpapers()
   } catch (error) {
     if (!isMounted.value) return
-    // 模拟数据
-    wallpaper.value = {
-      id: parseInt(id),
-      title: '美丽的风景壁纸',
-      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop&crop=center',
-      thumbUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center',
-      width: 1920,
-      height: 1080,
-      fileSize: 2048000,
-      format: 'JPG',
-      category: '风景',
-      tags: ['自然', '山水', '绿色', '清新'],
-      description: '这是一张非常美丽的风景壁纸，展现了大自然的壮丽景色。',
-      views: 1234,
-      likes: 89,
-      downloads: 456,
-      isLiked: false,
-      isFavorited: false,
-      createdAt: '2024-01-15T10:30:00Z',
-      uploader: {
-        id: 1,
-        username: '摄影师小王',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-        uploadCount: 25
-      }
-    }
-    
-    fetchRelatedWallpapers()
+    wallpaper.value = null
+    relatedWallpapers.value = []
+    loadError.value = error
+    return
   } finally {
     if (isMounted.value) loading.value = false
   }
@@ -467,30 +462,8 @@ const fetchRelatedWallpapers = async () => {
     relatedWallpapers.value = normalizePagedResult(response, normalizeWallpaper).items
   } catch (error) {
     if (!isMounted.value) return
-    // 模拟数据
-    relatedWallpapers.value = [
-      {
-        id: 2,
-        title: '相关壁纸1',
-        thumbUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&h=200&fit=crop&crop=center',
-        views: 567,
-        likes: 34
-      },
-      {
-        id: 3,
-        title: '相关壁纸2',
-        thumbUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=200&fit=crop&crop=center',
-        views: 890,
-        likes: 67
-      },
-      {
-        id: 4,
-        title: '相关壁纸3',
-        thumbUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&h=200&fit=crop&crop=center',
-        views: 234,
-        likes: 12
-      }
-    ]
+    relatedWallpapers.value = []
+    return
   }
 }
 
@@ -504,6 +477,29 @@ const toggleLike = async () => {
     })
   } finally {
     if (isMounted.value) likeLoading.value = false
+  }
+}
+
+const reportWallpaper = async () => {
+  if (!userStore.isAuthenticated) {
+    requestAuth({ reason: 'report' })
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report wallpaper', {
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel',
+      inputPlaceholder: 'Spam, infringement, unsafe content, or broken metadata'
+    })
+    await reportContent({
+      targetType: 'wallpaper',
+      targetId: wallpaper.value.id,
+      reason: 'user_report',
+      description: value || ''
+    })
+    ElMessage.success('Report submitted')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
   }
 }
 

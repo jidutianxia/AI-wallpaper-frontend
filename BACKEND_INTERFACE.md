@@ -2,6 +2,12 @@
 
 This document serves as the **Single Source of Truth** for the frontend-backend interface. It reflects the actual implementation requirements for the frontend to function correctly, including Community, User Center, and Interaction features.
 
+## 0. Current Implementation Scope
+
+- Current production scope is wallpaper browsing, community posts, upload, interactions, user center, and notifications.
+- AI generation, workflow orchestration, moderation console, and operations/admin dashboards are future modules and must not be assumed by frontend routes or API wrappers until matching backend endpoints exist.
+- Frontend pages should render recoverable `loading / empty / error / retry` states for every network-backed view instead of falling back to mock data.
+
 ## 1. Global Standards
 
 ### 1.1 Base URL
@@ -17,6 +23,8 @@ All successful responses (HTTP 200) **MUST** follow this structure:
   "data": { ... }       // Payload (Object or Array)
 }
 ```
+
+Paged payloads must be inside `data` and should use `items`, `total`, `page`, and `size`. The frontend normalizer still accepts legacy names as a defensive fallback, but new backend responses should not introduce more aliases.
 
 ### 1.3 Error Handling
 - **HTTP 401**: Unauthorized (Token expired/missing). Frontend will redirect to login.
@@ -199,10 +207,31 @@ All successful responses (HTTP 200) **MUST** follow this structure:
 - **Constraints**: 
   - Avatar: < 2MB, JPG/PNG.
   - Wallpaper/Post Image: < 10MB.
+  - Batch/community upload callers must support partial success by rendering both `items` and `errors` when present.
 
 ---
 
-## 6. Follow Module (Future)
+## 6. Reports & Content Status
+
+- **Endpoint**: `POST /reports`
+- **Auth**: Required.
+- **Body**:
+  ```json
+  {
+    "targetType": "post|comment|wallpaper|post_image",
+    "targetId": 1,
+    "reason": "user_report",
+    "description": "Optional short description"
+  }
+  ```
+- **Behavior**:
+  - Public lists only return visible content: community `published` posts/images/comments and wallpapers with `APPROVED` or `published` status.
+  - Authors can still see their own non-public posts from personal content views.
+  - When a target reaches the backend report threshold, the backend returns `hidden: true` and hides the target from public reads.
+
+---
+
+## 7. Follow Module (Future)
 
 - **Follow**: `POST /users/{id}/follow`
 - **Unfollow**: `DELETE /users/{id}/follow`

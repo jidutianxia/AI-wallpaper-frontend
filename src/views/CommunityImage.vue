@@ -3,6 +3,9 @@
     <div class="container" v-if="loading">
       <el-skeleton animated :rows="5" />
     </div>
+    <div class="container" v-else-if="loadError">
+      <AppState type="error" description="图片详情加载失败" retryable @retry="loadImageDetail" />
+    </div>
     <div class="container" v-else-if="imageUrl">
       <div class="topbar">
         <el-button size="small" :icon="ArrowLeftBold" @click="goPost">返回帖子</el-button>
@@ -76,6 +79,7 @@
                    </el-icon>
                   {{ imageMeta.liked ? '已喜欢' : '喜欢' }}
                 </el-button>
+                <el-button size="large" round :icon="Warning" @click="reportImage">Report</el-button>
               </div>
             </div>
             <div class="info-section">
@@ -144,13 +148,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Download, ArrowLeftBold, Calendar, ArrowRight, Picture as IconPicture, Upload } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, submitWallpaperFromPost, getCategories } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download, ArrowLeftBold, Calendar, ArrowRight, Picture as IconPicture, Upload, Warning } from '@element-plus/icons-vue'
+import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, submitWallpaperFromPost, getCategories, reportContent } from '@/api'
 import { useUserStore } from '@/store/user'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 import { normalizePost, openSecureWindow } from '@/utils'
 import { useShare } from '@/composables/useShare'
+import AppState from '@/components/AppState.vue'
+import { requestAuth } from '@/utils/authEvents'
 
 const route = useRoute()
 const postId = Number(route.params.id)
@@ -160,7 +166,8 @@ const imageUrl = computed(() => getImageUrl(rawImage.value)) // Computed safe UR
 const post = ref(null)
 const { share } = useShare()
 const loading = ref(true)
-const imageMeta = ref({ width: 0, height: 0, fileSize: null, format: '', views: 0, downloads: 0, liked: false, likes: 0, favorited: false, favorites: 0, wallpaperInfo: null })
+const loadError = ref(null)
+const imageMeta = ref({ id: null, width: 0, height: 0, fileSize: null, format: '', views: 0, downloads: 0, liked: false, likes: 0, favorited: false, favorites: 0, wallpaperInfo: null })
 const previewVisible = ref(false)
 const onImageLoad = () => {}
 
@@ -179,7 +186,9 @@ const loadCategories = async () => {
 }
 loadCategories()
 
-onMounted(async () => {
+const loadImageDetail = async () => {
+  loading.value = true
+  loadError.value = null
   try {
     const p = await getCommunityPost(postId)
     post.value = normalizePost(p)
@@ -187,6 +196,7 @@ onMounted(async () => {
     try {
       const meta = await getCommunityPostImageMeta(postId, index)
       imageMeta.value = {
+        id: meta.id ?? null,
         width: meta.width ?? 0,
         height: meta.height ?? 0,
         fileSize: meta.fileSize ?? null,
@@ -200,12 +210,15 @@ onMounted(async () => {
         wallpaperInfo: meta.wallpaperInfo || null
       }
     } catch {}
-  } catch {
+  } catch (error) {
+    loadError.value = error
     ElMessage.error('图片加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadImageDetail)
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -320,6 +333,33 @@ const shareImage = async () => {
     text: '查看帖子图片',
     url: `${location.origin}/community/post/${postId}/image/${index}`
   })
+}
+
+const reportImage = async () => {
+  if (!userStore.isAuthenticated) {
+    requestAuth({ reason: 'report' })
+    return
+  }
+  if (!imageMeta.value.id) {
+    ElMessage.warning('Image metadata is not ready')
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report image', {
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel',
+      inputPlaceholder: 'Spam, infringement, unsafe content, or broken metadata'
+    })
+    await reportContent({
+      targetType: 'post_image',
+      targetId: imageMeta.value.id,
+      reason: 'user_report',
+      description: value || ''
+    })
+    ElMessage.success('Report submitted')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+  }
 }
 </script>
 

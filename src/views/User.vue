@@ -51,7 +51,7 @@
             <h4 class="post-title" @click="router.push(`/community/post/${p.id}`)">{{ p.title }}</h4>
             <p class="post-content" @click="router.push(`/community/post/${p.id}`)">{{ p.content }}</p>
             <div class="post-images" v-if="p.images && p.images.length">
-              <img v-for="(img, idx) in p.images.slice(0, 4)" :key="idx" :src="img" class="post-img" />
+              <img v-for="(img, idx) in p.images.slice(0, 4)" :key="idx" :src="getImageUrl(img)" class="post-img" />
             </div>
             <div class="post-footer">
               <span class="tag" v-for="t in p.tags" :key="t">#{{ t }}</span>
@@ -62,7 +62,8 @@
             </div>
           </div>
         </div>
-        <div v-if="!loading.posts && posts.length === 0" class="empty-state">
+        <AppState v-if="!loading.posts && errors.posts" type="error" description="加载发布内容失败" retryable @retry="fetchMyPosts" />
+        <div v-else-if="!loading.posts && posts.length === 0" class="empty-state">
           <el-empty description="还没有发布任何作品" />
           <el-button type="primary" @click="router.push('/community/compose')">去发布</el-button>
         </div>
@@ -82,7 +83,8 @@
             :no-actions="true"
           />
         </div>
-        <div v-if="!loading.wallpaperLikes && (!wallpaperLikes || wallpaperLikes.length === 0)" class="empty-state">
+        <AppState v-if="!loading.wallpaperLikes && errors.wallpaperLikes" type="error" description="加载喜欢的壁纸失败" retryable @retry="fetchWallpaperLikes" />
+        <div v-else-if="!loading.wallpaperLikes && (!wallpaperLikes || wallpaperLikes.length === 0)" class="empty-state">
           <el-empty description="还没有喜爱任何壁纸" />
         </div>
       </el-tab-pane>
@@ -102,7 +104,8 @@
             :no-actions="true"
           />
         </div>
-        <div v-if="!loading.likes && likes.length === 0" class="empty-state">
+        <AppState v-if="!loading.likes && errors.likes" type="error" description="加载点赞帖子失败" retryable @retry="fetchLikes" />
+        <div v-else-if="!loading.likes && likes.length === 0" class="empty-state">
           <el-empty description="还没有点赞任何帖子" />
         </div>
       </el-tab-pane>
@@ -123,7 +126,8 @@
             :no-actions="true"
           />
         </div>
-        <div v-if="!loading.favorites && favorites.length === 0" class="empty-state">
+        <AppState v-if="!loading.favorites && errors.favorites" type="error" description="加载收藏帖子失败" retryable @retry="fetchFavorites" />
+        <div v-else-if="!loading.favorites && favorites.length === 0" class="empty-state">
           <el-empty description="还没有收藏任何帖子" />
         </div>
       </el-tab-pane>
@@ -158,7 +162,7 @@
             class="wallpaper-item"
             @click="viewDetail(wallpaper.id)"
           >
-            <img :src="wallpaper.thumbUrl" :alt="wallpaper.title" />
+            <img :src="getImageUrl(wallpaper.thumbUrl || wallpaper.url)" :alt="wallpaper.title" />
             <div class="wallpaper-overlay">
               <div class="wallpaper-actions">
                 <el-button 
@@ -182,7 +186,8 @@
             </div>
           </div>
         </div>
-        <div v-if="!loading.uploads && uploads.length === 0" class="empty-state">
+        <AppState v-if="!loading.uploads && errors.uploads" type="error" description="加载上传列表失败" retryable @retry="fetchUploads" />
+        <div v-else-if="!loading.uploads && uploads.length === 0" class="empty-state">
           <el-empty description="还没有上传任何壁纸" />
         </div>
       </el-tab-pane>
@@ -267,9 +272,11 @@
           <el-upload
             class="upload-demo"
             drag
-            :on-success="handleUploadSuccess"
+            :auto-upload="false"
+            :on-change="handleUploadChange"
+            :on-remove="handleUploadRemove"
             :before-upload="beforeUpload"
-            :show-file-list="false"
+            :limit="1"
           >
             <el-icon class="el-icon--upload"><upload-filled /></el-icon>
             <div class="el-upload__text">
@@ -281,6 +288,9 @@
               </div>
             </template>
           </el-upload>
+          <div v-if="uploadForm.file" class="upload-selected">
+            已选择：{{ uploadForm.file.name }}
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -309,6 +319,7 @@ import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
 import { normalizePost, normalizeWallpaper, validateImageFile } from '@/utils'
 import { usePagedResourceLoader } from '@/composables/usePagedResourceLoader'
 import { notifyAuthChanged } from '@/utils/authEvents'
+import AppState from '@/components/AppState.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -345,8 +356,18 @@ const loading = reactive({
   uploads: false,
   imageFavorites: false
 })
+const errors = reactive({
+  posts: null,
+  favorites: null,
+  wallpaperFavorites: null,
+  likes: null,
+  wallpaperLikes: null,
+  uploads: null,
+  imageFavorites: null
+})
 const { loadPagedResource } = usePagedResourceLoader({
   loading,
+  errors,
   isActive: () => isMounted.value
 })
 
@@ -618,17 +639,27 @@ const beforeAvatarUpload = (file) => {
   return result.valid
 }
 
-// 壁纸上传成功
-const handleUploadSuccess = (response) => {
-  uploadForm.file = response
-  ElMessage.success('文件上传成功')
-}
-
 // 壁纸上传前验证
 const beforeUpload = (file) => {
   const result = validateImageFile(file, { maxSizeMB: 10 })
   if (!result.valid) ElMessage.error(result.message)
   return result.valid
+}
+
+const handleUploadChange = (uploadFile) => {
+  const rawFile = uploadFile?.raw
+  if (!rawFile) return
+  const result = validateImageFile(rawFile, { maxSizeMB: 10 })
+  if (!result.valid) {
+    uploadForm.file = null
+    ElMessage.error(result.message)
+    return
+  }
+  uploadForm.file = rawFile
+}
+
+const handleUploadRemove = () => {
+  uploadForm.file = null
 }
 
 // 提交上传
@@ -908,6 +939,12 @@ onMounted(async () => {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
+  color: var(--app-text-secondary);
+}
+
+.upload-selected {
+  margin-top: 8px;
+  font-size: 13px;
   color: var(--app-text-secondary);
 }
 
