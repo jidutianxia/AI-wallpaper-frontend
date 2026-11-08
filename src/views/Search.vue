@@ -1,6 +1,5 @@
 <template>
   <div class="search-page">
-    <div class="ambient-background"></div>
 
     <!-- 核心交互区域 -->
     <div class="hero-section" :class="{ 'is-active': isInteractionActive }">
@@ -11,17 +10,18 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="搜索你喜欢的壁纸..."
+            aria-label="搜索壁纸" placeholder="搜索壁纸"
             class="hero-search-input"
             @focus="handleFocus"
-            @keyup.enter="handleSearch"
+            @keyup.enter="handleSearch" @keydown.esc="handleClickOutside"
           />
           <transition name="fade">
-            <div class="search-actions" v-if="isInteractionActive">
+            <div class="search-actions">
+              <button class="filter-toggle" type="button" aria-label="筛选" title="筛选" :aria-expanded="isInteractionActive" @click.stop="isInteractionActive = !isInteractionActive"><el-icon><Operation /></el-icon></button>
               <el-dropdown trigger="click" @command="handleResolutionSelect">
-                <span class="action-btn">
+                <button type="button" class="action-btn" aria-label="选择分辨率">
                   {{ filters.resolution || '分辨率' }} <el-icon><ArrowDown /></el-icon>
-                </span>
+                </button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="">全部</el-dropdown-item>
@@ -31,7 +31,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <button class="primary-search-btn" @click="handleSearch">
+              <button aria-label="搜索" class="primary-search-btn" @click="handleSearch">
                 <el-icon><Right /></el-icon>
               </button>
             </div>
@@ -40,47 +40,48 @@
 
         <!-- 快速分类导航 (动画显示) -->
         <transition name="expand">
-          <div class="quick-nav" v-show="isInteractionActive">
+          <div v-show="isInteractionActive" class="quick-nav">
             <div class="nav-tabs">
-              <span class="nav-tab" :class="{ active: activeTab === 'hot' }" @click="switchTab('hot')">热门推荐</span>
-              <span class="nav-tab" :class="{ active: activeTab === 'category' }" @click="switchTab('category')">壁纸分类</span>
-              <span class="nav-tab" :class="{ active: activeTab === 'color' }" @click="switchTab('color')">颜色分类</span>
+              <button type="button" class="nav-tab" :aria-pressed="activeTab === 'hot'" :class="{ active: activeTab === 'hot' }" @click="switchTab('hot')">主题</button>
+              <button type="button" class="nav-tab" :aria-pressed="activeTab === 'category'" :class="{ active: activeTab === 'category' }" @click="switchTab('category')">分类</button>
+              <button type="button" class="nav-tab" :aria-pressed="activeTab === 'color'" :class="{ active: activeTab === 'color' }" @click="switchTab('color')" title="按作品的颜色标签筛选">颜色</button>
             </div>
 
-            <div class="tab-content">
+            <transition name="search-options" mode="out-in"><div :key="activeTab" class="tab-content">
               <div v-if="activeTab === 'hot'" class="tags-cloud">
-                 <span 
+                 <button type="button"
                   v-for="tag in hotTags" 
                   :key="tag" 
                   class="tag-chip" 
                   :class="{ active: activeSub === tag }"
                   @click="selectSub('hot', tag)"
-                 >{{ tag }}</span>
+                 >{{ tag }}</button>
               </div>
               <div v-if="activeTab === 'category'" class="tags-cloud">
-                <span 
+                <button type="button"
                   v-for="cat in categories" 
                   :key="cat.id" 
                   class="tag-chip"
-                  :class="{ active: activeSub === String(cat.id) }"
-                  @click="selectSub('category', String(cat.id))"
-                >{{ cat.name }}</span>
+                  :class="{ active: activeSub === cat.name || activeSub === String(cat.id) }"
+                  @click="selectSub('category', cat.name)"
+                >{{ cat.name }}</button>
               </div>
               <div v-if="activeTab === 'color'" class="tags-cloud">
-                <span 
+                <button type="button"
                   v-for="color in colors" 
                   :key="color.value"
                   class="tag-chip"
                   :class="{ active: activeSub === color.key }"
                   @click="selectSub('color', color.key)"
-                >{{ color.name }}</span>
+                ><i class="filter-color" :style="{ background: color.value }"/>{{ color.name }}</button>
               </div>
-            </div>
+            </div></transition>
           </div>
         </transition>
       </div>
     </div>
 
+    <div v-if="searchQuery || activeSub || filters.resolution" class="active-filters"><span v-if="searchQuery">{{ searchQuery }}</span><span v-if="activeSub">{{ activeFilterLabel }}</span><span v-if="filters.resolution">{{ filters.resolution }}</span><button type="button" aria-label="清除筛选" title="清除筛选" @click="clearFilters"><el-icon><Close /></el-icon></button></div>
     <!-- 结果展示区域 - 默认一直显示 -->
     <div class="preview-section">
       <div class="section-header">
@@ -107,7 +108,7 @@
 
       <!-- 无结果提示 -->
       <div v-else class="no-results">
-        <AppState description="没有找到相关壁纸" />
+        <AppState description="无匹配作品" />
       </div>
 
       <!-- 分页 -->
@@ -126,9 +127,10 @@
 </template>
 
 <script setup>
+import { normalizeCategories } from '@/utils/normalizers'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Search, ArrowDown, Right, ArrowRight } from '@element-plus/icons-vue'
+import { Search, ArrowDown, Right, ArrowRight, Operation, Close } from '@element-plus/icons-vue'
 import { ClickOutside as vClickOutside } from 'element-plus'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import AppState from '@/components/AppState.vue'
@@ -179,15 +181,15 @@ const {
   getParams: () => {
     const params = {
       resolution: filters.resolution,
-      sortBy: filters.sortBy
+      sort: filters.sortBy === 'likes' ? 'hot' : filters.sortBy === 'download' ? 'download' : 'latest'
     }
 
     if (searchQuery.value) params.q = searchQuery.value
 
     if (activeTab.value === 'category' && activeSub.value) {
-      params.category = activeSub.value
+      params.category = categories.value.find(c => (c.name === activeSub.value || String(c.id) === activeSub.value))?.name || activeSub.value
     } else if (activeTab.value === 'color' && activeSub.value) {
-      params.color = activeSub.value
+      params.tag = colors.find(c => c.key === activeSub.value)?.name
     } else if (activeTab.value === 'hot' && activeSub.value) {
       params.tag = activeSub.value
     }
@@ -202,7 +204,7 @@ const {
 const sectionTitle = computed(() => {
   if (route.query.q) return `搜索结果: "${route.query.q}"`
   if (activeTab.value === 'category' && activeSub.value) {
-    const cat = categories.value.find(c => String(c.id) === activeSub.value)
+    const cat = categories.value.find(c => (c.name === activeSub.value || String(c.id) === activeSub.value))
     return cat ? `${cat.name}` : '分类壁纸'
   }
   if (activeTab.value === 'color' && activeSub.value) {
@@ -213,6 +215,12 @@ const sectionTitle = computed(() => {
   if (activeTab.value === 'hot') return '热门推荐'
   return '精选壁纸'
 })
+
+const activeFilterLabel = computed(() => activeTab.value === 'color' ? colors.find(c => c.key === activeSub.value)?.name : activeTab.value === 'category' ? categories.value.find(c => (c.name === activeSub.value || String(c.id) === activeSub.value))?.name || activeSub.value : activeSub.value)
+const clearFilters = () => {
+  searchQuery.value = ''; activeSub.value = ''; activeTab.value = 'hot'; filters.resolution = ''
+  currentPage.value = 1; router.push({ path: '/search', query: {} })
+}
 
 // 核心逻辑
 const handleFocus = () => {
@@ -267,7 +275,7 @@ const handleCurrentChange = (val) => {
 const fetchCategoriesData = async () => {
   try {
     const res = await getCategories()
-    categories.value = res || []
+    categories.value = normalizeCategories(res || [])
   } catch (error) {
     console.error('Failed to fetch categories', error)
   }
@@ -286,12 +294,15 @@ const fetchWallpapers = async () => {
 // 与首页复用同一张卡片字段契约，兼容后端 thumbUrl/url 差异。
 const toCard = (w) => ({
   id: w.id,
+  target: w,
   title: w.title,
   thumb: w.thumbUrl || w.url,
   url: w.url || w.thumbUrl,
   resolution: w.resolution,
   previewVideoUrl: w.previewVideoUrl,
   likes: w.likes,
+  liked: w.liked,
+  favorited: w.favorited,
   author: formatAuthor(w.uploader || w.author)
 })
 
@@ -299,13 +310,15 @@ const toCard = (w) => ({
 const updateURL = () => {
   const query = {}
   
-  if (searchQuery.value) query.q = searchQuery.value
+  if (searchQuery.value.trim()) query.q = searchQuery.value.trim()
   if (activeTab.value !== 'hot') query.cat = activeTab.value
   if (activeSub.value) query.sub = activeSub.value
   if (filters.resolution) query.res = filters.resolution
   if (currentPage.value > 1) query.page = String(currentPage.value)
   
-  router.push({ path: '/search', query })
+  if (route.query.sort) query.sort = route.query.sort
+  if (JSON.stringify(query) === JSON.stringify(route.query)) fetchWallpapers()
+  else router.push({ path: '/search', query })
 }
 
 // URL 是搜索页的单一入口，前进后退和直接打开链接都会触发列表刷新。
@@ -314,7 +327,7 @@ watch(() => route.query, () => {
   activeTab.value = route.query.cat || 'hot'
   activeSub.value = route.query.sub || ''
   filters.resolution = route.query.res || ''
-  filters.sortBy = activeTab.value === 'hot' ? 'likes' : 'created_at'
+  filters.sortBy = route.query.sort === 'download' ? 'download' : route.query.sort === 'latest' ? 'created_at' : activeTab.value === 'hot' ? 'likes' : 'created_at'
   currentPage.value = Math.max(1, Number(route.query.page) || 1)
   
   fetchWallpapers()
@@ -325,266 +338,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.search-page {
-  min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  padding: 0 20px;
-  padding-top: 15vh;
-  transition: padding-top 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.search-page.is-active {
-  padding-top: 40px; /* Search page specific adjustment if needed, handled by child margin typically */
-}
-
-.ambient-background {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* 核心搜索区域动画 */
-.hero-section {
-  width: 100%;
-  max-width: 600px;
-  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-  z-index: 10;
-}
-
-.hero-section.is-active {
-  max-width: 800px;
-  transform: translateY(-5vh);
-}
-
-.hero-search-card {
-  width: 100%;
-  background-color: var(--app-bg-card);
-  border-radius: 24px;
-  padding: 16px 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--app-border);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.2);
-  transition: all 0.4s ease;
-  cursor: text;
-}
-
-.hero-section.is-active .hero-search-card {
-  padding: 24px 32px;
-  cursor: default;
-}
-
-.search-input-wrapper {
-  display: flex;
-  align-items: center;
-  background-color: transparent;
-  transition: padding-bottom 0.3s ease;
-}
-
-.hero-section.is-active .search-input-wrapper {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--app-border);
-  margin-bottom: 16px;
-}
-
-.search-icon {
-  font-size: 20px;
-  color: var(--app-text-secondary);
-  margin-right: 12px;
-}
-
-.hero-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--app-text-main);
-  font-size: 16px;
-  letter-spacing: 0.02em;
-}
-
-.hero-search-input::placeholder {
-  color: var(--app-text-secondary);
-}
-
-.search-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.action-btn {
-  color: var(--app-text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.3s ease;
-}
-
-.action-btn:hover {
-  color: var(--app-text-main);
-}
-
-.primary-search-btn {
-  background-color: var(--app-color-primary);
-  color: #fff;
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: opacity 0.3s ease;
-}
-
-.primary-search-btn:hover {
-  opacity: 0.9;
-}
-
-/* 导航和标签 */
-.quick-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow: hidden;
-}
-
-.nav-tabs {
-  display: flex;
-  gap: 24px;
-}
-
-.nav-tab {
-  font-size: 14px;
-  color: var(--app-text-secondary);
-  cursor: pointer;
-  padding-bottom: 4px;
-  position: relative;
-  transition: color 0.3s ease;
-}
-
-.nav-tab.active {
-  color: var(--app-color-primary);
-  font-weight: 500;
-}
-
-.nav-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: var(--app-color-primary);
-  border-radius: 2px;
-}
-
-.tab-content {
-  min-height: 32px;
-}
-
-.tags-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.tag-chip {
-  font-size: 13px;
-  color: var(--app-text-secondary);
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.tag-chip:hover {
-  color: var(--app-text-main);
-}
-
-.tag-chip.active {
-  color: var(--app-text-main);
-  font-weight: 500;
-}
-
-/* 预览区 */
-.preview-section {
-  width: 100%;
-  max-width: 1200px;
-  margin-top: 20px; /* 改为正边距 */
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--app-text-main);
-  margin: 0;
-  letter-spacing: 0.02em;
-}
-
-/* 三列网格 */
-.wallpaper-grid-preview {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-@media (max-width: 992px) {
-  .wallpaper-grid-preview {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 576px) {
-  .wallpaper-grid-preview {
-    grid-template-columns: 1fr;
-  }
-}
-
-.pagination-wrapper {
-  margin-top: 40px;
-  display: flex;
-  justify-content: center;
-}
-
-/* 动画类 */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-
-.expand-enter-active, .expand-leave-active {
-  transition: all 0.4s ease;
-  max-height: 200px;
-  opacity: 1;
-}
-.expand-enter-from, .expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-
-.fade-up-enter-active, .fade-up-leave-active {
-  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-  transform: translateY(0);
-  opacity: 1;
-}
-.fade-up-enter-from, .fade-up-leave-to {
-  transform: translateY(20px);
-  opacity: 0;
-}
-</style>
+<style scoped src="../styles/browse.css"></style>

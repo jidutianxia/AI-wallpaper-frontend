@@ -8,7 +8,7 @@
         </el-avatar>
         <div class="profile-info">
           <h2>{{ userStore.info?.nickname || userStore.info?.username || '游客' }}</h2>
-          <p>{{ userStore.info?.signature || userStore.info?.bio || '这个人很懒，什么都没写' }}</p>
+          <p v-if="userStore.info?.signature || userStore.info?.bio">{{ userStore.info?.signature || userStore.info?.bio }}</p>
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-number">{{ userStats.posts }}</span>
@@ -25,13 +25,13 @@
           </div>
         </div>
       </div>
-      
+
       <div class="profile-actions" v-if="userStore.isAuthenticated">
         <el-button @click="showEditDialog = true" class="action-btn">编辑资料</el-button>
-        <el-button @click="showUploadDialog = true" type="primary" v-if="userStore.info?.role === 'admin'" class="action-btn">上传壁纸</el-button>
+        <el-button @click="router.push('/community/compose')" type="primary" v-if="userStore.info?.roles?.includes('admin')" class="action-btn">上传壁纸</el-button>
       </div>
     </div>
-    
+
     <!-- 标签页 -->
     <el-tabs v-model="activeTab" class="user-tabs">
       <el-tab-pane label="发布的作品" name="posts">
@@ -51,7 +51,7 @@
             <h4 class="post-title" @click="router.push(`/community/post/${p.id}`)">{{ p.title }}</h4>
             <p class="post-content" @click="router.push(`/community/post/${p.id}`)">{{ p.content }}</p>
             <div class="post-images" v-if="p.images && p.images.length">
-              <img v-for="(img, idx) in p.images.slice(0, 4)" :key="idx" :src="getImageUrl(img)" class="post-img" />
+              <MediaSurface v-for="(img, idx) in p.images.slice(0, 4)" :key="idx" :src="getImageUrl(img)" class="post-img" />
             </div>
             <div class="post-footer">
               <span class="tag" v-for="t in p.tags" :key="t">#{{ t }}</span>
@@ -70,15 +70,23 @@
       </el-tab-pane>
 
 
-      <el-tab-pane label="我喜欢的壁纸" name="wallpaperLikes">
+      <el-tab-pane label="收藏的壁纸" name="wallpaperFavorites">
+        <div class="wallpaper-grid" v-loading="loading.wallpaperFavorites">
+          <UnifiedCard v-for="w in wallpaperFavorites" :key="w.id" :data="{ ...w, thumb: w.thumbUrl || w.url }" />
+        </div>
+        <AppState v-if="errors.wallpaperFavorites" type="error" description="收藏加载失败" retryable @retry="fetchWallpaperFavorites" />
+        <AppState v-else-if="!loading.wallpaperFavorites && !wallpaperFavorites.length" description="还没有收藏壁纸" />
+      </el-tab-pane>
+
+      <el-tab-pane label="点赞的壁纸" name="wallpaperLikes">
         <div class="wallpaper-grid" v-loading="loading.wallpaperLikes">
-          <UnifiedCard 
-            v-for="w in wallpaperLikes" 
-            :key="w.id" 
-            :title="w.title" 
-            :cover="w.thumbUrl || w.url" 
-            :to="String(`/detail/${w.id}`)" 
-            :likes="w.likes" 
+          <UnifiedCard
+            v-for="w in wallpaperLikes"
+            :key="w.id"
+            :title="w.title"
+            :data="w" :cover="w.thumbUrl || w.url"
+            :to="String(`/detail/${w.id}`)"
+            :likes="w.likes"
             :favorites="w.favorites"
             :no-actions="true"
           />
@@ -89,17 +97,17 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="我的点赞（帖子）" name="likes">
+      <el-tab-pane label="点赞的帖子" name="likes">
         <div class="wallpaper-grid" v-loading="loading.likes">
-          <UnifiedCard 
-            v-for="p in likes" 
-            :key="p.id" 
-            :title="p.title" 
-            :cover="p.images?.[0]" 
+          <UnifiedCard
+            v-for="p in likes"
+            :key="p.id"
+            :title="p.title"
+            :cover="p.images?.[0]"
             :images="p.images || []"
             :image-count="p.images?.length || 0"
-            :subtitle="p.author?.username || ''" 
-            :to="String(`/community/post/${p.id}`)" 
+            :subtitle="p.author?.username || ''"
+            :to="String(`/community/post/${p.id}`)"
             :likes="p.likes"
             :no-actions="true"
           />
@@ -110,18 +118,18 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="我的收藏（帖子）" name="favorites">
+      <el-tab-pane label="收藏的帖子" name="favorites">
         <div class="wallpaper-grid" v-loading="loading.favorites">
-          <UnifiedCard 
-            v-for="p in favorites" 
-            :key="p.id" 
-            :title="p.title" 
-            :cover="p.images?.[0] || p.cover" 
+          <UnifiedCard
+            v-for="p in favorites"
+            :key="p.id"
+            :title="p.title"
+            :cover="p.images?.[0] || p.cover"
             :images="p.images || (p.cover ? [p.cover] : [])"
             :image-count="p.images?.length || (p.cover ? 1 : 0)"
-            :subtitle="p.author?.username || ''" 
-            :to="String(`/community/post/${p.id}`)" 
-            :likes="p.likes" 
+            :subtitle="p.author?.username || ''"
+            :to="String(`/community/post/${p.id}`)"
+            :likes="p.likes"
             :favorites="p.favorites"
             :no-actions="true"
           />
@@ -134,13 +142,13 @@
 
       <!-- <el-tab-pane label="我的收藏（图片）" name="imageFavorites">
         <div class="wallpaper-grid" v-loading="loading.imageFavorites">
-          <div 
-            v-for="img in imageFavorites" 
-            :key="img.url" 
+          <div
+            v-for="img in imageFavorites"
+            :key="img.url"
             class="wallpaper-item"
             @click="router.push(`/community/post/${img.postId}/image/${img.index}`)"
           >
-            <img :src="getImageUrl(img.url)" :alt="`图片 ${img.index}`" />
+            <MediaSurface :src="getImageUrl(img.url)" :alt="`图片 ${img.index}`" />
             <div class="wallpaper-overlay">
               <div class="wallpaper-info">
                  <p>来自帖子 #{{ img.postId }}</p>
@@ -152,29 +160,29 @@
           <el-empty description="还没有收藏任何图片" />
         </div>
       </el-tab-pane> -->
-      
+
       <el-tab-pane label="我的上传" name="uploads" v-if="userStore.info?.role === 'admin'">
         <div class="wallpaper-grid" v-loading="loading.uploads">
-          <div 
-            v-for="wallpaper in uploads" 
-            :key="wallpaper.id" 
+          <div
+            v-for="wallpaper in uploads"
+            :key="wallpaper.id"
             :title="wallpaper.title"
             class="wallpaper-item"
             @click="viewDetail(wallpaper.id)"
           >
-            <img :src="getImageUrl(wallpaper.thumbUrl || wallpaper.url)" :alt="wallpaper.title" />
+            <MediaSurface :src="wallpaper" :alt="wallpaper.title" />
             <div class="wallpaper-overlay">
               <div class="wallpaper-actions">
-                <el-button 
-                  :icon="Edit" 
-                  circle 
-                  size="small" 
+                <el-button
+                  :icon="Edit"
+                  circle
+                  size="small"
                   @click.stop="editWallpaper(wallpaper)"
                 />
-                <el-button 
-                  :icon="Delete" 
-                  circle 
-                  size="small" 
+                <el-button
+                  :icon="Delete"
+                  circle
+                  size="small"
                   type="danger"
                   @click.stop="deleteWallpaper(wallpaper)"
                 />
@@ -192,7 +200,7 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-    
+
     <!-- 编辑资料对话框 -->
     <el-dialog v-model="showEditDialog" title="编辑资料" width="400px">
       <el-form :model="editForm" label-width="80px">
@@ -225,7 +233,7 @@
         <el-button type="primary" @click="saveProfile" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
-    
+
     <!-- 编辑帖子对话框 -->
     <el-dialog v-model="showEditPostDialog" title="编辑作品" width="500px">
       <el-form :model="editPostForm" label-width="80px">
@@ -249,66 +257,18 @@
       </template>
     </el-dialog>
 
-    <!-- 上传壁纸对话框 -->
-    <el-dialog v-model="showUploadDialog" title="上传壁纸" width="500px">
-      <el-form :model="uploadForm" label-width="80px">
-        <el-form-item label="标题">
-          <el-input v-model="uploadForm.title" />
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="uploadForm.category" placeholder="选择分类">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="标签">
-          <el-input v-model="uploadForm.tags" placeholder="用逗号分隔多个标签" />
-        </el-form-item>
-        <el-form-item label="图片">
-          <el-upload
-            class="upload-demo"
-            drag
-            :auto-upload="false"
-            :on-change="handleUploadChange"
-            :on-remove="handleUploadRemove"
-            :before-upload="beforeUpload"
-            :limit="1"
-          >
-            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">
-              将文件拖到此处，或<em>点击上传</em>
-            </div>
-            <template #tip>
-              <div class="el-upload__tip">
-                只能上传jpg/png文件，且不超过10MB
-              </div>
-            </template>
-          </el-upload>
-          <div v-if="uploadForm.file" class="upload-selected">
-            已选择：{{ uploadForm.file.name }}
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showUploadDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitUpload" :loading="uploading">上传</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
+import MediaSurface from '@/components/MediaSurface.vue'
 import { ref, reactive, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, Download, Edit, Delete, Plus, UploadFilled, ChatLineSquare } from '@element-plus/icons-vue'
+import { Star, Download, Edit, Delete, Plus, ChatLineSquare } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { 
-  getCategories, uploadWallpaper, likeWallpaper, favoriteWallpaper, 
+import {
+  likeWallpaper, favoriteWallpaper,
   getUserLikes, getUserStats, getMyPostFavorites, getMyWallpaperFavorites,
   getMyCommunityPosts, deleteCommunityPost, updateCommunityPost,
   deleteWallpaper as apiDeleteWallpaper, getUserUploads, getMyFavoriteCommunityImages,
@@ -330,13 +290,11 @@ onBeforeUnmount(() => {
 })
 
 // 响应式数据
-const activeTab = ref('posts') // 默认显示发布的作品
+const activeTab = ref(router.currentRoute?.value?.query?.tab === 'wallpaperFavorites' ? 'wallpaperFavorites' : 'posts') // 默认显示发布的作品
 const showEditDialog = ref(false)
-const showUploadDialog = ref(false)
 const showEditPostDialog = ref(false)
 const saving = ref(false)
 const savingPost = ref(false)
-const uploading = ref(false)
 
 // 用户统计
 const userStats = reactive({
@@ -378,7 +336,6 @@ const wallpaperFavorites = ref([])
 const imageFavorites = ref([])
 const likes = ref([])
 const uploads = ref([])
-const categories = ref([])
 const wallpaperLikes = ref([])
 
 
@@ -397,14 +354,6 @@ const editPostForm = reactive({
   title: '',
   content: '',
   tags: ''
-})
-
-// 上传表单
-const uploadForm = reactive({
-  title: '',
-  category: '',
-  tags: '',
-  file: null
 })
 
 // 获取统计数据
@@ -499,18 +448,6 @@ const fetchUploads = async () => {
   })
 }
 
-// 获取分类列表
-const fetchCategories = async () => {
-  try {
-    const response = await getCategories()
-    if (!isMounted.value) return
-    categories.value = response || []
-  } catch (error) {
-    if (!isMounted.value) return
-    categories.value = []
-  }
-}
-
 // 查看详情
 const viewDetail = (id) => {
   router.push(`/detail/${id}`)
@@ -524,7 +461,7 @@ const deleteWallpaper = async (wallpaper) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     await apiDeleteWallpaper(wallpaper.id)
     if (!isMounted.value) return
     uploads.value = uploads.value.filter(item => item.id !== wallpaper.id)
@@ -546,7 +483,7 @@ const openEditPost = (post) => {
 // 保存帖子
 const savePost = async () => {
   if (!editPostForm.title) return ElMessage.warning('标题不能为空')
-  
+
   savingPost.value = true
   try {
     const payload = {
@@ -589,13 +526,13 @@ const deletePost = async (post) => {
 const saveProfile = async () => {
   saving.value = true
   try {
-    const payload = { 
-      email: editForm.email, 
-      avatarUrl: editForm.avatarUrl 
+    const payload = {
+      email: editForm.email,
+      avatarUrl: editForm.avatarUrl
     }
     if (editForm.nickname) payload.nickname = editForm.nickname
     if (editForm.signature) payload.signature = editForm.signature
-    
+
     await updateMe(payload)
     if (!isMounted.value) return
     await userStore.fetchUser()
@@ -639,72 +576,15 @@ const beforeAvatarUpload = (file) => {
   return result.valid
 }
 
-// 壁纸上传前验证
-const beforeUpload = (file) => {
-  const result = validateImageFile(file, { maxSizeMB: 10 })
-  if (!result.valid) ElMessage.error(result.message)
-  return result.valid
-}
-
-const handleUploadChange = (uploadFile) => {
-  const rawFile = uploadFile?.raw
-  if (!rawFile) return
-  const result = validateImageFile(rawFile, { maxSizeMB: 10 })
-  if (!result.valid) {
-    uploadForm.file = null
-    ElMessage.error(result.message)
-    return
-  }
-  uploadForm.file = rawFile
-}
-
-const handleUploadRemove = () => {
-  uploadForm.file = null
-}
-
-// 提交上传
-const submitUpload = async () => {
-  if (!uploadForm.title || !uploadForm.category || !uploadForm.file) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-  
-  uploading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('title', uploadForm.title)
-    formData.append('category', uploadForm.category)
-    formData.append('tags', uploadForm.tags)
-    formData.append('file', uploadForm.file)
-    
-    await uploadWallpaper(formData)
-    if (!isMounted.value) return
-    showUploadDialog.value = false
-    ElMessage.success('上传成功，等待审核')
-    
-    // 重置表单
-    Object.assign(uploadForm, {
-      title: '',
-      category: '',
-      tags: '',
-      file: null
-    })
-    
-    // 刷新上传列表
-    fetchUploads()
-  } catch (error) {
-    if (!isMounted.value) return
-    ElMessage.error('上传失败：' + (error.response?.data?.message || error.message))
-  } finally {
-    if (isMounted.value) uploading.value = false
-  }
-}
-
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
+
+watch(() => router.currentRoute?.value?.query?.tab, (tab) => {
+  if (tab === 'wallpaperFavorites') activeTab.value = tab
+})
 
 // 监听标签页切换
 watch(activeTab, (newTab) => {
@@ -714,6 +594,9 @@ watch(activeTab, (newTab) => {
       break
     case 'favorites':
       if (favorites.value.length === 0) fetchFavorites()
+      break
+    case 'wallpaperFavorites':
+      if (!wallpaperFavorites.value.length) fetchWallpaperFavorites()
       break
     case 'wallpaperLikes':
       if (wallpaperLikes.value.length === 0) fetchWallpaperLikes()
@@ -748,7 +631,7 @@ onMounted(async () => {
     router.push('/')
     return
   }
-  
+
   // 如果有 token 但未认证（可能是刷新页面），尝试重新获取用户信息
   if (!userStore.isAuthenticated) {
     try {
@@ -766,8 +649,8 @@ onMounted(async () => {
     router.push('/')
     return
   }
-  
-  fetchCategories()
+
+  if (activeTab.value === 'wallpaperFavorites') fetchWallpaperFavorites()
   fetchUserStats()
   fetchMyPosts() // Default tab
 })

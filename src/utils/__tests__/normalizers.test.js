@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  normalizeCategories,
   normalizePagedResult,
   normalizePost,
   normalizeUser,
@@ -7,6 +8,15 @@ import {
 } from '../normalizers'
 
 describe('normalizers', () => {
+  it('keeps subject categories and omits virtual navigation groups', () => {
+    const tree = [
+      { id: 1, name: '热门推荐', children: [{ id: 101, name: '最新' }] },
+      { id: 2, name: '壁纸种类', children: [{ id: 203, name: '风景' }] },
+      { id: 4, name: '分辨率', children: [{ id: 401, name: '4K' }] }
+    ]
+    expect(normalizeCategories(tree)).toEqual([{ id: 203, name: '风景' }])
+    expect(normalizeCategories([{ id: 7, name: '自然' }])).toEqual([{ id: 7, name: '自然' }])
+  })
   it('normalizes post field aliases and image objects', () => {
     const post = normalizePost({
       postId: 12,

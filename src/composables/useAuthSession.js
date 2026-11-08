@@ -8,6 +8,8 @@ export function useAuthSession(options = {}) {
   const router = useRouter()
   const userStore = useUserStore()
   const { onAuthRequired } = options
+  let pendingRedirect = null
+  const cancelAuthRedirect = () => { pendingRedirect = null }
 
   const refreshCurrentRoute = () => {
     try {
@@ -24,11 +26,20 @@ export function useAuthSession(options = {}) {
     if (event?.detail?.reason === 'unauthorized') {
       userStore.clearSession({ notify: false })
     }
+    const redirect = event?.detail?.redirect
+    if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) pendingRedirect = redirect
     onAuthRequired?.(event)
   }
 
-  const handleAuthChanged = () => {
-    refreshCurrentRoute()
+  const handleAuthChanged = (event) => {
+    if (event?.detail?.type === 'login' && pendingRedirect) {
+      const target = pendingRedirect
+      pendingRedirect = null
+      router.push(target)
+    } else {
+      if (event?.detail?.type === 'logout') pendingRedirect = null
+      refreshCurrentRoute()
+    }
   }
 
   const handleLogout = () => {
@@ -50,6 +61,7 @@ export function useAuthSession(options = {}) {
 
   return {
     userStore,
+    cancelAuthRedirect,
     handleLogout
   }
 }

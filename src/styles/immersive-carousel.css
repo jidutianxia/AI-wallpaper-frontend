@@ -1,0 +1,587 @@
+/* The image is the stage. Only artwork names remain as visible editorial text. */
+.immersive-carousel {
+  --look-x: 0px;
+  --look-y: 0px;
+  position: relative;
+  isolation: isolate;
+  width: calc(100% - 80px);
+  max-width: 1520px;
+  height: clamp(320px, calc(100svh - 230px), 720px);
+  margin: 24px auto 0;
+  color: #fff;
+  touch-action: pan-y pinch-zoom;
+}
+.immersive-carousel:focus-visible {
+  outline: 2px solid var(--app-color-primary);
+  outline-offset: 6px;
+  border-radius: 24px;
+}
+.cinema-aura {
+  position: absolute;
+  inset: 20% 2% -18px;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  filter: blur(42px) saturate(1.3);
+  opacity: 0.23;
+  pointer-events: none;
+}
+.cinema-screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #131b25;
+  box-shadow: 0 20px 60px #00000024;
+}
+.cinema-screen:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px #ffffff19;
+  pointer-events: none;
+}
+.cinema-picture {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+.cinema-picture:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -6px;
+  z-index: 2;
+}
+.cinema-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  transition:
+    border-radius 0.65s,
+    width 0.65s,
+    height 0.65s,
+    left 0.65s,
+    top 0.65s,
+    transform 0.65s,
+    border-color 0.4s;
+}
+.cinema-parallax {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translate(var(--look-x), var(--look-y));
+  transition: transform 800ms cubic-bezier(0.2, 0.65, 0.2, 1);
+}
+.cinema-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: cinema-travel 14s cubic-bezier(0.2, 0.3, 0.3, 1) both;
+  animation-play-state: paused;
+}
+.is-running .cinema-image {
+  animation-play-state: running;
+}
+.cinema-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(0deg, #050b16c9 0%, #050b1618 44%, transparent 70%),
+    linear-gradient(90deg, #070d193b, transparent 56%);
+}
+.cinema-heading {
+  position: absolute;
+  left: 5%;
+  right: 18%;
+  bottom: clamp(125px, 30%, 220px);
+  pointer-events: none;
+}
+.cinema-heading h1 {
+  font-size: clamp(36px, 4.2vw, 66px);
+  font-weight: 450;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  margin: 0;
+  text-shadow: 0 2px 30px #00000035;
+  overflow-wrap: anywhere;
+  max-width: 16ch;
+}
+.cinema-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 19px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.22s,
+    box-shadow 0.22s,
+    transform 0.3s;
+}
+.cinema-icon:hover,
+.cinema-icon[aria-pressed='true'] {
+  color: #fff;
+  background: #ffffff24;
+  box-shadow: inset 0 0 0 1px #ffffff24;
+  text-decoration: none;
+}
+.cinema-icon:active {
+  transform: scale(0.93);
+}
+.cinema-icon:focus-visible,
+.cinema-filmstrip button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+.cinema-icon:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.cinema-play {
+  position: absolute;
+  right: 25px;
+  top: 24px;
+  backdrop-filter: blur(14px);
+  border-color: #ffffff28;
+  background: #10182438;
+  font-size: 17px;
+}
+.cinema-arrow {
+  position: absolute;
+  top: calc(50% - 22px);
+  backdrop-filter: blur(14px);
+  background: #0f182b33;
+  border-color: #ffffff30;
+  transition:
+    opacity 0.3s,
+    transform 0.3s,
+    background 0.3s;
+}
+.arrow-prev {
+  left: 18px;
+}
+.arrow-next {
+  right: 18px;
+}
+.cinema-bottom-bar {
+  position: absolute;
+  left: 5%;
+  right: 4%;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  pointer-events: none;
+}
+.cinema-filmstrip,
+.cinema-tools {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  background: #141b276b;
+  border: 1px solid #ffffff2c;
+  box-shadow:
+    inset 0 1px #ffffff12,
+    0 10px 28px #00000024;
+  backdrop-filter: blur(22px) saturate(1.2);
+}
+.cinema-filmstrip {
+  gap: 8px;
+  padding: 8px;
+  border-radius: 15px;
+  min-width: 0;
+  max-width: 65%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+}
+.cinema-filmstrip button {
+  position: relative;
+  flex: 0 0 80px;
+  width: 80px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid #ffffff28;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #101824;
+  opacity: 0.57;
+  transition:
+    opacity 0.35s,
+    transform 0.35s,
+    box-shadow 0.35s;
+}
+.cinema-filmstrip button:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.cinema-filmstrip button[aria-pressed='true'] {
+  opacity: 1;
+  box-shadow: 0 0 0 2px #e6ddff;
+  border-color: transparent;
+}
+.cinema-filmstrip img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cinema-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #e9dcff;
+  box-shadow: 0 0 12px #bc9dff;
+  transform-origin: left;
+  animation: film-progress 7s linear both;
+  animation-play-state: paused;
+}
+.is-running .cinema-progress {
+  animation-play-state: running;
+}
+.cinema-tools {
+  padding: 6px;
+  gap: 4px;
+  border-radius: 32px;
+}
+.cinema-tool-divider {
+  height: 20px;
+  width: 1px;
+  background: #ffffff2b;
+  margin: 0 3px;
+}
+.ambient-fade-enter-active,
+.ambient-fade-leave-active {
+  transition: opacity 1s;
+}
+.ambient-fade-enter-from,
+.ambient-fade-leave-to {
+  opacity: 0;
+}
+.scene-dissolve-enter-active {
+  transition:
+    opacity 0.85s ease,
+    filter 0.85s ease,
+    transform 1s cubic-bezier(0.16, 0.75, 0.24, 1);
+}
+.scene-dissolve-leave-active {
+  transition:
+    opacity 0.8s ease,
+    transform 1s ease;
+  pointer-events: none;
+}
+.scene-dissolve-enter-from {
+  opacity: 0;
+  filter: blur(5px);
+  transform: scale(1.045);
+}
+.scene-dissolve-leave-to {
+  opacity: 0;
+  transform: scale(1.025);
+}
+.name-rise-enter-active,
+.name-rise-leave-active {
+  transition:
+    opacity 0.25s,
+    transform 0.35s;
+}
+.name-rise-enter-from {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.name-rise-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+@keyframes cinema-travel {
+  from {
+    transform: scale(1.025);
+  }
+  to {
+    transform: scale(1.085);
+  }
+}
+@keyframes film-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+/* Device modes stay on the same stage, without a second modal shell. */
+.view-desktop .cinema-picture,
+.view-phone .cinema-picture {
+  background: #10192335;
+}
+.view-desktop .cinema-frame {
+  inset: auto;
+  left: 50%;
+  top: 43%;
+  width: min(72%, 900px);
+  height: 66%;
+  transform: translate(-50%, -50%);
+  border: 7px solid #30353f;
+  border-bottom-width: 14px;
+  border-radius: 13px;
+  box-shadow:
+    0 0 0 1px #ffffff73,
+    0 25px 65px #00000080;
+}
+.view-phone .cinema-frame {
+  inset: auto;
+  left: 50%;
+  top: 44%;
+  height: calc(100% - 140px);
+  width: auto;
+  aspect-ratio: 9 / 19.5;
+  transform: translate(-50%, -50%);
+  border: 6px solid #24262e;
+  border-radius: 32px;
+  box-shadow:
+    0 0 0 1px #ffffff73,
+    0 25px 65px #00000080;
+}
+.view-phone .cinema-frame:after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: calc(50% - 23px);
+  width: 46px;
+  height: 13px;
+  border-radius: 20px;
+  background: #13141a;
+}
+.view-desktop .cinema-image,
+.view-phone .cinema-image {
+  animation: none;
+}
+.view-desktop .cinema-parallax,
+.view-phone .cinema-parallax {
+  transform: none;
+}
+.view-desktop .cinema-heading,
+.view-phone .cinema-heading {
+  opacity: 0;
+}
+.view-desktop .cinema-shade,
+.view-phone .cinema-shade {
+  background: linear-gradient(0deg, #050b1670, transparent 30%);
+}
+.cinema-lock {
+  position: absolute;
+  top: 16%;
+  left: 0;
+  right: 0;
+  display: block;
+  color: #fff;
+  font-size: clamp(32px, 4vw, 58px);
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 25px #00000040;
+}
+.cinema-device-dock {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid #ffffff44;
+  background: #ffffff25;
+  backdrop-filter: blur(16px);
+  border-radius: 12px;
+}
+.cinema-device-dock i {
+  width: 18px;
+  height: 18px;
+  background: #e1e8f4cc;
+  border-radius: 5px;
+}
+.cinema-device-dock i:nth-child(2n) {
+  background: #8795c3;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cinema-arrow {
+    opacity: 0;
+  }
+  .immersive-carousel:hover .cinema-arrow,
+  .immersive-carousel:focus-within .cinema-arrow {
+    opacity: 1;
+  }
+}
+@media (max-width: 1000px) {
+  .cinema-filmstrip button {
+    flex-basis: 64px;
+    width: 64px;
+    height: 44px;
+  }
+  .cinema-bottom-bar {
+    left: 26px;
+    right: 26px;
+    gap: 16px;
+  }
+  .cinema-heading {
+    left: 6%;
+  }
+}
+@media (max-width: 768px) {
+  .immersive-carousel {
+    width: calc(100% - 32px);
+    height: clamp(300px, calc(100svh - 240px), 560px);
+    margin-top: 16px;
+  }
+  .cinema-screen {
+    border-radius: 18px;
+  }
+  .cinema-heading {
+    left: 24px;
+    right: 24px;
+    bottom: 100px;
+  }
+  .cinema-heading h1 {
+    font-size: clamp(30px, 7vw, 44px);
+    letter-spacing: 0.07em;
+    max-width: 12ch;
+  }
+  .cinema-bottom-bar {
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    display: block;
+  }
+  .cinema-filmstrip {
+    max-width: none;
+    width: fit-content;
+    margin: auto;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+  .cinema-filmstrip button {
+    flex: 1 1 52px;
+    width: 52px;
+    min-width: 0;
+    height: 38px;
+  }
+  .cinema-tools {
+    position: absolute;
+    bottom: calc(clamp(300px, calc(100svh - 240px), 560px) - 80px);
+    right: -2px;
+    padding: 2px;
+    gap: 0;
+  }
+  .cinema-tools .cinema-icon {
+    width: 40px;
+    flex-basis: 40px;
+    height: 44px;
+    font-size: 18px;
+  }
+  .cinema-tool-divider {
+    margin-inline: 1px;
+  }
+  .cinema-play {
+    top: 16px;
+    left: 16px;
+    right: auto;
+    width: 44px;
+    height: 44px;
+  }
+  .cinema-arrow {
+    width: 40px;
+    height: 44px;
+    font-size: 17px;
+    border-color: #ffffff22;
+  }
+  .arrow-prev {
+    left: 10px;
+  }
+  .arrow-next {
+    right: 10px;
+  }
+  .view-phone .cinema-frame {
+    top: 49%;
+    height: calc(100% - 150px);
+    border-radius: 26px;
+  }
+  .view-desktop .cinema-frame {
+    top: 49%;
+    width: 76%;
+    height: 48%;
+    border-width: 5px;
+    border-bottom-width: 10px;
+  }
+  .cinema-device-dock {
+    padding: 4px 6px;
+    gap: 5px;
+    bottom: 6px;
+    border-radius: 7px;
+  }
+  .cinema-device-dock i {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+  .cinema-lock {
+    font-size: 31px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-carousel *,
+  .immersive-carousel *:before,
+  .immersive-carousel *:after {
+    animation: none !important;
+    transition-duration: 0s !important;
+  }
+  .cinema-parallax {
+    transform: none;
+  }
+  .cinema-progress {
+    transform: scaleX(1);
+  }
+}
+
+.cinema-device-backdrop {
+  position: absolute;
+  inset: -30px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) saturate(0.85);
+  opacity: 0;
+  transition: opacity 0.6s;
+  pointer-events: none;
+}
+.view-desktop .cinema-device-backdrop,
+.view-phone .cinema-device-backdrop {
+  opacity: 0.65;
+}
+
+.cinema-heading h1 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+@media (max-width: 768px) {
+  .cinema-filmstrip { max-width: 100%; gap: 4px; padding: 6px; }
+  .cinema-filmstrip button { min-width: 44px; height: 44px; }
+}

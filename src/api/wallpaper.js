@@ -6,7 +6,9 @@ export const getWallpaper = (id) => request.get(`/wallpapers/${id}`).then(unwrap
 export const updateWallpaperTags = (id, tags) => request.put(`/wallpapers/${id}/tags`, { tags }).then(unwrap)
 export const updateWallpaper = (id, payload) => request.put(`/wallpapers/${id}`, payload).then(unwrap)
 export const deleteWallpaper = (id) => request.delete(`/wallpapers/${id}`).then(unwrap)
-export const downloadWallpaperApi = (id) => request.get(`/wallpapers/${id}/download`).then(unwrap)
+export const downloadWallpaperApi = (id) => request.get(`/wallpapers/${id}/download`, {
+  params: { redirect: false }
+}).then(unwrap)
 
 
 // Wallpaper Interactions

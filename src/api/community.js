@@ -28,6 +28,7 @@ export const getCommunityTags = () => request.get('/community/tags').then(unwrap
 export const getCommunityRecentUsers = () => request.get('/community/recent-users').then(unwrap)
 export const getMyFavoriteCommunityImages = (params) => request.get('/community/my/favorite-images', { params }).then(unwrap)
 export const uploadCommunityImage = (formData, config = {}) => request.post('/upload', formData, {
+  timeout: 180000,
   ...config,
   headers: { 'Content-Type': 'multipart/form-data', ...(config.headers || {}) }
 }).then(unwrap)

@@ -3,7 +3,6 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { ElMessage } from 'element-plus'
 import User from '../User.vue'
 import {
-  getCategories,
   getMyCommunityPosts,
   getUserStats
 } from '@/api'
@@ -30,7 +29,6 @@ vi.mock('@/api', () => ({
   deleteCommunityPost: vi.fn(),
   deleteWallpaper: vi.fn(),
   favoriteWallpaper: vi.fn(),
-  getCategories: vi.fn(),
   getMyCommunityPosts: vi.fn(),
   getMyFavoriteCommunityImages: vi.fn(),
   getMyLikedWallpapers: vi.fn(),
@@ -80,7 +78,6 @@ describe('User view', () => {
     userStore.isAuthenticated = false
     userStore.info = null
     userStore.initAuth.mockReset()
-    vi.mocked(getCategories).mockResolvedValue([{ id: 1, name: 'Nature' }])
     vi.mocked(getUserStats).mockResolvedValue({
       postCount: 2,
       favoriteCount: 3,
@@ -109,7 +106,6 @@ describe('User view', () => {
     const wrapper = mount(User, mountOptions())
     await flushPromises()
 
-    expect(getCategories).toHaveBeenCalledOnce()
     expect(getUserStats).toHaveBeenCalledOnce()
     expect(getMyCommunityPosts).toHaveBeenCalledWith({ page: 1, size: 50 })
     expect(wrapper.text()).toContain('alice')

@@ -2,8 +2,7 @@
   <div class="community">
     <div class="container">
       <div class="header">
-        <h2>社区</h2>
-        <p>浏览公共分享与创作，支持上传最多 10 张图片。</p>
+        <h1>社区</h1>
       </div>
       <div class="grid">
         <aside class="left">
@@ -19,11 +18,11 @@
               </template>
               <template v-else>
                 <div class="avatar-lg placeholder"><el-icon><User /></el-icon></div>
-                <div class="creator"><div class="creator-name">请先登录</div><div class="creator-desc">登录后可发布内容</div></div>
+                <div class="creator"><div class="creator-name">创作空间</div></div>
                 <el-button class="publish-btn" type="primary" round @click.stop="handlePublishClick">发布</el-button>
               </template>
             </div>
-            <div class="stats-grid">
+            <div v-if="isAuthenticated" class="stats-grid">
               <div class="stat-item"><el-icon class="stat-icon"><EditPen /></el-icon><div class="stat-val">{{ isAuthenticated ? myStat.posts : 0 }}</div><div class="stat-label">发布</div></div>
               <div class="stat-item">
                 <el-icon class="stat-icon">
@@ -45,9 +44,9 @@
             <el-select v-if="feedMode === 'all'" v-model="tag" placeholder="按标签筛选" class="filter-select" clearable>
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
-            <el-select v-if="feedMode === 'all'" v-model="sort" class="filter-select" aria-label="sort">
-              <el-option label="Latest" value="latest" />
-              <el-option label="Popular" value="popular" />
+            <el-select v-if="feedMode === 'all'" v-model="sort" class="filter-select" aria-label="帖子排序">
+              <el-option label="最新发布" value="latest" />
+              <el-option label="热门讨论" value="popular" />
             </el-select>
           </div>
           <AppState v-if="loading" type="loading" :rows="3" />
@@ -66,22 +65,10 @@
                 <div class="tags"><el-tag v-for="t in p.tags" :key="t" size="small" class="post-tag">{{ t }}</el-tag></div>
               </div>
               <p class="content" @click="goPost(p.id)">{{ p.content }}</p>
-              <div class="images"><img v-for="(u,i) in p.images" :key="i" :src="getImageUrl(u)" class="image" @click.stop="goImage(p.id,i)" /></div>
+              <div class="images" :class="{ 'single-media': p.images?.length === 1 }"><div role="link" tabindex="0" @keydown.enter.self="goImage(p.id,i)" v-for="(u,i) in p.images" :key="i" class="post-media-link" :aria-label="`查看${p.title} · ${i+1}`" @click.stop="goImage(p.id,i)"><MediaSurface :src="u" :alt="p.title" class="image" /></div></div>
               <div class="post-actions">
-                <el-button link size="small" :class="{ 'liked': p.liked }" @click="toggleLike(p)">
-                  <el-icon :size="20" class="action-icon">
-                    <svg v-if="p.liked" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M923 283.6a260.04 260.04 0 0 0-56.9-82.8 264.4 264.4 0 0 0-84-55.5A260 260 0 0 0 679.7 125c-49.3 0-97.4 13.5-139.2 39-10 6.1-19.5 12.8-28.5 20.1-9-7.3-18.5-14-28.5-20.1-41.8-25.5-89.9-39-139.2-39-35.5 0-69.9 6.8-102.4 20.3-31.4 13-59.7 31.7-84 55.5a258.44 258.44 0 0 0-56.9 82.8c-13.9 32.3-21 66.6-21 101.9 0 33.3 6.8 68 20.3 103.3 11.3 29.5 27.5 60.1 48.2 91 32.8 48.9 77.9 99.9 133.9 151.6 92.8 85.7 184.7 144.9 188.6 147.3l23.7 15.2c10.5 6.7 24 6.7 34.5 0l23.7-15.2c3.9-2.5 95.7-61.6 188.6-147.3 56-51.7 101.1-102.7 133.9-151.6 20.7-30.9 37-61.5 48.2-91 13.5-35.3 20.3-70 20.3-103.3.1-35.3-7-69.6-20.9-101.9z"/></svg>
-                    <svg v-else viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path fill="currentColor" d="M699.6 148.8c-76.8 0-146.4 40.8-187.6 102.4C470.4 189.6 401.2 148.8 324 148.8 194.8 148.8 90 253.6 90 382.8c0 178 184.4 330 384.4 468.4 12.8 8.8 29.2 8.8 42 0C739.2 702.4 934 544.4 934 382.8c-0.4-129.2-105.2-234-234.4-234z m0-64c164.4 0 298.4 133.6 298.4 298 0 205.6-224.4 394-472.4 559.6-9.2 6-21.2 6-30.4 0C247.2 776.8 26 588.4 26 382.8 26 218.4 160 84.8 324.4 84.8c92 0 174.4 42 228.4 107.2 54-65.2 136.4-107.2 228.4-107.2z" transform="scale(0.9) translate(50,50)"/></svg>
-                  </el-icon>
-                  <span class="count">{{ p.likes }}</span>
-                </el-button>
-                <el-button link size="small" :class="{ 'favorited': p.favorited }" @click="toggleFavorite(p)">
-                  <el-icon :size="20" class="action-icon">
-                    <StarFilled v-if="p.favorited" />
-                    <Star v-else />
-                  </el-icon>
-                  <span class="count">{{ p.favorites ?? 0 }}</span>
-                </el-button>
+                <ReactionButton :active="Boolean(p.liked)" :pending-action="p._interacting" :count="Number(p.likes || 0)" @click="toggleLike(p)" />
+                <ReactionButton kind="favorite" :active="Boolean(p.favorited)" :pending-action="p._interacting" :count="Number(p.favorites || 0)" @click="toggleFavorite(p)" />
                 <el-button link size="small" @click="sharePost(p)">
                   <el-icon :size="18" class="action-icon"><Share /></el-icon>
                   <span class="count">分享</span>
@@ -92,7 +79,7 @@
                 </el-button>
                 <el-button link size="small" @click="reportPost(p)">
                   <el-icon :size="18" class="action-icon"><Warning /></el-icon>
-                  <span class="count">Report</span>
+                  <span class="count">举报</span>
                 </el-button>
               </div>
               <div v-if="p.showComment" class="comments">
@@ -114,17 +101,17 @@
               </div>
             </div>
           </div>
-          <AppState v-else description="暂无帖子，去发布一条吧" />
-          <div class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="total" v-model:current-page="page" /></div>
+          <AppState v-else description="暂无帖子" />
+          <div v-if="total > pageSize" class="pagination"><el-pagination background layout="prev, pager, next" :page-size="pageSize" :total="total" v-model:current-page="page" /></div>
         </main>
-        <aside class="right">
-          <el-card class="hot"><h4>热门帖子</h4><ol class="hot-list"><li v-for="(h,i) in hotPosts" :key="h.id" @click="goPost(h.id)">{{ i+1 }}. {{ h.title }}</li></ol></el-card>
-          <el-card class="recent"><h4>近期分享者</h4><div class="users"><div class="user" v-for="u in recentUsers" :key="u.id" @click="goProfile(u.id)"><img :src="getAvatarUrl(u.avatarUrl)" class="avatar" /><div class="uinfo"><div class="uname">{{ u.username }}</div><div class="uextra">帖子 {{ u.postCount }} | 获赞 {{ u.likeCount }}</div></div></div></div></el-card>
+        <aside v-if="hotPosts.length || recentUsers.length || isAuthenticated" class="right">
+          <el-card v-if="hotPosts.length" class="hot"><h4>热门帖子</h4><ol class="hot-list"><li v-for="(h,i) in hotPosts" :key="h.id" @click="goPost(h.id)">{{ i+1 }}. {{ h.title }}</li></ol></el-card>
+          <el-card v-if="recentUsers.length" class="recent"><h4>近期分享者</h4><div class="users"><div class="creator-row" v-for="u in recentUsers" :key="u.id" @click="goProfile(u.id)"><img :src="getAvatarUrl(u.avatarUrl)" class="avatar" /><div class="uinfo"><div class="uname">{{ u.username }}</div><div class="uextra">帖子 {{ u.postCount }} | 获赞 {{ u.likeCount }}</div></div></div></div></el-card>
           <el-card v-if="isAuthenticated" class="recommended">
             <h4>推荐关注</h4>
             <AppState v-if="recommendedLoading" type="loading" :rows="2" />
             <div v-else class="users">
-              <div class="user recommend-row" v-for="u in recommendedUsers" :key="u.id">
+              <div class="creator-row recommend-row" v-for="u in recommendedUsers" :key="u.id">
                 <img :src="getAvatarUrl(u.avatarUrl)" class="avatar" @click="goProfile(u.id)" />
                 <div class="uinfo" @click="goProfile(u.id)">
                   <div class="uname">{{ u.nickname || u.username }}</div>
@@ -142,6 +129,8 @@
 </template>
 
 <script setup>
+import MediaSurface from '@/components/MediaSurface.vue'
+import ReactionButton from '@/components/ReactionButton.vue'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -164,7 +153,7 @@ const { toggleInteraction } = useInteraction()
 const { share } = useShare()
 const isAuthenticated = computed(() => userStore.isAuthenticated)
 const displayName = computed(() => userStore.info?.nickname || userStore.info?.username || '请先登录')
-const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '这个人很懒~')
+const signature = computed(() => userStore.info?.signature || userStore.info?.bio || '')
 const q = ref('')
 const tag = ref('')
 const sort = ref('latest')
@@ -303,7 +292,11 @@ const postsRef = ref(null)
 let io
 onMounted(() => {
   io = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in-view') })
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue
+      entry.target.classList.add('in-view')
+      io?.unobserve(entry.target)
+    }
   }, { threshold: 0.12 })
 })
 
@@ -317,7 +310,7 @@ onBeforeUnmount(() => {
 watch([posts, loading], async () => {
   await nextTick()
   if (!postsRef.value || !io || loading.value) return
-  const cards = postsRef.value.querySelectorAll('.post')
+  const cards = postsRef.value.querySelectorAll('.post:not(.in-view)')
   cards.forEach(c => io.observe(c))
 })
 
@@ -397,10 +390,10 @@ const reportPost = async (p) => {
     return
   }
   try {
-    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report post', {
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel',
-      inputPlaceholder: 'Spam, abuse, infringement, or unsafe content'
+    const { value } = await ElMessageBox.prompt('请简要说明问题', '举报帖子', {
+      confirmButtonText: '提交',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如侵权、垃圾内容或不当内容'
     })
     await reportContent({
       targetType: 'post',
@@ -408,9 +401,9 @@ const reportPost = async (p) => {
       reason: 'user_report',
       description: value || ''
     })
-    ElMessage.success('Report submitted')
+    ElMessage.success('举报已提交')
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('提交失败，请稍后重试')
   }
 }
 
@@ -437,7 +430,7 @@ const goProfile = (uid) => {
   else router.push(`/profile/${uid}`)
 }
 
-const currentAvatar = 'https://i.pravatar.cc/80?u=community'
+const currentAvatar = computed(() => getAvatarUrl(userStore.info?.avatarUrl))
 
 watch(() => userStore.info?.id, async () => { await loadPosts(); await loadRecommendedUsers() })
 
@@ -679,7 +672,7 @@ const refreshPost = async (id) => {
 .hot-list li:hover { transform: translateX(4px); background: var(--app-bg-hover); box-shadow: var(--app-shadow-sm); }
 
 .users { display: flex; flex-direction: column; gap: 10px; }
-.user {
+.creator-row {
   display: flex; align-items: center; gap: 10px;
   padding: 8px;
   border-radius: 8px;
@@ -689,7 +682,7 @@ const refreshPost = async (id) => {
   transition: transform 0.2s;
   color: var(--app-text-main);
 }
-.user:hover { transform: translateX(4px); background: var(--app-bg-hover); }
+.creator-row:hover { transform: translateX(4px); background: var(--app-bg-hover); }
 .recommend-row { cursor: default; }
 .recommend-row:hover { transform: none; }
 .recommend-row .uinfo,
@@ -699,9 +692,13 @@ const refreshPost = async (id) => {
 .user .uname { font-weight: 500; font-size: 0.9rem; color: var(--app-text-main); margin-bottom: 2px; }
 .user .uextra { font-size: 0.75rem; color: var(--app-text-secondary); }
 
-/* Animation */
-.post { opacity: 1; transform: none; }
-.post.in-view { transition: opacity .4s ease, transform .4s ease; }
+@media (prefers-reduced-motion: no-preference) {
+  .post.in-view { animation: post-arrive .42s ease-out; }
+}
+@keyframes post-arrive {
+  from { opacity: .8; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .fade-list-enter-active, .fade-list-leave-active { transition: opacity .25s ease; }
 .fade-list-enter-from, .fade-list-leave-to { opacity: 0; }
 
@@ -748,4 +745,6 @@ const refreshPost = async (id) => {
   .pagination :deep(.btn-prev), .pagination :deep(.btn-next) { margin: 0 2px; }
   .pagination :deep(.el-pager li) { margin: 0 2px; }
 }
+.header h1 { font-size:24px;font-weight:500;letter-spacing:-.03em; }.header p { color:var(--app-text-secondary); }
+.filters { flex-wrap:wrap; }.filters .filter-input { flex:1 1 180px;min-width:160px; }.filters .filter-select { flex:1 1 120px; }.filters .el-radio-group { flex-shrink:0; }
 </style>

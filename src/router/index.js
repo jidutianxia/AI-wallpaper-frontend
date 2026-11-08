@@ -5,6 +5,7 @@ import { requestAuth } from '@/utils/authEvents'
 const view = (name) => () => import(`@/views/${name}.vue`)
 
 const routes = [
+  { path: '/design-preview', component: view('DesignPreview'), meta: { designPreview: true } },
   { path: '/', component: view('Home') },
   { path: '/detail/:id', component: view('Detail') },
   { path: '/category/:id', component: view('Category') },
@@ -25,7 +26,12 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, saved) {
+    if (saved) return saved
+    if (to.path === from.path) return false
+    return { top: 0 }
+  }
 })
 
 router.beforeEach(async (to) => {

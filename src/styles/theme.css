@@ -1,144 +1,94 @@
-@import './tokens.css';
-
+/* Obsidian / silver: one violet accent, image-led surfaces. */
 :root {
-  /* Semantic Colors - LIGHT MODE (Zhefeng Style) */
-  --app-color-primary: #007AFF; /* Bright Blue */
-  --app-bg-base: var(--color-light-bg-page);
-  --app-bg-card: var(--color-light-bg-card);
-  --app-backdrop-blur: none; /* Removed blur for pure white cards in light mode as requested, or subtle */
-  
-  --app-text-main: var(--color-light-text-main);
-  --app-text-secondary: var(--color-light-text-sub);
-  --app-border: var(--color-light-border);
-  
-  /* Button Semantics - Light */
-  --app-btn-primary-bg: #007AFF;
-  --app-btn-primary-text: #FFFFFF;
-  --app-btn-primary-hover-bg: #0062CC;
-  --app-btn-primary-active-bg: #0056B3;
-  --app-btn-primary-shadow: var(--shadow-blue-glow);
-
-  /* Special Detail Page Buttons (Mapped from Tokens) */
-  --app-btn-collect-bg: linear-gradient(135deg, var(--color-orange-gradient-start), var(--color-orange-gradient-end));
-  --app-btn-collect-text: #FFFFFF; /* Light Mode default white */
-  --app-btn-collect-shadow: 0 8px 20px var(--color-orange-shadow);
-  
-  --app-btn-download-bg: rgba(99, 102, 241, 0.9); /* Purple with opacity */
-  --app-btn-download-text: #FFFFFF;
-  
-  --app-bg-nested-card: #F9FAFB; /* Light mode nested */
-  --app-nested-glow: none;
-
-  --app-btn-secondary-bg: rgba(0,0,0,0.05);
-  --app-btn-secondary-text: var(--color-light-text-main);
-  --app-btn-secondary-hover-bg: rgba(0,0,0,0.08);
-  
-  --app-btn-ghost-border: var(--color-light-border);
-  --app-btn-ghost-text: var(--color-light-text-sub);
-  --app-btn-ghost-hover-bg: rgba(0,0,0,0.03);
-  --app-btn-ghost-hover-text: #007AFF;
-
-  --app-btn-text-color: var(--color-light-text-sub);
-  --app-btn-text-hover-color: #007AFF;
-
-  --app-brand-gradient-start: var(--color-gradient-light-start);
-  --app-brand-gradient-end: var(--color-gradient-light-end);
-  
-  --app-shadow-card: var(--shadow-sm);
-  --app-shadow-hover: var(--shadow-md);
-  
-  /* Radius Semantics */
-  --app-radius-card: var(--radius-lg);
-  --app-radius-button: 9999px; 
-  --app-radius-input: var(--radius-sm);
-  
-  /* Helper for gradients (Subtle backgrounds) */
-  --app-bg-gradient-1: #F5F5F7;
-  --app-bg-gradient-2: #FFFFFF;
-  --app-bg-gradient-3: #F0F0F2;
-
-  /* Manage Button Semantics - Light */
-  --app-btn-manage-bg: linear-gradient(135deg, #f3f0ff 0%, #e0d5ff 100%);
-  --app-btn-manage-text: #5b3a8a;
-  --app-btn-manage-border: #d4c2fc;
-  --app-btn-manage-shadow: 0 4px 12px rgba(106, 65, 163, 0.15);
-  --app-btn-manage-hover-bg: linear-gradient(135deg, #8c52ff 0%, #6a41a3 100%);
-  --app-btn-manage-hover-text: #ffffff;
-  --app-btn-manage-hover-border: #8c52ff;
-  --app-btn-manage-hover-shadow: 0 6px 16px rgba(106, 65, 163, 0.3);
-  --app-btn-manage-active-bg: #e0d5ff;
+  color-scheme: light;
+  --app-color-primary: #6853a4;
+  --app-bg-base: #eef0f3;
+  --app-bg-card: #fafbfd;
+  --app-bg-nested-card: #e5e8ef;
+  --app-bg-hover: #e4e3ed;
+  --app-text-main: #232530;
+  --app-text-secondary: #666b7b;
+  --app-border: #d8dce5;
+  --app-accent-bg-soft: #e8e3f2;
+  --app-accent-border: #c9bddf;
+  --app-accent-text: #59458f;
+  --app-btn-primary-text: #fff;
+  --app-glass: #fafbfde3;
+  --app-shadow-card: 0 12px 36px #242f4210;
+  --app-shadow-hover: 0 22px 50px #242f4226;
+  --app-card-inner-glow: inset 0 1px 0 #ffffffa6;
+  --app-radius-card: 18px;
+  --app-radius-button: 12px;
+  --app-radius-input: 12px;
+  --app-backdrop-blur: blur(22px);
+  --app-focus-ring: var(--app-color-primary);
+  --app-btn-primary-bg: var(--app-color-primary);
+  --app-btn-primary-hover-bg: color-mix(
+    in srgb,
+    var(--app-color-primary) 85%,
+    var(--app-text-main)
+  );
+  --app-btn-primary-active-bg: var(--app-btn-primary-hover-bg);
+  --app-btn-primary-shadow: 0 4px 16px
+    color-mix(in srgb, var(--app-color-primary) 18%, transparent);
+  --app-btn-primary-glow: transparent;
+  --app-btn-collect-bg: var(--app-color-primary);
+  --app-btn-collect-text: var(--app-btn-primary-text);
+  --app-btn-collect-shadow: var(--app-btn-primary-shadow);
+  --app-btn-download-bg: var(--app-color-primary);
+  --app-btn-download-text: var(--app-btn-primary-text);
+  --app-nested-glow: var(--app-card-inner-glow);
+  --app-btn-secondary-bg: var(--app-bg-nested-card);
+  --app-btn-secondary-text: var(--app-text-main);
+  --app-btn-secondary-hover-bg: var(--app-bg-hover);
+  --app-btn-ghost-border: var(--app-border);
+  --app-btn-ghost-text: var(--app-text-secondary);
+  --app-btn-ghost-hover-bg: var(--app-bg-hover);
+  --app-btn-ghost-hover-text: var(--app-text-main);
+  --app-btn-text-color: var(--app-text-secondary);
+  --app-btn-text-hover-color: var(--app-color-primary);
+  --app-brand-gradient-start: var(--app-color-primary);
+  --app-brand-gradient-end: var(--app-color-primary);
+  --app-bg-gradient-1: var(--app-bg-base);
+  --app-bg-gradient-2: var(--app-bg-card);
+  --app-bg-gradient-3: var(--app-bg-base);
+  --app-btn-manage-bg: var(--app-bg-hover);
+  --app-btn-manage-text: var(--app-text-main);
+  --app-btn-manage-border: var(--app-border);
+  --app-btn-manage-shadow: none;
+  --app-btn-manage-hover-bg: var(--app-bg-card);
+  --app-btn-manage-hover-text: var(--app-text-main);
+  --app-btn-manage-hover-border: var(--app-color-primary);
+  --app-btn-manage-hover-shadow: none;
+  --app-btn-manage-active-bg: var(--app-bg-hover);
+  --app-success-bg: #e4f1e8;
+  --app-success-text: #21683c;
+  --app-reaction-like: #ce416d;
+  --app-reaction-favorite: #997029;
+  --app-image-control-bg: #141923c9;
+  --app-image-control-border: #ffffff30;
+  --app-image-control-text: #f4f2f9;
 }
-
 :root.dark {
-  /* Semantic Colors - DARK MODE (Breathing Deep Space) */
-  --app-color-primary: #5E5CE6; /* Deep Blue Purple */
-  --app-bg-base: var(--color-dark-bg-page);
-  --app-bg-card: var(--color-dark-bg-card); /* #1C1C1E */
-  --app-backdrop-blur: blur(20px); /* Enable blur for dark mode cards */
-  
-  --app-text-main: var(--color-dark-text-main);
-  --app-text-secondary: var(--color-dark-text-sub);
-  --app-border: var(--color-dark-border); /* 1px rgba(255,255,255,0.08) */
-  
-  /* Button Semantics - Dark */
-  --app-btn-primary-bg: #5E5CE6;
-  --app-btn-primary-text: #FFFFFF;
-  --app-btn-primary-hover-bg: #4745BC;
-  --app-btn-primary-active-bg: #3A3899;
-  --app-btn-primary-glow: rgba(94, 92, 230, 0.4); 
-  --app-btn-primary-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset; 
-
-  /* Special Detail Page Buttons (Mapped from Tokens) */
-  --app-btn-collect-bg: linear-gradient(135deg, var(--color-orange-gradient-start), var(--color-orange-gradient-end));
-  --app-btn-collect-text: var(--color-orange-text); /* Dark Mode specific brown text */
-  --app-btn-collect-shadow: 0 8px 20px var(--color-orange-shadow);
-  
-  --app-btn-download-bg: rgba(99, 102, 241, 0.9); /* Purple with opacity */
-  --app-btn-download-text: #FFFFFF;
-  
-  --app-bg-nested-card: var(--color-dark-bg-card-nested);
-  --app-nested-glow: 0 0 20px var(--color-purple-glow);
-
-  --app-btn-secondary-bg: rgba(255,255,255,0.1);
-  --app-btn-secondary-text: var(--color-dark-text-main);
-  --app-btn-secondary-hover-bg: rgba(255,255,255,0.15);
-
-  --app-btn-ghost-border: var(--color-dark-border);
-  --app-btn-ghost-text: var(--color-dark-text-sub);
-  --app-btn-ghost-hover-bg: rgba(255,255,255,0.05);
-  --app-btn-ghost-hover-text: #FFFFFF;
- 
-  --app-btn-text-color: var(--color-dark-text-sub);
-  --app-btn-text-hover-color: #5E5CE6;
- 
-  /* Functional Colors */
-  --app-success-bg: var(--color-success-bg);
-  --app-success-text: var(--color-success-text);
- 
-  --app-brand-gradient-start: var(--color-gradient-dark-start);
-  --app-brand-gradient-end: var(--color-gradient-dark-end);
-   
-  --app-shadow-card: var(--shadow-dark-md);
-  --app-shadow-hover: var(--shadow-dark-lg);
-  --app-card-inner-glow: var(--shadow-inner-highlight); /* New: Inner Glow */
-
-  /* Accents */
-  --app-accent-bg-soft: rgba(94, 92, 230, 0.2);
-  --app-accent-border: rgba(94, 92, 230, 0.4);
-  --app-accent-text: #FFFFFF;
-  
-  --app-bg-gradient-1: #0A0A0C;
-  --app-bg-gradient-2: #141416;
-  --app-bg-gradient-3: #0F0F11;
-
-  /* Manage Button Semantics - Dark */
-  --app-btn-manage-bg: linear-gradient(135deg, #3d2266 0%, #22133a 100%);
-  --app-btn-manage-text: #e0d5ff;
-  --app-btn-manage-border: #5b3a8a;
-  --app-btn-manage-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  --app-btn-manage-hover-bg: linear-gradient(135deg, #4f2d85 0%, #311b54 100%);
-  --app-btn-manage-hover-text: #ffffff;
-  --app-btn-manage-hover-border: #8c52ff;
-  --app-btn-manage-hover-shadow: 0 6px 16px rgba(106, 65, 163, 0.4);
-  --app-btn-manage-active-bg: #22133a;
+  color-scheme: dark;
+  --app-color-primary: #b8a5df;
+  --app-bg-base: #111318;
+  --app-bg-card: #1a1d25;
+  --app-bg-nested-card: #14171e;
+  --app-bg-hover: #272a35;
+  --app-text-main: #ebeaf0;
+  --app-text-secondary: #a0a4b2;
+  --app-border: #343744;
+  --app-accent-bg-soft: #2b263c;
+  --app-accent-border: #55486c;
+  --app-accent-text: #c6b4e5;
+  --app-btn-primary-text: #201a2c;
+  --app-glass: #1a1d25df;
+  --app-shadow-card: 0 12px 36px #02030b24;
+  --app-shadow-hover: 0 22px 50px #02030b55;
+  --app-card-inner-glow: inset 0 1px 0 #ffffff0c;
+  --app-success-bg: #1c3025;
+  --app-success-text: #93c7a6;
+  --app-reaction-like: #ee7497;
+  --app-reaction-favorite: #cfad68;
 }

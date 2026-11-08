@@ -49,6 +49,22 @@ const Harness = defineComponent({
 })
 
 describe('useAuthSession', () => {
+  it('discards a canceled destination before a later login', () => {
+    const wrapper = mount(Harness)
+    window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT, { detail: { redirect: '/community/compose' } }))
+    wrapper.vm.cancelAuthRedirect()
+    window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT, { detail: { type: 'login' } }))
+    expect(router.push).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('resumes a protected destination after login', () => {
+    const wrapper = mount(Harness)
+    window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT, { detail: { redirect: '/community/compose' } }))
+    window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT, { detail: { type: 'login' } }))
+    expect(router.push).toHaveBeenCalledWith('/community/compose')
+    wrapper.unmount()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

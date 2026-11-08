@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import Detail from '../Detail.vue'
-import { getWallpaper, getWallpapers } from '@/api'
-import { getLocalStorageItem } from '@/utils/storage'
+import { downloadWallpaperApi, getWallpaper, getWallpapers } from '@/api'
 import { ElMessage } from 'element-plus'
 import { mountOptions } from '@/test/testUtils'
 
@@ -41,10 +40,6 @@ vi.mock('@/composables/useInteraction', () => ({
   useInteraction: () => ({ toggleInteraction })
 }))
 
-vi.mock('@/utils/storage', () => ({
-  getLocalStorageItem: vi.fn()
-}))
-
 vi.mock('element-plus', async () => {
   const actual = await vi.importActual('element-plus')
   return {
@@ -66,7 +61,7 @@ describe('Detail view', () => {
     router.push.mockClear()
     route.params.id = '5'
     window.open = vi.fn()
-    vi.mocked(getLocalStorageItem).mockReturnValue('token with spaces')
+    vi.mocked(downloadWallpaperApi).mockResolvedValue({ downloadUrl: 'https://example.com/original.jpg' })
     vi.mocked(getWallpaper).mockResolvedValue({
       id: 5,
       title: 'Detail Wallpaper',
@@ -90,14 +85,24 @@ describe('Detail view', () => {
     expect(wrapper.text()).toContain('Detail Wallpaper')
   })
 
-  it('opens downloads with encoded token and noopener protection', async () => {
+  it('connects the collection action to the wallpaper favorite API flow', async () => {
+    toggleInteraction.mockClear()
+    const wrapper = mount(Detail, mountOptions())
+    await flushPromises()
+    await wrapper.find('.detail-favorite').trigger('click')
+    expect(toggleInteraction).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }), 'favorite', 'wallpaper')
+  })
+
+  it('opens the download URL returned by the authenticated API', async () => {
     const wrapper = mount(Detail, mountOptions())
     await flushPromises()
 
     await wrapper.find('.btn-gradient-orange').trigger('click')
 
+    await flushPromises()
+    expect(downloadWallpaperApi).toHaveBeenCalledWith(5)
     expect(window.open).toHaveBeenCalledWith(
-      'http://localhost:8080/api/wallpapers/5/download?token=token%20with%20spaces',
+      'https://example.com/original.jpg',
       '_blank',
       'noopener,noreferrer'
     )

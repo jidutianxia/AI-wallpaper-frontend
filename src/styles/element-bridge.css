@@ -7,11 +7,11 @@
 :root {
   /* --- Primary Color Mapping --- */
   --el-color-primary: var(--app-color-primary);
-  --el-color-primary-light-3: var(--app-color-primary); /* Simplified for now */
-  --el-color-primary-light-5: var(--app-color-primary);
-  --el-color-primary-light-7: var(--app-color-primary);
-  --el-color-primary-light-8: var(--app-color-primary);
-  --el-color-primary-light-9: var(--app-color-primary);
+  --el-color-primary-light-3: color-mix(in srgb, var(--app-color-primary) 70%, var(--app-bg-card)); /* Simplified for now */
+  --el-color-primary-light-5: color-mix(in srgb, var(--app-color-primary) 50%, var(--app-bg-card));
+  --el-color-primary-light-7: color-mix(in srgb, var(--app-color-primary) 30%, var(--app-bg-card));
+  --el-color-primary-light-8: color-mix(in srgb, var(--app-color-primary) 20%, var(--app-bg-card));
+  --el-color-primary-light-9: color-mix(in srgb, var(--app-color-primary) 10%, var(--app-bg-card));
   --el-color-primary-dark-2: var(--app-color-primary);
 
   /* --- Backgrounds --- */
@@ -138,8 +138,8 @@
   border-color: transparent !important;
 }
 .el-tag--primary {
-  background-color: rgba(64, 158, 255, 0.15) !important;
-  color: #409eff !important;
+  background-color: var(--app-accent-bg-soft) !important;
+  color: var(--app-accent-text) !important;
 }
 .el-tag--success {
   background-color: rgba(103, 194, 58, 0.15) !important;
@@ -454,3 +454,19 @@ h1, h2, h3, h4, h5, h6 {
 .el-drawer__body {
   color: var(--app-text-main) !important;
 }
+
+.el-button { min-height:40px;box-shadow:none; }.el-button--primary { color:var(--app-btn-primary-text)!important; }
+.el-dialog { max-width:calc(100vw - 32px);border-radius:var(--app-radius-card); }.el-input__wrapper,.el-select__wrapper { min-height:42px; }.el-card { box-shadow:var(--app-shadow-card)!important; }
+@media(max-width:768px) { .el-button { min-height:44px; }.el-message-box { max-width:calc(100vw - 32px); } }
+
+.el-radio-button.is-active .el-radio-button__inner,
+.el-pagination.is-background .el-pager li.is-active {
+  color: var(--app-btn-primary-text) !important;
+}
+.el-button:not(.el-button--primary):not(.el-button--danger):not(.el-button--warning):not(.el-button--success):not(.el-button--info):not(.is-text):not(.is-link) {
+  background-color: var(--app-bg-card);
+  color: var(--app-text-main);
+  border-color: var(--app-border);
+}
+.el-button:not(.el-button--primary):hover { color: var(--app-color-primary); }
+.el-empty__image { width: 80px !important; opacity: .6; }

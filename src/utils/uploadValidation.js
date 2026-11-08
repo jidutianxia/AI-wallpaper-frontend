@@ -45,3 +45,12 @@ export const validateUploadCount = (files, maxCount) => {
   }
   return { valid: true, message: '' }
 }
+
+export const validateMediaFile = (file) => {
+  if (file?.type?.startsWith('video/')) {
+    if (!['video/mp4', 'video/webm'].includes(file.type) || !/\.(mp4|webm)$/i.test(file.name || '')) return { valid: false, message: '仅支持 MP4 / WebM 视频' }
+    if (bytesToMB(file.size) > 100) return { valid: false, message: '视频大小不能超过 100MB' }
+    return { valid: true, message: '' }
+  }
+  return validateImageFile(file)
+}

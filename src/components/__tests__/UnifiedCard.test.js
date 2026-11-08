@@ -13,10 +13,12 @@ describe('UnifiedCard', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     push.mockClear()
+    vi.stubGlobal('IntersectionObserver', undefined)
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('renders card data and navigates to detail by id', async () => {
@@ -67,17 +69,19 @@ describe('UnifiedCard', () => {
       }
     }))
 
-    expect(wrapper.find('img').attributes('src')).toBe('/a.jpg')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('img').attributes('src')).toContain('/a.jpg')
 
     await wrapper.trigger('mouseenter')
     vi.advanceTimersByTime(1200)
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('img').attributes('src')).toBe('/b.jpg')
+    expect(wrapper.find('img').attributes('src')).toContain('/b.jpg')
 
     await wrapper.trigger('mouseleave')
 
-    expect(wrapper.find('img').attributes('src')).toBe('/a.jpg')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('img').attributes('src')).toContain('/a.jpg')
   })
 
   it('shows a placeholder and retry control when an image fails', async () => {
@@ -88,13 +92,14 @@ describe('UnifiedCard', () => {
       }
     }))
 
+    await wrapper.vm.$nextTick()
     await wrapper.find('img').trigger('error')
 
-    expect(wrapper.find('img').attributes('src')).toContain('data:image/svg+xml')
-    expect(wrapper.find('.image-retry').exists()).toBe(true)
+    expect(wrapper.find('.media-surface').classes()).toContain('is-failed')
+    expect(wrapper.find('.media-retry').exists()).toBe(true)
 
-    await wrapper.find('.image-retry').trigger('click')
+    await wrapper.find('.media-retry').trigger('click')
 
-    expect(wrapper.find('img').attributes('src')).toBe('/missing.jpg')
+    expect(wrapper.find('img').attributes('src')).toContain('/missing.jpg')
   })
 })

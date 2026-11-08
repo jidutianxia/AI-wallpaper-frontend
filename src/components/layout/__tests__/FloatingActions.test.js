@@ -19,18 +19,11 @@ describe('FloatingActions', () => {
     window.scrollTo = vi.fn()
   })
 
-  it('toggles theme, side, settings, and scroll actions', async () => {
+  it('scrolls back to the top', async () => {
     const wrapper = mount(FloatingActions, mountOptions())
     const buttons = wrapper.findAll('button')
 
     await buttons[0].trigger('click')
-    await buttons[1].trigger('click')
-    await buttons[2].trigger('click')
-    await buttons[3].trigger('click')
-
-    expect(toggleTheme).toHaveBeenCalledOnce()
-    expect(wrapper.classes()).toContain('left')
-    expect(wrapper.emitted('settings')).toHaveLength(1)
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
 })

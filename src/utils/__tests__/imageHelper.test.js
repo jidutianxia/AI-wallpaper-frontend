@@ -31,7 +31,7 @@ describe('imageHelper', () => {
   it('provides avatar fallback and keeps post objects intact', () => {
     const post = { images: [{ url: '/a.jpg' }] }
 
-    expect(getAvatarUrl('')).toBe('https://i.pravatar.cc/150?u=default')
+    expect(getAvatarUrl('')).toBe('/avatar.svg')
     expect(normalizePostImages(post)).toBe(post)
   })
 

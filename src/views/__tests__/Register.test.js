@@ -41,24 +41,35 @@ describe('Register view', () => {
   it('requires username and password', async () => {
     const wrapper = mount(Register, mountOptions())
 
-    await wrapper.find('button').trigger('click')
+    await wrapper.find('.auth-submit').trigger('click')
 
-    expect(ElMessage.warning).toHaveBeenCalledWith('请输入用户名和密码')
+    expect(wrapper.find('[role=alert]').text()).toBe('请输入用户名和密码')
     expect(register).not.toHaveBeenCalled()
   })
 
-  it('registers and opens login guidance', async () => {
+  it('does not send mismatched passwords to the API', async () => {
+    const wrapper = mount(Register, mountOptions())
+    wrapper.vm.form.username = 'alice'
+    wrapper.vm.form.password = 'secret'
+    wrapper.vm.form.confirmPassword = 'different'
+    await wrapper.vm.submit()
+    expect(register).not.toHaveBeenCalled()
+    expect(wrapper.vm.passwordError).toBe('两次输入的密码不一致')
+  })
+
+  it('registers with matching passwords and proceeds without another login', async () => {
     const wrapper = mount(Register, mountOptions())
 
     wrapper.vm.form.username = 'alice'
     wrapper.vm.form.email = 'alice@example.com'
     wrapper.vm.form.password = 'secret'
+    wrapper.vm.form.confirmPassword = 'secret'
     await wrapper.vm.submit()
     await flushPromises()
 
-    expect(register).toHaveBeenCalledWith(wrapper.vm.form)
-    expect(ElMessage.success).toHaveBeenCalledWith('注册成功，请登录')
+    expect(register).toHaveBeenCalledWith({ username: 'alice', email: 'alice@example.com', password: 'secret' })
+    expect(ElMessage.success).toHaveBeenCalledWith('账户已创建')
     expect(push).toHaveBeenCalledWith('/')
-    expect(requestAuth).toHaveBeenCalledWith({ reason: 'registered' })
+    expect(requestAuth).not.toHaveBeenCalled()
   })
 })

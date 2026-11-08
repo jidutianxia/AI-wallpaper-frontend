@@ -4,7 +4,7 @@ import UserProfile from '../UserProfile.vue'
 import {
   followUser,
   getOtherUserLikedPosts,
-  getOtherUserPostFavorites,
+  getOtherUserWallpaperFavorites,
   getUserCommunityPosts,
   getUserProfile
 } from '@/api'
@@ -26,7 +26,7 @@ vi.mock('@/api', () => ({
   followUser: vi.fn(),
   getMyCommunityPosts: vi.fn(),
   getOtherUserLikedPosts: vi.fn(),
-  getOtherUserPostFavorites: vi.fn(),
+  getOtherUserWallpaperFavorites: vi.fn(),
   getUserCommunityPosts: vi.fn(),
   getUserLikes: vi.fn(),
   getUserPostFavorites: vi.fn(),
@@ -37,8 +37,8 @@ vi.mock('@/api', () => ({
 vi.mock('@/components/UnifiedCard.vue', () => ({
   default: {
     name: 'UnifiedCard',
-    props: ['title'],
-    template: '<article class="mock-card">{{ title }}</article>'
+    props: ['title', 'to'],
+    template: '<a class="mock-card" :href="to">{{ title }}</a>'
   }
 }))
 
@@ -59,8 +59,8 @@ describe('UserProfile view', () => {
     vi.mocked(getOtherUserLikedPosts).mockResolvedValue({
       items: [{ id: 11, title: 'Liked Post', images: ['/liked.jpg'], author: { username: 'bob' } }]
     })
-    vi.mocked(getOtherUserPostFavorites).mockResolvedValue({
-      items: [{ id: 12, title: 'Favorite Post', cover: { url: '/fav.jpg' }, author: { username: 'carol' } }]
+    vi.mocked(getOtherUserWallpaperFavorites).mockResolvedValue({
+      items: [{ id: 12, title: 'Favorite Wallpaper', thumbUrl: '/fav.jpg' }]
     })
     vi.mocked(followUser).mockResolvedValue({})
   })
@@ -75,7 +75,7 @@ describe('UserProfile view', () => {
     expect(wrapper.vm.followersCount).toBe(12)
     expect(wrapper.text()).toContain('Post A')
     expect(wrapper.text()).toContain('Liked Post')
-    expect(wrapper.text()).toContain('Favorite Post')
+    expect(wrapper.find('a[href="/detail/12"]').text()).toBe('Favorite Wallpaper')
 
     await wrapper.vm.toggleFollow()
     expect(followUser).toHaveBeenCalledWith('7')

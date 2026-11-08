@@ -30,7 +30,7 @@ export function useInteraction() {
 
     // Prevent duplicate clicks on the same target
     if (target._interacting) return false
-    target._interacting = true
+    target._interacting = type
 
     // 字段兼容处理
     // 后端返回字段可能不统一 (liked vs isLiked)，这里做归一化
@@ -100,7 +100,7 @@ export function useInteraction() {
     } finally {
       // Throttle unlock
       setTimeout(() => {
-        target._interacting = false
+        target._interacting = null
       }, 500)
     }
   }

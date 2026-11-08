@@ -3,7 +3,7 @@
     <div class="container">
       <el-card class="composer">
         <div class="composer-header">
-          <el-button circle text :icon="ArrowLeftBold" @click="goBack">
+          <el-button circle text aria-label="返回社区" title="返回社区" :icon="ArrowLeftBold" @click="goBack">
           </el-button>
 
           <h2 class="title">发布分享</h2>
@@ -17,7 +17,7 @@
               placeholder="分享你的创作说明" input-style="background-color: var(--app-bg-card);" />
           </el-form-item>
           <el-form-item label="标签">
-            <el-select ref="tagSelectRef" v-model="form.tags" multiple filterable allow-create default-first-option
+            <el-select :reserve-keyword="false" ref="tagSelectRef" v-model="form.tags" multiple filterable allow-create default-first-option
               placeholder="选择或输入标签" @change="handleTagChange">
               <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
             </el-select>
@@ -26,7 +26,7 @@
             <el-upload class="upload" v-model:file-list="fileList" :http-request="onHttpRequest"
               :before-upload="beforeUpload"
               :on-success="onUploadSuccess" :on-error="onUploadError" :on-exceed="onExceed" :limit="10" multiple
-              list-type="picture-card" accept="image/*">
+              list-type="picture-card" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
               <template #default>
                 <el-icon>
                   <Plus />
@@ -34,13 +34,13 @@
               </template>
               <template #file="{ file }">
                 <div class="custom-file-preview">
-                  <img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+                  <MediaSurface class="el-upload-list__item-thumbnail" :src="file.url" :video="file.raw?.type?.startsWith('video/')" :poster="file.poster" :alt="file.name" />
                   <span class="el-upload-list__item-actions">
-                    <span class="el-upload-list__item-delete" @click="handleRemove(file)">
+                    <button type="button" class="el-upload-list__item-delete" aria-label="移除图片" title="移除图片" @click="handleRemove(file)">
                       <el-icon>
                         <Delete />
                       </el-icon>
-                    </span>
+                    </button>
                   </span>
                   <div class="wallpaper-option">
                     <el-checkbox v-model="file.isWallpaper" label="收录为壁纸" size="small"
@@ -86,12 +86,15 @@
 </template>
 
 <script setup>
+import MediaSurface from '@/components/MediaSurface.vue'
+import { normalizeCategories } from '@/utils/normalizers'
 import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, ArrowLeft, ArrowLeftBold } from '@element-plus/icons-vue'
 import { uploadCommunityImage, createCommunityPost, getCategories } from '@/api'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { validateImageFile, validateUploadCount } from '@/utils'
+import { validateUploadCount } from '@/utils'
+import { validateMediaFile } from '@/utils/uploadValidation'
 
 const router = useRouter()
 
@@ -117,7 +120,7 @@ const confirmLeave = () => {
 }
 
 const goBack = () => {
-  if (confirmLeave()) router.push('/community')
+  router.push('/community')
 }
 
 const handleBeforeUnload = (event) => {
@@ -143,7 +146,7 @@ onBeforeRouteLeave((_to, _from, next) => {
 const loadCategories = async () => {
   try {
     const cats = await getCategories()
-    wallpaperCategories.value = (cats || []).map(c => ({ label: c.name, value: c.id }))
+    wallpaperCategories.value = normalizeCategories(cats || []).map(c => ({ label: c.name, value: c.name }))
   } catch { }
 }
 loadCategories()
@@ -151,11 +154,11 @@ loadCategories()
 // 上传入口统一使用 validateImageFile/validateUploadCount，保持拖拽、超限和手动请求的错误提示一致。
 const onExceed = (files) => {
   const result = validateUploadCount([...(fileList.value || []), ...(files || [])], 10)
-  ElMessage.warning(result.message || '最多只能上传 10 张图片')
+  ElMessage.warning(result.message || '最多只能上传 10 个文件')
 }
 
 const beforeUpload = (file) => {
-  const result = validateImageFile(file, { maxSizeMB: 10 })
+  const result = validateMediaFile(file)
   if (!result.valid) ElMessage.error(result.message)
   return result.valid
 }
@@ -172,7 +175,7 @@ const updateUploadState = (rawFile, patch) => {
 const onHttpRequest = async (options) => {
   const { file, onSuccess, onError, onProgress } = options
   // 自定义 http-request 再校验一次，避免绕过 before-upload 时把非法文件送到后端。
-  const validation = validateImageFile(file, { maxSizeMB: 10 })
+  const validation = validateMediaFile(file)
   if (!validation.valid) {
     ElMessage.error(validation.message)
     updateUploadState(file, { uploadStatus: 'fail', uploadError: validation.message })
@@ -218,6 +221,7 @@ const onUploadSuccess = (response, file) => {
   
   if (remoteUrl) {
     file.url = remoteUrl
+    file.poster = response?.thumbUrl || response?.data?.thumbUrl
   }
 }
 const onUploadError = (_error, file) => {
@@ -259,6 +263,7 @@ const handleWallpaperCheck = (checked, file) => {
 }
 
 const publish = async () => {
+  if (publishing.value) return
   if (!form.value.title || !form.value.content) { ElMessage.warning('请填写标题与内容'); return }
 
   // Validate wallpaper submissions
@@ -268,21 +273,21 @@ const publish = async () => {
   for (const [index, f] of fileList.value.entries()) {
     if (f.url) {
       if (f.uploadStatus === 'uploading') {
-        ElMessage.error(`第 ${index + 1} 张图片仍在上传，请稍后再发布`)
+        ElMessage.error(`第 ${index + 1} 个文件仍在上传，请稍后再发布`)
         return
       }
       if (f.uploadStatus === 'fail') {
-        ElMessage.error(`第 ${index + 1} 张图片上传失败，请重传后再发布`)
+        ElMessage.error(`第 ${index + 1} 个文件上传失败，请重传后再发布`)
         return
       }
       if (f.url.startsWith('blob:')) {
-        ElMessage.error(`第 ${index + 1} 张图片上传未完成或失败，请删除后重试`)
+        ElMessage.error(`第 ${index + 1} 个文件上传未完成或失败，请删除后重试`)
         return
       }
       validImages.push(f.url)
       if (f.isWallpaper) {
         if (!f.wallpaperCategory) {
-          ElMessage.warning(`请为第 ${index + 1} 张图片选择壁纸分类`)
+          ElMessage.warning(`请为第 ${index + 1} 个文件选择壁纸分类`)
           return
         }
         submissions.push({
@@ -320,7 +325,7 @@ const reset = () => {
 const tagSelectRef = ref(null)
 
 const handleTagChange = () => {
-  if (tagSelectRef.value) {
+  if (tagSelectRef.value?.states) {
     // 核心代码：强制清空输入框正在输入的搜索文本
     tagSelectRef.value.states.inputValue = ''
     // 或者使用官方推荐的 query 变量（取决于 Element Plus 版本）

@@ -48,7 +48,7 @@ describe('api wrappers', () => {
     expect(request.put).toHaveBeenCalledWith('/wallpapers/5/tags', { tags: ['nature'] })
     expect(request.put).toHaveBeenCalledWith('/wallpapers/5', { title: 'New' })
     expect(request.delete).toHaveBeenCalledWith('/wallpapers/5')
-    expect(request.get).toHaveBeenCalledWith('/wallpapers/5/download')
+    expect(request.get).toHaveBeenCalledWith('/wallpapers/5/download', { params: { redirect: false } })
     expect(request.post).toHaveBeenCalledWith('/wallpapers/5/like')
     expect(request.post).toHaveBeenCalledWith('/wallpapers/5/favorite')
     expect(request.post).toHaveBeenCalledWith('/wallpapers/submit-from-post', { postId: 9 })
@@ -82,7 +82,8 @@ describe('api wrappers', () => {
     const onUploadProgress = vi.fn()
     await communityApi.uploadCommunityImage(formData, {
       headers: { 'X-Trace-Id': 'abc' },
-      onUploadProgress
+      onUploadProgress,
+      timeout: 180000
     })
 
     expect(request.get).toHaveBeenCalledWith('/community/posts', { params: { tag: 'art' } })
@@ -107,7 +108,8 @@ describe('api wrappers', () => {
         'Content-Type': 'multipart/form-data',
         'X-Trace-Id': 'abc'
       },
-      onUploadProgress
+      onUploadProgress,
+      timeout: 180000
     })
   })
 
@@ -145,7 +147,7 @@ describe('api wrappers', () => {
     await userApi.getRecommendedUsers({ page: 1 })
     await userApi.getUserCommunityPosts(8, { page: 1 })
     await userApi.getOtherUserLikedPosts(8, { page: 1 })
-    await userApi.getOtherUserPostFavorites(8, { page: 1 })
+    await userApi.getOtherUserWallpaperFavorites(8, { page: 1 })
 
     request.get.mockResolvedValueOnce(responseOf({
       records: [

@@ -43,7 +43,7 @@ describe('Category view', () => {
       page: 1,
       size: 9,
       resolution: '',
-      sortBy: 'likes'
+      sort: 'hot'
     })
     expect(wrapper.text()).toContain('Forest')
   })

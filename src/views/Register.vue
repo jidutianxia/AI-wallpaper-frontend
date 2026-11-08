@@ -1,29 +1,21 @@
 <template>
-  <div class="register">
-    <div class="container">
-      <el-card class="panel">
-        <h2 class="title">创建账户</h2>
-        <el-form :model="form" label-width="80px">
-          <el-form-item label="用户名">
-            <el-input v-model="form.username" maxlength="30" show-word-limit />
-          </el-form-item>
-          <el-form-item label="邮箱">
-            <el-input v-model="form.email" type="email" />
-          </el-form-item>
-          <el-form-item label="密码">
-            <el-input v-model="form.password" type="password" show-password />
-          </el-form-item>
-          <div class="actions">
-            <el-button type="primary" :loading="loading" @click="submit">注册</el-button>
-            <el-button @click="goLogin">已有账号？登录</el-button>
-          </div>
-        </el-form>
-      </el-card>
-    </div>
+  <div class="auth-register-page">
+    <AuthSurface mode="register" @switch="goLogin" @close="router.push('/')">
+      <el-form :model="form" label-position="top" class="auth-form" @submit.prevent="submit" @keyup.enter="!$event.isComposing && submit()">
+        <el-form-item label="用户名"><el-input v-model="form.username" autocomplete="username" aria-label="用户名" maxlength="30"><template #prefix><el-icon><User /></el-icon></template></el-input></el-form-item>
+        <el-form-item label="邮箱（选填）"><el-input v-model="form.email" autocomplete="email" aria-label="邮箱" type="email"><template #prefix><el-icon><Message /></el-icon></template></el-input></el-form-item>
+        <el-form-item label="密码"><el-input v-model="form.password" autocomplete="new-password" aria-label="密码" type="password" show-password><template #prefix><el-icon><Lock /></el-icon></template></el-input></el-form-item>
+        <el-form-item label="确认密码" :error="passwordError"><el-input ref="confirmInput" v-model="form.confirmPassword" autocomplete="new-password" aria-label="确认密码" type="password" show-password @input="passwordError = ''"><template #prefix><el-icon><Lock /></el-icon></template></el-input></el-form-item>
+        <p v-if="error" role="alert" class="auth-error">{{ error }}</p>
+        <el-button class="auth-submit" type="primary" :loading="loading" @click="submit"><span>创建账户</span><el-icon v-if="!loading"><Right /></el-icon></el-button>
+      </el-form>
+    </AuthSurface>
   </div>
 </template>
 
 <script setup>
+import AuthSurface from '@/components/AuthSurface.vue'
+import { User, Message, Lock, Right } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -32,19 +24,27 @@ import { requestAuth } from '@/utils/authEvents'
 
 const router = useRouter()
 const userStore = useUserStore()
-const form = ref({ username: '', email: '', password: '' })
+const form = ref({ username: '', email: '', password: '', confirmPassword: '' })
 const loading = ref(false)
+const error = ref('')
+const passwordError = ref('')
+const confirmInput = ref(null)
 
 const submit = async () => {
-  if (!form.value.username || !form.value.password) { ElMessage.warning('请输入用户名和密码'); return }
+  if (loading.value) return
+  error.value = ''
+  if (!form.value.username.trim() || !form.value.password) { error.value = '请输入用户名和密码'; return }
+  if (form.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) { error.value = '请输入有效的邮箱地址'; return }
+  if (form.value.password !== form.value.confirmPassword) { passwordError.value = '两次输入的密码不一致'; confirmInput.value?.focus?.(); return }
+  passwordError.value = ''
   loading.value = true
   try {
-    await userStore.register(form.value)
-    ElMessage.success('注册成功，请登录')
+    const { confirmPassword, ...payload } = form.value
+    await userStore.register(payload)
+    ElMessage.success('账户已创建')
     router.push('/')
-    requestAuth({ reason: 'registered' })
   } catch (e) {
-    ElMessage.error(e.response?.data?.message || e.message)
+    error.value = e.response?.data?.message || '注册未完成，请重试'
   } finally { loading.value = false }
 }
 const goLogin = () => {
@@ -52,19 +52,3 @@ const goLogin = () => {
   requestAuth({ reason: 'login-link' })
 }
 </script>
-
-<style scoped>
-.register { padding: 2rem 0; }
-.container { max-width: 560px; margin: 0 auto; padding: 0 2rem; }
-.panel {
-  border-radius: 16px;
-  box-shadow: var(--app-shadow-card);
-  border: 1px solid var(--app-border);
-  background: var(--app-bg-card);
-  --el-card-bg-color: var(--app-bg-card);
-  --el-card-border-color: var(--app-border);
-}
-.title { margin-bottom: 1rem; color: var(--app-text-main); }
-.actions { display: flex; gap: 12px; justify-content: flex-end; }
-.actions :deep(.el-button) { border-radius: 8px; box-shadow: var(--app-shadow-card); }
-</style>

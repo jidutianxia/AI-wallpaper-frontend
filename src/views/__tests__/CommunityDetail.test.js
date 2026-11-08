@@ -8,6 +8,7 @@ import {
 } from '@/api'
 import { mountOptions } from '@/test/testUtils'
 
+vi.mock('@/utils/storage', () => ({ getLocalStorageItem: () => 'test-token' }))
 const push = vi.fn()
 const toggleInteraction = vi.fn()
 const share = vi.fn()

@@ -25,9 +25,8 @@ export function useTheme() {
       isDark.value = false
       html.classList.remove('dark')
     } else {
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      isDark.value = prefersDark
-      if (prefersDark) html.classList.add('dark')
+      isDark.value = true
+      html.classList.add('dark')
     }
   }
 

@@ -100,3 +100,11 @@ export const normalizePagedResult = (result, itemNormalizer = (item) => item) =>
     size: toNumber(source?.size ?? source?.pageSize ?? source?.limit ?? items.length, items.length)
   }
 }
+
+// The API groups actual categories alongside virtual sort/resolution/color menus.
+// Only image subjects are valid upload categories and category filters.
+export const normalizeCategories = (nodes = []) => nodes.flatMap(node => {
+  if (!node.children?.length) return [node]
+  if (![2, 3].includes(Number(node.id))) return []
+  return node.children
+})

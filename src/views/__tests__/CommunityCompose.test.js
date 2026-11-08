@@ -78,7 +78,7 @@ describe('CommunityCompose view', () => {
 
     await wrapper.vm.publish()
 
-    expect(ElMessage.error).toHaveBeenCalledWith('第 1 张图片上传失败，请重传后再发布')
+    expect(ElMessage.error).toHaveBeenCalledWith('第 1 个文件上传失败，请重传后再发布')
     expect(createCommunityPost).not.toHaveBeenCalled()
   })
 

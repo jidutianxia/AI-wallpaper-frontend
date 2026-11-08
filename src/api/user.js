@@ -47,7 +47,7 @@ export const getRecommendedUsers = (params) => request.get('/users/recommended',
 // Public user resources
 export const getUserCommunityPosts = (userId, params) => request.get(`/community/users/${userId}/posts`, { params }).then(unwrap)
 export const getOtherUserLikedPosts = (userId, params) => request.get(`/users/${userId}/likes`, { params }).then(unwrap)
-export const getOtherUserPostFavorites = (userId, params) => request.get(`/users/${userId}/favorites`, { params }).then(unwrap)
+export const getOtherUserWallpaperFavorites = (userId, params) => request.get(`/users/${userId}/favorites`, { params }).then(unwrap)
 
 // Aliases
 export const getMyFavorites = getMyWallpapers

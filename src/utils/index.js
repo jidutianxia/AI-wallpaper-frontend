@@ -2,6 +2,8 @@
  * 工具函数库
  */
 
+import { isSafeExternalUrl, openSecureWindow } from './urlSecurity'
+
 export * from './normalizers'
 export * from './uploadValidation'
 export * from './urlSecurity'
@@ -61,13 +63,17 @@ export const formatFileSize = (bytes) => {
 }
 
 // 下载文件
-export const downloadFile = (url, filename) => {
+export const downloadFile = (url, filename = '') => {
+  if (!isSafeExternalUrl(url)) return false
+  const source = new URL(url, window.location.origin)
+  if (source.origin !== window.location.origin) return openSecureWindow(source.href)
   const link = document.createElement('a')
-  link.href = url
+  link.href = source.href
   link.download = filename
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  return true
 }
 
 // 格式化作者名称

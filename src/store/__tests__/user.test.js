@@ -63,11 +63,15 @@ describe('user store', () => {
     expect(notifyAuthChanged).not.toHaveBeenCalled()
   })
 
-  it('proxies registration to the user api', async () => {
-    vi.mocked(registerApi).mockResolvedValue({ id: 2 })
+  it('persists the registration session and notifies logged-in views', async () => {
+    const response = { id: 2, token: 'new-token', userInfo: { id: 2, username: 'bob' } }
+    vi.mocked(registerApi).mockResolvedValue(response)
     const store = useUserStore()
 
-    await expect(store.register({ username: 'bob' })).resolves.toEqual({ id: 2 })
+    await expect(store.register({ username: 'bob' })).resolves.toEqual(response)
+    expect(store.isAuthenticated).toBe(true)
+    expect(setLocalStorageItem).toHaveBeenCalledWith('token', 'new-token')
+    expect(notifyAuthChanged).toHaveBeenCalledWith({ type: 'login' })
   })
 
   it('deduplicates concurrent fetchUser requests and resets fetchPromise', async () => {

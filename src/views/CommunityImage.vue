@@ -12,29 +12,7 @@
       </div>
       <div class="image-content">
         <div class="image-display">
-          <div class="image-container">
-            <el-image 
-              :src="imageUrl" 
-              class="image" 
-              :preview-src-list="[imageUrl]" 
-              :initial-index="0"
-              fit="contain"
-              hide-on-click-modal
-              lazy
-            >
-              <template #placeholder>
-                <div class="image-slot placeholder-slot">
-                  <el-skeleton-item variant="image" style="width: 100%; height: 100%; min-height: 300px" />
-                </div>
-              </template>
-              <template #error>
-                <div class="image-slot error-slot">
-                  <el-icon><IconPicture /></el-icon>
-                  <span>加载失败</span>
-                </div>
-              </template>
-            </el-image>
-          </div>
+          <WallpaperStage :image="{ ...imageMeta, url: imageUrl, title: post?.title || '作品' }" />
         </div>
         <div class="side-info" v-if="post">
             <div class="info-header">
@@ -66,20 +44,9 @@
                   <el-icon :size="18" class="action-icon"><Upload /></el-icon>
                   收录为壁纸
                 </el-button>
-                <el-button type="primary" size="large" :icon="Download" @click="download" round>下载原图</el-button>
-                <el-button 
-                  :class="{ 'liked': imageMeta.liked }"
-                  size="large" 
-                  round
-                  @click="toggleImageLike"
-                >
-                  <el-icon :size="18" class="action-icon">
-                     <svg v-if="imageMeta.liked" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="18" height="18"><path fill="currentColor" d="M923 283.6a260.04 260.04 0 0 0-56.9-82.8 264.4 264.4 0 0 0-84-55.5A260 260 0 0 0 679.7 125c-49.3 0-97.4 13.5-139.2 39-10 6.1-19.5 12.8-28.5 20.1-9-7.3-18.5-14-28.5-20.1-41.8-25.5-89.9-39-139.2-39-35.5 0-69.9 6.8-102.4 20.3-31.4 13-59.7 31.7-84 55.5a258.44 258.44 0 0 0-56.9 82.8c-13.9 32.3-21 66.6-21 101.9 0 33.3 6.8 68 20.3 103.3 11.3 29.5 27.5 60.1 48.2 91 32.8 48.9 77.9 99.9 133.9 151.6 92.8 85.7 184.7 144.9 188.6 147.3l23.7 15.2c10.5 6.7 24 6.7 34.5 0l23.7-15.2c3.9-2.5 95.7-61.6 188.6-147.3 56-51.7 101.1-102.7 133.9-151.6 20.7-30.9 37-61.5 48.2-91 13.5-35.3 20.3-70 20.3-103.3.1-35.3-7-69.6-20.9-101.9z"/></svg>
-                     <svg v-else viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="18" height="18"><path fill="currentColor" d="M699.6 148.8c-76.8 0-146.4 40.8-187.6 102.4C470.4 189.6 401.2 148.8 324 148.8 194.8 148.8 90 253.6 90 382.8c0 178 184.4 330 384.4 468.4 12.8 8.8 29.2 8.8 42 0C739.2 702.4 934 544.4 934 382.8c-0.4-129.2-105.2-234-234.4-234z m0-64c164.4 0 298.4 133.6 298.4 298 0 205.6-224.4 394-472.4 559.6-9.2 6-21.2 6-30.4 0C247.2 776.8 26 588.4 26 382.8 26 218.4 160 84.8 324.4 84.8c92 0 174.4 42 228.4 107.2 54-65.2 136.4-107.2 228.4-107.2z" transform="scale(0.9) translate(50,50)"/></svg>
-                   </el-icon>
-                  {{ imageMeta.liked ? '已喜欢' : '喜欢' }}
-                </el-button>
-                <el-button size="large" round :icon="Warning" @click="reportImage">Report</el-button>
+                <el-button type="primary" size="large" :icon="Download" :loading="downloading" @click="download" round>下载原图</el-button>
+                <ReactionButton :active="Boolean(imageMeta.liked)" :pending-action="imageMeta._interacting" :count="Number(imageMeta.likes || 0)" @click="toggleImageLike" /><ReactionButton kind="favorite" :active="Boolean(imageMeta.favorited)" :pending-action="imageMeta._interacting" @click="toggleImageFavorite" />
+                <el-button size="large" round :icon="Warning" @click="reportImage">举报</el-button>
               </div>
             </div>
             <div class="info-section">
@@ -100,7 +67,7 @@
             </div>
             <div class="info-section" v-if="post.author">
               <h3>发布者</h3>
-              <div class="uploader-info" @click="goProfile(post.author.id)" style="cursor:pointer">
+              <div class="uploader-info" role="link" tabindex="0" @keydown.enter="goProfile(post.author.id)" @click="goProfile(post.author.id)" style="cursor:pointer">
                 <el-avatar :src="getAvatarUrl(post.author.avatarUrl)" :size="48">{{ post.author.username?.[0] }}</el-avatar>
                 <div class="uploader-details">
                   <div class="uploader-name">{{ post.author.username }}</div>
@@ -117,7 +84,7 @@
       </el-dialog>
       
       <!-- Wallpaper Submission Dialog -->
-      <el-dialog v-model="submitDialogVisible" title="收录为壁纸" width="500px">
+      <el-dialog v-model="submitDialogVisible" title="收录为壁纸" width="min(500px, 92vw)">
         <el-form :model="submitForm" label-position="top">
           <el-form-item label="壁纸分类 (必填)">
             <el-select v-model="submitForm.category" placeholder="请选择分类" style="width: 100%">
@@ -146,14 +113,17 @@
 </template>
 
 <script setup>
+import { normalizeCategories } from '@/utils/normalizers'
+import ReactionButton from '@/components/ReactionButton.vue'
+import WallpaperStage from '@/components/WallpaperStage.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, ArrowLeftBold, Calendar, ArrowRight, Picture as IconPicture, Upload, Warning } from '@element-plus/icons-vue'
-import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, submitWallpaperFromPost, getCategories, reportContent } from '@/api'
+import { getCommunityPost, getCommunityPostImageMeta, downloadCommunityPostImage, downloadWallpaperApi, submitWallpaperFromPost, getCategories, reportContent } from '@/api'
 import { useUserStore } from '@/store/user'
 import { getImageUrl, getAvatarUrl } from '@/utils/imageHelper'
-import { normalizePost, openSecureWindow } from '@/utils'
+import { downloadFile, normalizePost } from '@/utils'
 import { useShare } from '@/composables/useShare'
 import AppState from '@/components/AppState.vue'
 import { requestAuth } from '@/utils/authEvents'
@@ -181,7 +151,7 @@ const submitting = ref(false)
 const loadCategories = async () => {
   try {
     const cats = await getCategories()
-    wallpaperCategories.value = (cats || []).map(c => ({ label: c.name, value: c.id }))
+    wallpaperCategories.value = normalizeCategories(cats || []).map(c => ({ label: c.name, value: c.name }))
   } catch {}
 }
 loadCategories()
@@ -226,9 +196,7 @@ const goPost = () => router.push(`/community/post/${postId}`)
 const goProfile = (id) => { if (id) router.push(`/profile/${id}`) }
 const goWallpaper = () => {
   if (imageMeta.value.wallpaperInfo?.id) {
-    // Navigate to wallpaper detail (assuming such route exists, or use external link)
-    // For now, maybe just show a message or download
-    ElMessage.success('该图片已收录为壁纸')
+    router.push(`/detail/${imageMeta.value.wallpaperInfo.id}`)
   }
 }
 
@@ -237,27 +205,27 @@ const getDownloadUrl = (response) => {
   return response?.downloadUrl || response?.url || response?.href || response?.data?.downloadUrl || response?.data?.url || ''
 }
 
-const download = async () => { 
-  if (imageUrl.value) {
-    // Check if it is a wallpaper
-    if (imageMeta.value.wallpaperInfo) {
-      // If it is a wallpaper, guide user to the wallpaper detail page to download
-      router.push(`/detail/${imageMeta.value.wallpaperInfo.id}`)
+const downloading = ref(false)
+const download = async () => {
+  if (!imageUrl.value || downloading.value) return
+  downloading.value = true
+  try {
+    const wallpaperId = imageMeta.value.wallpaperInfo?.id
+    const response = wallpaperId
+      ? await downloadWallpaperApi(wallpaperId)
+      : await downloadCommunityPostImage(postId, index)
+    if (!downloadFile(getDownloadUrl(response))) {
+      ElMessage.warning('下载地址不可用')
       return
     }
-
-    try {
-      const response = await downloadCommunityPostImage(postId, index)
-      const downloadUrl = getDownloadUrl(response)
-      if (!downloadUrl || !openSecureWindow(downloadUrl)) {
-        ElMessage.warning('下载地址不可用')
-        return
-      }
-      imageMeta.value.downloads = Number(imageMeta.value.downloads || 0) + 1
-      ElMessage.success('开始下载')
-    } catch {
-      ElMessage.warning('该图片暂未收录为壁纸，可提醒作者上架')
+    if (!wallpaperId) {
+      imageMeta.value.downloads = response?.downloads ?? Number(imageMeta.value.downloads || 0) + 1
     }
+    ElMessage.success('开始下载')
+  } catch {
+    ElMessage.error('下载请求失败')
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -317,10 +285,6 @@ import { useInteraction } from '@/composables/useInteraction'
 
 const { toggleInteraction } = useInteraction()
 const toggleImageLike = async () => {
-  if (!imageMeta.value.wallpaperInfo) {
-    ElMessage.warning('可提醒作者上架壁纸，方便收藏壁纸')
-    return
-  }
   await toggleInteraction(imageMeta.value, 'like', 'image', { postId, imageIndex: index })
 }
 const toggleImageFavorite = async () => {
@@ -345,10 +309,10 @@ const reportImage = async () => {
     return
   }
   try {
-    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report image', {
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel',
-      inputPlaceholder: 'Spam, infringement, unsafe content, or broken metadata'
+    const { value } = await ElMessageBox.prompt('请简要说明问题', '举报图片', {
+      confirmButtonText: '提交',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如侵权、垃圾内容或错误的作品信息'
     })
     await reportContent({
       targetType: 'post_image',
@@ -356,9 +320,9 @@ const reportImage = async () => {
       reason: 'user_report',
       description: value || ''
     })
-    ElMessage.success('Report submitted')
+    ElMessage.success('举报已提交')
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('提交失败，请稍后重试')
   }
 }
 </script>

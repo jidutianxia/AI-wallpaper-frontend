@@ -19,6 +19,8 @@ export const getFullUrl = (url) => {
   const normalized = String(url).trim()
   if (!isSafeImageUrl(normalized)) return ''
   if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:image/')) return normalized
+  // Bundled frontend assets also work when Vite and the API use separate origins.
+  if (normalized.startsWith('/preview-assets/') || normalized === '/avatar.svg' || normalized === '/favicon.svg') return normalized
   // If url starts with /, append to server origin
   if (normalized.startsWith('/')) return `${SERVER_ORIGIN}${normalized}`
   // Otherwise assume it's relative to server origin as well (or handle edge cases)
@@ -46,7 +48,7 @@ export const getImageUrl = (image) => {
  * @returns {string} The valid avatar URL
  */
 export const getAvatarUrl = (url) => {
-  if (!url) return 'https://i.pravatar.cc/150?u=default' // Default placeholder
+  if (!url) return '/avatar.svg' // Default placeholder
   return getFullUrl(url)
 }
 

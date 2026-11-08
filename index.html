@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ai-wallpaper-frontend</title>
+    <title>AI 壁纸</title>
+    <meta name="description" content="发现 AI 创作的壁纸，收藏喜欢的画面，与创作者分享灵感。" />
     <style id="theme-preload">html{visibility:hidden}</style>
     <script>
       (function(){
@@ -14,13 +15,11 @@
           if (saved === 'dark') { html.classList.add('dark'); }
           else if (saved === 'light') { html.classList.remove('dark'); }
           else {
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) { html.classList.add('dark'); localStorage.setItem('theme','dark'); }
-            else { html.classList.remove('dark'); localStorage.setItem('theme','light'); }
+            html.classList.add('dark');
           }
           var s = document.getElementById('theme-preload');
           if (s) s.parentNode.removeChild(s);
-        } catch {}
+        } catch {} finally { document.getElementById("theme-preload")?.remove(); }
       })();
     </script>
   </head>

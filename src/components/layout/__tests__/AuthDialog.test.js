@@ -40,9 +40,9 @@ describe('AuthDialog', () => {
       props: { modelValue: true }
     }))
 
-    await wrapper.findAll('button').at(-1).trigger('click')
+    await wrapper.find('.auth-submit').trigger('click')
 
-    expect(ElMessage.warning).toHaveBeenCalled()
+    expect(wrapper.find('[role=alert]').text()).toContain('请输入用户名和密码')
     expect(userStore.login).not.toHaveBeenCalled()
   })
 
@@ -59,7 +59,7 @@ describe('AuthDialog', () => {
 
     await inputs[0].setValue('alice')
     await inputs[1].setValue('secret')
-    await wrapper.findAll('button').at(-1).trigger('click')
+    await wrapper.find('.auth-submit').trigger('click')
     await flushPromises()
 
     expect(userStore.login).toHaveBeenCalledWith({
@@ -75,7 +75,7 @@ describe('AuthDialog', () => {
       props: { modelValue: true }
     }))
 
-    await wrapper.findAll('button')[1].trigger('click')
+    await wrapper.find('[data-auth-switch]').trigger('click')
 
     expect(routerPush).toHaveBeenCalledWith('/register')
   })

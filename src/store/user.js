@@ -49,7 +49,14 @@ export const useUserStore = defineStore('user', {
     
     async register(payload) {
       try {
-        return await register(payload)
+        const data = await register(payload)
+        if (!data.token || !data.userInfo) throw new Error('注册响应缺少登录信息')
+        this.token = data.token
+        this.info = data.userInfo
+        this.isLoggedIn = true
+        setLocalStorageItem('token', data.token)
+        notifyAuthChanged({ type: 'login' })
+        return data
       } catch (error) {
         throw error
       }

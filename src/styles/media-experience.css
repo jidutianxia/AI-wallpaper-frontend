@@ -1,0 +1,68 @@
+/* Artwork provides the light; controls retain the platform's semantic colors. */
+.immersive-detail { isolation: isolate; position: relative; }
+.detail-ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; background-position: center; background-size: cover; filter: blur(7px) saturate(.8); opacity: .48; transform: scale(1.08); mask-image: linear-gradient(black,black 55%,transparent); }
+#app.platform .detail.immersive-detail .wallpaper-info { padding: 26px; background: color-mix(in srgb,var(--app-bg-card) 72%, transparent); border: 1px solid var(--app-border); box-shadow: var(--app-card-inner-glow),var(--app-shadow-card); backdrop-filter: blur(26px) saturate(1.15); border-radius: 24px; }
+#app.platform .detail.immersive-detail .studio-canvas { background: transparent; border-color: transparent; padding: 28px 12px; min-height: 420px; overflow: visible; }
+.immersive-detail .studio-ambient { opacity: .2; filter: blur(35px); transform: none; }
+.studio-frame { transition: width .55s cubic-bezier(.2,.7,.2,1), box-shadow .55s; }
+.studio-frame.frame-original { width: 100%; }
+.studio-frame.frame-original .media-surface { aspect-ratio: 16/10; height: auto; max-height: 64vh; background: transparent; }
+.studio-frame.frame-original .media-surface > img { object-fit: contain; }
+.studio-frame.frame-phone .media-surface { height: 100%; }
+.studio-frame.frame-desktop { aspect-ratio: 16/9; }
+.studio-frame.frame-desktop .media-surface { aspect-ratio: 16/9; height: 100%; }
+.studio-toolbar { width: fit-content; margin: 18px auto 0; padding: 5px; background: var(--app-glass); backdrop-filter: blur(20px); border: 1px solid var(--app-border); border-radius: 999px; box-shadow: var(--app-card-inner-glow); }
+.cinema-video-shell { width: 100%; height: 100%; display: grid; place-items: center; }
+.cinema-video-shell video { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+#app.platform .community .grid { grid-template-columns: 210px minmax(0, 820px) 240px; justify-content: center; gap: 24px; }
+#app.platform .community .grid > * { min-width: 0; }
+#app.platform .community .filters { flex-wrap: wrap; gap: 10px; }
+#app.platform .community .filter-input { flex: 1 1 190px; }
+#app.platform .community .filter-select { width: 140px; }
+#app.platform .community .post-header { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; }
+#app.platform .community .post-header .title { grid-column: 1/-1; grid-row: 2; margin: 4px 0 0; font-size: 21px; }
+#app.platform .community .post-header .tags { margin: 0; max-width: 240px; }
+#app.platform .community .author .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app.platform .community .images { grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: 0; }
+#app.platform .community .images.single-media { grid-template-columns: 1fr; }
+.post-media-link { border: 0; padding: 0; background: transparent; min-width: 0; border-radius: 14px; overflow: hidden; cursor: pointer; }
+#app.platform .community .image { width: 100%; height: auto; aspect-ratio: 16/9; display: block; }
+#app.platform .community .post .el-card__body { padding: 20px; }
+#app.platform .community .post-actions { gap: 12px; align-items: center; }
+#app.platform .community .right .users { display: grid; gap: 6px; }
+#app.platform .community .creator-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px 0; border: 0; border-radius: 0; background: transparent; cursor: pointer; }
+#app.platform .community .creator-row + .creator-row { border-top: 1px solid var(--app-border); }
+#app.platform .community .creator-row .avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; }
+#app.platform .community .creator-row .uinfo { min-width: 0; flex: 1; }
+#app.platform .community .creator-row .uname { font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+#app.platform .community .creator-row .uextra { font-size: 11px; margin-top: 5px; line-height: 1.5; }
+#app.platform .community .hot-list li { padding: 12px 0; border: 0; border-bottom: 1px solid var(--app-border); background: transparent; border-radius: 0; font-size: 13px; }
+.related-item .media-surface { aspect-ratio: 16/10; height: auto; }
+.auth-register-page .auth-content { padding-top: 48px; padding-bottom: 48px; }
+.auth-register-page .auth-art { min-height: 620px; }
+@media(max-width:1200px) { #app.platform .community .grid { grid-template-columns: 190px minmax(0,1fr); } }
+@media(max-width:768px) {
+ #app.platform .community .grid { display: block; }
+ #app.platform .community .post-header .tags { max-width: 140px; }
+ #app.platform .detail.immersive-detail .wallpaper-info { padding: 20px; border-radius: 18px; }
+ #app.platform .detail.immersive-detail .studio-canvas { min-height: 220px; padding: 12px 0; }
+ .auth-register-page .auth-art { min-height: 130px; }
+ .auth-register-page .auth-content { padding: 28px 24px 32px; }
+ .studio-frame.frame-original .media-surface { max-height: none; }
+}
+@media(prefers-reduced-motion:reduce) { .studio-frame { transition: none; } }
+
+@media(min-width:1024px) {
+ #app.platform .detail.immersive-detail .detail-content { grid-template-columns: minmax(0,1fr) 360px; gap: 34px; }
+}
+#app.platform .detail.immersive-detail .info-header { padding-bottom: 18px; }
+#app.platform .detail.immersive-detail .wallpaper-title { font-size: 27px; }
+#app.platform .detail.immersive-detail .info-section { margin-bottom: 20px; }
+
+html:not(.dark) .detail-ambient { opacity: .18; }
+.cinema-arriving .cinema-video-shell video { animation: cinema-resolve .65s ease both; }
+@media(prefers-reduced-motion:reduce) { .cinema-arriving .cinema-video-shell video { animation: none; } }
+
+#app.platform .detail .secondary-actions .btn-ghost-grey { width: 44px; min-width: 44px; padding: 0; border-radius: 50%; }
+
+#app.platform .detail.immersive-detail .report-action { margin-left: auto; width: 44px; height: 44px; padding: 0; border-radius: 50%; color: var(--app-text-secondary); }

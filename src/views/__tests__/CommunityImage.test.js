@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import CommunityImage from '../CommunityImage.vue'
 import {
   downloadCommunityPostImage,
+  downloadWallpaperApi,
   getCategories,
   getCommunityPost,
   getCommunityPostImageMeta,
@@ -27,6 +28,7 @@ vi.mock('@/store/user', () => ({
 
 vi.mock('@/api', () => ({
   downloadCommunityPostImage: vi.fn(),
+  downloadWallpaperApi: vi.fn(),
   getCategories: vi.fn(),
   getCommunityPost: vi.fn(),
   getCommunityPostImageMeta: vi.fn(),
@@ -54,6 +56,14 @@ vi.mock('element-plus', async () => {
 })
 
 describe('CommunityImage view', () => {
+  it('allows image likes before a post image is submitted as a wallpaper', async () => {
+    vi.mocked(getCommunityPostImageMeta).mockResolvedValueOnce({ likes: 3, wallpaperInfo: null })
+    const wrapper = mount(CommunityImage, mountOptions())
+    await flushPromises()
+    await wrapper.vm.toggleImageLike()
+    expect(toggleInteraction).toHaveBeenCalledWith(expect.anything(), 'like', 'image', { postId: 5, imageIndex: 0 })
+    wrapper.unmount()
+  })
   beforeEach(() => {
     push.mockClear()
     share.mockClear()
@@ -77,11 +87,12 @@ describe('CommunityImage view', () => {
       wallpaperInfo: { id: 99 }
     })
     vi.mocked(downloadCommunityPostImage).mockResolvedValue({ downloadUrl: 'https://example.com/download.jpg' })
+    vi.mocked(downloadWallpaperApi).mockResolvedValue({ downloadUrl: 'https://example.com/wallpaper.jpg' })
     vi.mocked(submitWallpaperFromPost).mockResolvedValue({})
     window.open = vi.fn()
   })
 
-  it('loads image metadata and routes wallpaper downloads to detail', async () => {
+  it('uses the wallpaper download policy and links to the wallpaper detail', async () => {
     const wrapper = mount(CommunityImage, mountOptions())
     await flushPromises()
 
@@ -91,13 +102,14 @@ describe('CommunityImage view', () => {
     expect(wrapper.text()).toContain('1920')
 
     await wrapper.vm.download()
-    expect(push).toHaveBeenCalledWith('/detail/99')
+    expect(downloadWallpaperApi).toHaveBeenCalledWith(99)
+    expect(downloadCommunityPostImage).not.toHaveBeenCalled()
 
     await wrapper.vm.shareImage()
     expect(share).toHaveBeenCalledWith(expect.objectContaining({ title: 'Image Post' }))
 
     await wrapper.vm.goWallpaper()
-    expect(ElMessage.success).toHaveBeenCalledWith('该图片已收录为壁纸')
+    expect(push).toHaveBeenCalledWith('/detail/99')
   })
 
   it('opens safe post image downloads when the image is not a wallpaper', async () => {

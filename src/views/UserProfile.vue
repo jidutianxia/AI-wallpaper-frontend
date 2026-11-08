@@ -10,8 +10,8 @@
           <div class="desc">公开分享</div>
         </div>
         <div class="follow-area" v-if="!isSelf">
-          <el-button 
-            :type="isFollowing ? 'default' : 'primary'" 
+          <el-button
+            :type="isFollowing ? 'default' : 'primary'"
             round
             @click="toggleFollow"
           >
@@ -37,12 +37,12 @@
               <h4 class="post-title" @click="goPost(p.id)">{{ p.title }}</h4>
               <p class="post-content" @click="goPost(p.id)">{{ p.content }}</p>
               <div class="post-images" v-if="p.images && p.images.length">
-                <img 
-                  v-for="(img, idx) in p.images.slice(0, 4)" 
-                  :key="idx" 
-                  :src="img" 
-                  class="post-img" 
-                  @click.stop="goImage(p.id, idx)" 
+                <MediaSurface
+                  v-for="(img, idx) in p.images.slice(0, 4)"
+                  :key="idx"
+                  :src="img"
+                  class="post-img"
+                  @click.stop="goImage(p.id, idx)"
                 />
               </div>
               <div class="post-footer">
@@ -60,18 +60,18 @@
             </div>
           </div>
         </el-tab-pane>
-        
+
         <el-tab-pane label="点赞的帖子" name="likes">
           <div class="wallpaper-grid" v-loading="loadingLikes">
-            <UnifiedCard 
-              v-for="p in likedPosts" 
-              :key="p.id" 
-              :title="p.title" 
-              :cover="p.images?.[0]" 
+            <UnifiedCard
+              v-for="p in likedPosts"
+              :key="p.id"
+              :title="p.title"
+              :cover="p.images?.[0]"
               :images="p.images || []"
               :image-count="p.images?.length || 0"
-              :subtitle="p.author?.username || ''" 
-              :to="String(`/community/post/${p.id}`)" 
+              :subtitle="p.author?.username || ''"
+              :to="String(`/community/post/${p.id}`)"
               :likes="p.likes"
               :no-actions="true"
             />
@@ -80,25 +80,20 @@
             <el-empty description="TA还没有点赞任何帖子" />
           </div>
         </el-tab-pane>
-        
-        <el-tab-pane label="收藏的帖子" name="favorites">
+
+        <el-tab-pane label="收藏的壁纸" name="favorites">
           <div class="wallpaper-grid" v-loading="loadingFavorites">
-            <UnifiedCard 
-              v-for="p in favoritePosts" 
-              :key="p.id" 
-              :title="p.title" 
-              :cover="p.images?.[0] || p.cover" 
-              :images="p.images || (p.cover ? [p.cover] : [])"
-              :image-count="p.images?.length || (p.cover ? 1 : 0)"
-              :subtitle="p.author?.username || ''" 
-              :to="String(`/community/post/${p.id}`)" 
-              :likes="p.likes" 
-              :favorites="p.favorites"
+            <UnifiedCard
+              v-for="wallpaper in favoriteWallpapers"
+              :key="wallpaper.id"
+              :title="wallpaper.title"
+              :data="wallpaper" :cover="wallpaper.thumbUrl || wallpaper.url"
+              :to="`/detail/${wallpaper.id}`"
               :no-actions="true"
             />
           </div>
-          <div v-if="!loadingFavorites && favoritePosts.length === 0" class="empty-state">
-            <el-empty description="TA还没有收藏任何帖子" />
+          <div v-if="!loadingFavorites && favoriteWallpapers.length === 0" class="empty-state">
+            <el-empty description="TA还没有收藏壁纸" />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -107,15 +102,16 @@
 </template>
 
 <script setup>
+import MediaSurface from '@/components/MediaSurface.vue'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Star, ChatLineSquare } from '@element-plus/icons-vue'
-import { getUserProfile, getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getUserPostFavorites, getOtherUserLikedPosts, getOtherUserPostFavorites, followUser, unfollowUser } from '@/api'
+import { getUserProfile, getUserCommunityPosts, getMyCommunityPosts, getUserLikes, getOtherUserLikedPosts, getOtherUserWallpaperFavorites, followUser, unfollowUser } from '@/api'
 import { useUserStore } from '@/store/user'
 import UnifiedCard from '@/components/UnifiedCard.vue'
 import { useAsyncState } from '@/composables/useAsyncState'
-import { normalizePagedResult, normalizePost } from '@/utils'
+import { normalizePagedResult, normalizePost, normalizeWallpaper } from '@/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,7 +119,7 @@ const userStore = useUserStore()
 const userId = route.params.id
 const userPosts = ref([])
 const likedPosts = ref([])
-const favoritePosts = ref([])
+const favoriteWallpapers = ref([])
 const activeTab = ref('posts')
 const username = ref('用户')
 const avatarUrl = ref('')
@@ -191,12 +187,10 @@ const likesState = useAsyncState(async () => {
 }, { initialData: [] })
 
 const favoritesState = useAsyncState(async () => {
-  const favorites = isSelf.value
-    ? await getUserPostFavorites({ page: 1, size: 20 })
-    : await getOtherUserPostFavorites(userId, { page: 1, size: 20 })
-  if (!isMounted.value) return favoritePosts.value
-  favoritePosts.value = normalizePostPage(favorites)
-  return favoritePosts.value
+  const favorites = await getOtherUserWallpaperFavorites(userId, { page: 1, size: 20 })
+  if (!isMounted.value) return favoriteWallpapers.value
+  favoriteWallpapers.value = normalizePagedResult(favorites, normalizeWallpaper).items
+  return favoriteWallpapers.value
 }, { initialData: [] })
 
 const loadingProfile = profileState.loading
@@ -224,16 +218,16 @@ const goPost = (id) => router.push(`/community/post/${id}`)
 const goImage = (id, index) => router.push(`/community/post/${id}/image/${index}`)
 const toggleFollow = async () => {
   try {
-    if (isFollowing.value) { 
+    if (isFollowing.value) {
       await unfollowUser(userId)
       if (!isMounted.value) return
       isFollowing.value = false
-      followersCount.value = Math.max(0, followersCount.value - 1) 
-    } else { 
+      followersCount.value = Math.max(0, followersCount.value - 1)
+    } else {
       await followUser(userId)
       if (!isMounted.value) return
       isFollowing.value = true
-      followersCount.value = followersCount.value + 1 
+      followersCount.value = followersCount.value + 1
     }
   } catch {}
 }
@@ -452,21 +446,21 @@ const toggleFollow = async () => {
     text-align: center;
     padding: 20px;
   }
-  
+
   .follow-area {
     align-items: center;
     margin-top: 10px;
   }
-  
+
   .wallpaper-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+
   .post-images {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .post-img {
     height: 140px;
   }

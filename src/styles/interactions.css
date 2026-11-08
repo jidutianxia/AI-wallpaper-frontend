@@ -1,0 +1,65 @@
+/* Interaction layer: state changes remain visible without extra explanatory copy. */
+#app.platform .nav-center { transition: max-width .45s cubic-bezier(.2,.8,.2,1); }
+#app.platform .nav-center.expanded { max-width: 490px; }
+#app.platform .search-wrapper { position: relative; transition: filter .3s; }
+#app.platform .expanded .search-wrapper { filter: drop-shadow(0 6px 18px color-mix(in srgb,var(--app-color-primary) 16%,transparent)); }
+#app.platform .expanded .el-input__wrapper { outline: 1px solid var(--app-color-primary); }
+#app.platform .nav-search-submit { display: grid; place-items: center; padding: 0; width: 30px; height: 32px; border: 0; background: transparent; }
+#app.platform .search-categories { left: auto; right: 0; width: min(580px, calc(100vw - 60px)); padding: 16px; }
+#app.platform .main-cats { flex-direction: row; gap: 4px; }
+#app.platform .cat-pill { width: auto; flex: 1; text-align: center; padding: 8px 5px; white-space: nowrap; }
+#app.platform .sub-list { padding: 16px 0 0; min-height: 58px; }
+#app.platform .sub-item { min-height: 44px; transition: transform .25s, box-shadow .25s; }
+#app.platform .sub-item:hover { transform: translateY(-3px); box-shadow: 0 6px 16px var(--app-accent-bg-soft); }
+.search-panel-enter-active,.search-panel-leave-active { transition: opacity .22s, transform .3s, filter .3s; transform-origin: top right; }
+.search-panel-enter-from,.search-panel-leave-to { opacity: 0; transform: translateY(-8px) scale(.97); filter: blur(5px); }
+.search-options-enter-active,.search-options-leave-active { transition: opacity .15s, transform .2s; }
+.search-options-enter-from { opacity: 0; transform: translateY(7px); }
+.search-options-leave-to { opacity: 0; transform: translateY(-5px); }
+#app.platform .hero-search-card { transition: box-shadow .4s, border-color .3s, transform .4s; }
+#app.platform .hero-section.is-active .hero-search-card { transform: translateY(-3px); border-color: var(--app-accent-border); box-shadow: 0 16px 44px color-mix(in srgb,var(--app-color-primary) 16%,transparent); }
+#app.platform .search-icon { transition: transform .4s; }
+#app.platform .is-active .search-icon { transform: rotate(-10deg) scale(1.12); }
+#app.platform .filter-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: transparent; font-size: 20px; }
+#app.platform .filter-toggle[aria-expanded=true] { background: var(--app-accent-bg-soft); color: var(--app-color-primary); }
+#app.platform .action-btn { background: transparent; padding: 10px 4px; min-height: 44px; }
+#app.platform .primary-search-btn .el-icon { transition: transform .3s; }
+#app.platform .primary-search-btn:hover .el-icon { transform: translateX(4px); }
+.expand-enter-active,.expand-leave-active { transition: max-height .35s, opacity .25s, transform .3s; overflow: hidden; max-height: 420px; }
+.expand-enter-from,.expand-leave-to { max-height: 0; opacity: 0; transform: translateY(-8px); }
+.filter-color { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; box-shadow: 0 0 0 1px var(--app-border); }
+.active-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -12px 0 24px; }
+.active-filters > span { padding: 5px 12px; border-radius: 20px; background: var(--app-accent-bg-soft); color: var(--app-accent-text); font-size: 12px; max-width: 70vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.active-filters button { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
+.nav-publish { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--app-text-main); background: var(--app-accent-bg-soft); font-size: 20px; transition: transform .3s; }
+.nav-publish:hover { transform: rotate(90deg); }
+#app.platform .item-card { transition: transform .35s, box-shadow .35s; }
+#app.platform .item-card:hover { transform: translateY(-5px); box-shadow: var(--app-shadow-hover); }
+.card-reactions { position: absolute; bottom: 12px; right: 12px; display: flex; gap: 6px; z-index: 4; }
+#app.platform .card-reactions .reaction-button { background: color-mix(in srgb,var(--app-bg-card) 88%,transparent); border-color: var(--app-border); color: var(--app-text-secondary); backdrop-filter: blur(16px); padding: 10px; }
+#app.platform .item-card:has(.card-reactions) .info { max-width: calc(100% - 130px); }
+#app.platform .item-card .info h3 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.page-reveal-enter-active,.page-reveal-leave-active { transition: opacity .18s, transform .22s; }
+.page-reveal-enter-from { opacity: 0; transform: translateY(8px); }
+.page-reveal-leave-to { opacity: 0; transform: translateY(-4px); }
+.form-inline-error { color: var(--el-color-danger); font-size: 13px; margin: 12px 0 0; }
+#app.platform .secondary-actions,.info-actions,.post-actions,.post-detail .actions { align-items: center; gap: 10px; }
+#app.platform .mobile-menu { top: 64px; flex-wrap: wrap; gap: 8px; }
+@media (max-width:768px) {
+ #app.platform .nav-publish { display: none; }
+ #app.platform .mobile-menu .mobile-link { min-height: 44px; display: grid; place-items: center; }
+ .mobile-account-actions { padding: 0; }
+ .notify-container { grid-template-columns: 1fr; }
+ .notify-nav { display: flex; overflow-x: auto; }
+ .notify-item { white-space: nowrap; }
+ .card-reactions { bottom: 8px; left: 8px; right: auto; gap: 4px; }
+ #app.platform .item-card:has(.card-reactions) .overlay { padding-bottom: 62px; }
+ #app.platform .item-card:has(.card-reactions) .info { max-width: 100%; }
+ #app.platform .card-preview-action { width: 44px; height: 44px; }
+}
+@media(prefers-reduced-motion:reduce) { .search-panel-enter-active,.search-panel-leave-active,.search-options-enter-active,.search-options-leave-active,.expand-enter-active,.expand-leave-active,.page-reveal-enter-active,.page-reveal-leave-active { transition: none; } }
+
+#app.platform .card-reactions .reaction-button.is-active { color: var(--reaction); border-color: color-mix(in srgb,var(--reaction) 60%,transparent); }
+
+#app.platform .hero-search-input:focus-visible { outline: none; }
+#app.platform .hero-search-card:focus-within { border-color: var(--app-color-primary); }

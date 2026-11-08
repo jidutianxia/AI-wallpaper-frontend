@@ -1,5 +1,6 @@
 <template>
-  <div class="detail">
+  <div class="detail immersive-detail">
+    <div v-if="wallpaper" class="detail-ambient" aria-hidden="true" :style="{ backgroundImage: `url(${JSON.stringify(mediaPoster(wallpaper))})` }" />
     <div class="topbar">
       <el-button size="small" :icon="ArrowLeft" @click="goBack">返回</el-button>
     </div>
@@ -14,52 +15,30 @@
     <div v-else-if="wallpaper" class="detail-content">
       <!-- 壁纸展示区 -->
       <div class="wallpaper-display">
-        <div class="wallpaper-container">
-          <img 
-            :src="getImageUrl(wallpaper.url || wallpaper.thumbUrl)"
-            :alt="wallpaper.title"
-            class="wallpaper-image"
-            @click="previewImage"
-          />
-        </div>
+        <WallpaperStage :image="wallpaper" />
       </div>
 
       <!-- 壁纸信息区 -->
       <div class="wallpaper-info">
         <div class="info-header">
           <h1 class="wallpaper-title">{{ wallpaper.title }}</h1>
-          
+
           <!-- New Action Area (Moved from overlay) -->
           <div class="action-area">
               <div class="secondary-actions">
-                <el-button 
-                  class="btn-gradient-orange" 
-                  size="large" 
-                  :icon="Download" 
+                <ReactionButton class="detail-favorite" kind="favorite" :active="Boolean(wallpaper.favorited)" :pending-action="wallpaper._interacting" @click="toggleFavorite" />
+                <el-button
+                  class="btn-gradient-orange"
+                  size="large"
+                  :icon="Download"
+                  :loading="downloading"
                   @click="downloadWallpaper"
                 >
-                  下载原图
+                  下载
                 </el-button>
-                <el-button 
-                  :class="wallpaper.liked ? 'btn-red-soft' : 'btn-ghost-grey'"
-                  size="large"
-                  :icon="View"
-                  @click="toggleLike"
-                  :loading="likeLoading"
-                >
-                  {{ wallpaper.liked ? '已点赞' : '点赞' }} ({{ wallpaper.likes }})
-                </el-button>
-                <el-button
-                  class="btn-ghost-grey"
-                  size="large"
-                  :icon="Warning"
-                  @click="reportWallpaper"
-                >
-                  Report
-                </el-button>
+                <ReactionButton class="detail-like" :active="Boolean(wallpaper.liked)" :count="Number(wallpaper.likes || 0)" :pending-action="wallpaper._interacting" @click="toggleLike" />
               </div>
-             <!-- Author Actions (Only visible to author) -->
-              <div v-if="isAuthor" class="author-actions">
+              <div v-if="canManage" class="author-actions">
                 <el-button class="btn-manage" round size="large" :icon="Edit" @click="handleEdit">
                   管理壁纸
                 </el-button>
@@ -79,12 +58,13 @@
               <el-icon><Calendar /></el-icon>
               {{ formatDate(wallpaper.createdAt) }}
             </span>
+            <el-button class="report-action" circle text :icon="Warning" aria-label="举报" title="举报" @click="reportWallpaper" />
           </div>
         </div>
 
         <div class="info-content">
           <div class="info-section">
-            <h3>基本信息</h3>
+
             <div class="info-grid">
               <div class="info-item">
                 <label>分辨率:</label>
@@ -96,7 +76,7 @@
               </div>
               <div class="info-item">
                 <label>格式:</label>
-                <span class="detail-value">{{ wallpaper.format || 'JPG' }}</span>
+                <span class="detail-value">{{ wallpaper.format || '—' }}</span>
               </div>
               <div class="info-item">
                 <label>分类:</label>
@@ -116,13 +96,13 @@
           </div>
 
           <div class="info-section" v-if="wallpaper.description">
-            <h3>描述</h3>
+
             <p class="description">{{ wallpaper.description }}</p>
           </div>
 
           <div class="info-section" v-if="uploaderInfo">
-            <h3>发布者</h3>
-            <div class="uploader-info card-nested" @click="goProfile(uploaderInfo.id)" style="cursor: pointer;">
+
+            <div class="uploader-info card-nested" role="link" tabindex="0" @keydown.enter="goProfile(uploaderInfo.id)" @click="goProfile(uploaderInfo.id)" style="cursor: pointer;">
               <el-avatar :src="uploaderInfo.avatar" :size="40">
                 {{ (uploaderInfo.nickname || uploaderInfo.username)?.[0]?.toUpperCase() }}
               </el-avatar>
@@ -141,13 +121,13 @@
     <div class="related-section" v-if="!loading && relatedWallpapers.length">
       <h2>相关推荐</h2>
       <div class="related-grid">
-        <div 
-          v-for="item in relatedWallpapers" 
+        <div
+          v-for="item in relatedWallpapers"
           :key="item.id"
-          class="related-item"
+          class="related-item" role="link" tabindex="0" @keydown.enter="viewDetail(item.id)"
           @click="viewDetail(item.id)"
         >
-          <img :src="getImageUrl(item.thumbUrl || item.url)" :alt="item.title" />
+          <MediaSurface :src="item" :alt="item.title" />
           <div class="related-info">
             <h4>{{ item.title }}</h4>
             <div class="related-stats">
@@ -172,11 +152,11 @@
           <el-input v-model="editForm.title" placeholder="请输入标题" maxlength="50" show-word-limit />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input 
-            v-model="editForm.description" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入描述" 
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入描述"
             maxlength="200"
             show-word-limit
           />
@@ -216,28 +196,19 @@
       </template>
     </el-dialog>
 
-    <!-- 图片预览对话框 -->
-   <el-dialog v-model="showPreview" :show-close="false" :align-center="true" class="cinema-preview-dialog" width="100%"
-      :transition-drop-down="false" transition="cinema-fade">
-      <div class="cinema-wrapper" @click="showPreview = false">
-        <img :src="getImageUrl(wallpaper?.url || wallpaper?.thumbUrl)" :alt="wallpaper?.title" class="cinema-image" />
-        <!-- <div class="cinema-caption">
-          <h3>{{ wallpaper?.title }}</h3>
-          <p>{{ wallpaper?.width }} × {{ wallpaper?.height }}</p>
-        </div> -->
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
+import { mediaPoster } from '@/utils/media'
+import MediaSurface from '@/components/MediaSurface.vue'
 import { ref, reactive,nextTick, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
+import {
   Star,
-  Download, 
-  View, 
+  Download,
+  View,
   Calendar,
   ArrowLeft,
   ArrowRight,
@@ -247,10 +218,11 @@ import {
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { getWallpaper, getWallpapers, downloadWallpaperApi, deleteWallpaper, updateWallpaper, getCategories, reportContent } from '@/api'
-import { appendTokenParam, normalizePagedResult, normalizeWallpaper, openSecureWindow } from '@/utils'
+import { downloadFile, normalizeCategories, normalizePagedResult, normalizeWallpaper } from '@/utils'
 import { useInteraction } from '@/composables/useInteraction'
-import { getLocalStorageItem } from '@/utils/storage'
 import AppState from '@/components/AppState.vue'
+import ReactionButton from '@/components/ReactionButton.vue'
+import WallpaperStage from '@/components/WallpaperStage.vue'
 import { getImageUrl } from '@/utils/imageHelper'
 import { requestAuth } from '@/utils/authEvents'
 
@@ -268,13 +240,13 @@ onBeforeUnmount(() => {
 const loading = ref(true)
 const loadError = ref(null)
 const likeLoading = ref(false)
-const showPreview = ref(false)
+const favoriteLoading = ref(false)
 const wallpaper = ref(null)
 const relatedWallpapers = ref([])
 
 const uploaderInfo = computed(() => {
   if (!wallpaper.value) return null
-  
+
   // 1. If uploader is already an object
   if (wallpaper.value.uploader && typeof wallpaper.value.uploader === 'object') {
     return wallpaper.value.uploader
@@ -283,7 +255,7 @@ const uploaderInfo = computed(() => {
   // 2. Handle author field (could be string, JSON string, or object)
   if (wallpaper.value.author) {
     let authorData = wallpaper.value.author
-    
+
     // Try parsing if it's a string that looks like JSON
     if (typeof authorData === 'string' && authorData.trim().startsWith('{')) {
       try {
@@ -304,21 +276,22 @@ const uploaderInfo = computed(() => {
         uploadCount: authorData.uploadCount || 0
       }
     }
-    
+
     // Fallback: author is a simple string (username)
     return {
       id: wallpaper.value.authorId, // Try to get ID from separate field if available
       username: authorData,
-      avatar: '', 
+      avatar: '',
       uploadCount: 0
     }
   }
   return null
 })
 
-const isAuthor = computed(() => {
-  if (!userStore.isAuthenticated || !userStore.info || !uploaderInfo.value) return false
-  return String(userStore.info.id) === String(uploaderInfo.value.id)
+const canManage = computed(() => {
+  if (!userStore.isAuthenticated || !userStore.info) return false
+  return userStore.info.roles?.includes('admin') ||
+    (uploaderInfo.value != null && String(userStore.info.id) === String(uploaderInfo.value.id))
 })
 
 
@@ -348,10 +321,10 @@ const editForm = reactive({
 const processedTags = computed(() => {
   const rawTags = wallpaper.value?.tags
   if (!rawTags) return []
-  
+
   // 如果已经是数组则直接返回，如果是字符串则按逗号分割
   if (Array.isArray(rawTags)) return rawTags
-  
+
   return rawTags
     .split(',')           // 按逗号分割成数组
     .map(tag => tag.trim()) // 去除每个标签前后的空格
@@ -363,7 +336,7 @@ const fetchCategories = async () => {
   if (categoryOptions.value.length > 0) return
   try {
     const res = await getCategories()
-    categoryOptions.value = res || []
+    categoryOptions.value = normalizeCategories(res || [])
   } catch (e) {
     console.error('Failed to fetch categories:', e)
   }
@@ -375,7 +348,7 @@ const handleEdit = async () => {
   editForm.title = wallpaper.value.title || ''
   editForm.description = wallpaper.value.description || ''
   editForm.category = wallpaper.value.category || ''
-  editForm.tagsList = Array.isArray(wallpaper.value.tags) ? [...wallpaper.value.tags] : []
+  editForm.tagsList = [...processedTags.value]
   editDialogVisible.value = true
 }
 
@@ -385,7 +358,7 @@ const submitEdit = async () => {
     ElMessage.warning('标题不能为空')
     return
   }
-  
+
   submitting.value = true
   try {
     await updateWallpaper(wallpaper.value.id, {
@@ -417,7 +390,7 @@ const handleDelete = async () => {
         type: 'warning',
       }
     )
-    
+
     await deleteWallpaper(wallpaper.value.id)
     ElMessage.success('壁纸已删除')
     router.push('/user') // 返回用户中心或首页
@@ -429,39 +402,41 @@ const handleDelete = async () => {
 }
 
 // 获取壁纸详情
+let detailRequestId = 0
 const fetchWallpaper = async (id) => {
+  const requestId = ++detailRequestId
   loading.value = true
   loadError.value = null
   try {
     const response = await getWallpaper(id)
-    if (!isMounted.value) return
+    if (!isMounted.value || requestId !== detailRequestId) return
     wallpaper.value = normalizeWallpaper(response)
-    
+
     // 获取相关推荐
-    fetchRelatedWallpapers()
+    fetchRelatedWallpapers(requestId)
   } catch (error) {
-    if (!isMounted.value) return
+    if (!isMounted.value || requestId !== detailRequestId) return
     wallpaper.value = null
     relatedWallpapers.value = []
     loadError.value = error
     return
   } finally {
-    if (isMounted.value) loading.value = false
+    if (isMounted.value && requestId === detailRequestId) loading.value = false
   }
 }
 
 // 获取相关推荐
-const fetchRelatedWallpapers = async () => {
+const fetchRelatedWallpapers = async (requestId) => {
   try {
     const response = await getWallpapers({
       category: wallpaper.value?.category,
       size: 6,
       exclude: wallpaper.value?.id
     })
-    if (!isMounted.value) return
-    relatedWallpapers.value = normalizePagedResult(response, normalizeWallpaper).items
+    if (!isMounted.value || requestId !== detailRequestId) return
+    relatedWallpapers.value = normalizePagedResult(response, normalizeWallpaper).items.filter(item => String(item.id) !== String(wallpaper.value?.id))
   } catch (error) {
-    if (!isMounted.value) return
+    if (!isMounted.value || requestId !== detailRequestId) return
     relatedWallpapers.value = []
     return
   }
@@ -486,10 +461,10 @@ const reportWallpaper = async () => {
     return
   }
   try {
-    const { value } = await ElMessageBox.prompt('Describe the issue briefly', 'Report wallpaper', {
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel',
-      inputPlaceholder: 'Spam, infringement, unsafe content, or broken metadata'
+    const { value } = await ElMessageBox.prompt('请简要说明问题', '举报壁纸', {
+      confirmButtonText: '提交',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如侵权、垃圾内容或错误的作品信息'
     })
     await reportContent({
       targetType: 'wallpaper',
@@ -497,38 +472,38 @@ const reportWallpaper = async () => {
       reason: 'user_report',
       description: value || ''
     })
-    ElMessage.success('Report submitted')
+    ElMessage.success('举报已提交')
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') ElMessage.error('Report failed')
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('提交失败，请稍后重试')
   }
 }
 
 // 下载壁纸
+const downloading = ref(false)
 const downloadWallpaper = async () => {
+  if (!wallpaper.value || downloading.value) return
+  downloading.value = true
   try {
-    // 直接构造下载链接，避免 axios 自动跟随重定向导致的 CORS 问题
-    // 后端重定向到 OSS，浏览器对 XHR 请求的重定向资源有严格的 CORS 限制
-    // 使用 window.open 或直接导航可以绕过此限制
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-    const token = getLocalStorageItem('token')
-    const url = appendTokenParam(`${baseUrl}/wallpapers/${wallpaper.value.id}/download`, token)
-    
-    // appendTokenParam 只负责拼 token，openSecureWindow 再做协议校验和 noopener 打开。
-    if (!openSecureWindow(url)) throw new Error('Invalid download URL')
-    
-    // 更新下载数 (乐观更新)
-    wallpaper.value.downloads++
+    const item = wallpaper.value
+    const { downloadUrl } = await downloadWallpaperApi(item.id)
+    if (!downloadFile(downloadUrl)) throw new Error('Invalid download URL')
+    item.downloads++
     ElMessage.success('开始下载')
 
   } catch (error) {
     console.error('Download error:', error)
     ElMessage.error('下载请求失败')
+  } finally {
+    downloading.value = false
   }
 }
 
 // 预览图片
-const previewImage = () => {
-  showPreview.value = true
+const toggleFavorite = async () => {
+  if (!wallpaper.value) return
+  favoriteLoading.value = true
+  try { await toggleInteraction(wallpaper.value, 'favorite', 'wallpaper') }
+  finally { favoriteLoading.value = false }
 }
 
 // 按标签搜索
@@ -549,11 +524,11 @@ const formatDate = (dateString) => {
   if (!dateString) return '未知'
   // Check for "0" string or 0 number which often means invalid/epoch
   if (dateString === '0' || dateString === 0) return '未知'
-  
+
   const date = new Date(dateString)
   // Check for invalid date or Unix epoch (1970)
   if (isNaN(date.getTime()) || date.getFullYear() <= 1970) return '未知'
-  
+
   return date.toLocaleDateString('zh-CN')
 }
 
@@ -580,7 +555,7 @@ const handleTagChange = (newTags) => {
     if (activeInput && activeInput.tagName === 'INPUT') {
       // 1. 清空原生 DOM 的值
       activeInput.value = '';
-      
+
       // 2. 触发 input 事件让 Vue/Element 监测到内容已变为空（可选，视版本而定）
       activeInput.dispatchEvent(new Event('input'));
     }
@@ -590,634 +565,25 @@ const handleTagChange = (newTags) => {
 </script>
 
 <style scoped>
-.detail {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.topbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.detail-content {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 40px;
-  margin-bottom: 40px;
-}
-
-.wallpaper-display {
-  position: relative;
-}
-
-.wallpaper-container {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--app-bg-hover);
-  box-shadow: var(--app-shadow-card);
-}
-
-.wallpaper-image {
-  width: 100%;
-  height: auto;
-  display: block;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.wallpaper-image:hover {
-  transform: scale(1.02);
-}
-
-/* Action Area Styles */
-.action-area {
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.author-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-start;
-  padding-top: 12px;
-  border-top: 1px solid var(--app-border);
-}
-
-.author-actions .el-button {
-  flex: 1;
-}
-
-.btn-manage {
-  width: 100%;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Semantic Variables from theme.css */
-  border: 1px solid var(--app-btn-manage-border) !important;
-  color: var(--app-btn-manage-text) !important;
-  background: var(--app-btn-manage-bg) !important;
-  box-shadow: var(--app-btn-manage-shadow);
-}
-
-.btn-manage:hover {
-  border-color: var(--app-btn-manage-hover-border) !important;
-  color: var(--app-btn-manage-hover-text) !important;
-  background: var(--app-btn-manage-hover-bg) !important;
-  box-shadow: var(--app-btn-manage-hover-shadow);
-  transform: translateY(-1px);
-}
-
-.btn-manage:active {
-  background: var(--app-btn-manage-active-bg) !important;
-  transform: translateY(1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.btn-gradient-orange {
-  width: 100%;
-  height: 48px !important;
-  font-size: 16px !important;
-}
-
-.secondary-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.secondary-actions .el-button {
-  flex: 1;
-}
-
-/* Dialog Styles */
-.dialog-footer-content {
-  display: flex;
-  justify-content: space-between; /* 拉开左侧删除和右侧保存的距离 */
-  align-items: center;           /* 垂直方向居中对齐 */
-  width: 100%;
-  padding-top: 10px;             /* 增加一点顶距更美观 */
-}
-
-/* 按钮内部图标与文字水平垂直居中 */
-:deep(.el-button.is-link) {
-  display: inline-flex;
-  align-items: center;   /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  height: auto;
-  padding: 4px 8px;
-}
-:deep(.el-button--danger.is-link) {
-  color: #ff4d4f !important; /* 你想要的颜色，比如更鲜艳的红色 */
-}
-/* 强制图标和文字之间的间距平衡 */
-:deep(.el-button .el-icon) {
-  margin-right: 6px;     /* 图标与文字的间距 */
-  vertical-align: middle;
-  font-size: 16px;       /* 调整图标大小使其与文字视觉统一 */
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-/* Typography Overrides */
-.wallpaper-title {
-  color: var(--app-text-header);
-}
-
-.detail-value {
-  color: var(--app-text-sub);
-  font-family: monospace; /* For numbers/data */
-}
-
-/* Nested Card for Publisher */
-.card-nested {
-  background-color: var(--app-bg-nested-card);
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid var(--app-border);
-}
-
-.uploader-info.card-nested {
-  /* Ensure overrides are applied */
-  background-color: var(--app-bg-nested-card);
-}
-
-.wallpaper-info {
-  background: var(--app-bg-card);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: var(--app-shadow-card);
-  height: fit-content;
-  border: 1px solid var(--app-border);
-  position: sticky;
-  top: 20px;
-  z-index: 10;
-}
-
-.info-header {
-  margin-bottom: 30px;
-}
-
-.wallpaper-title {
-  margin: 0 0 15px 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--app-text-main);
-  line-height: 1.3;
-}
-
-.wallpaper-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--app-text-secondary);
-  font-size: 14px;
-}
-
-.info-section {
-  margin-bottom: 30px;
-}
-
-.info-section:last-child {
-  margin-bottom: 0;
-}
-
-.info-section h3 {
-  margin: 0 0 15px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--app-text-main);
-}
-
-.info-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.info-item label {
-  font-weight: 500;
-  color: var(--app-text-secondary);
-}
-.info-item span {
-  color: var(--app-text-main);
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-item {
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: var(--app-accent-bg-soft);
-  border-color: var(--app-accent-border);
-  color: var(--app-text-secondary);
-  --el-tag-bg-color: var(--app-accent-bg-soft);
-  --el-tag-border-color: var(--app-accent-border);
-  --el-tag-text-color: var(--app-text-secondary);
-}
-
-.tag-item:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--app-shadow-sm);
-  color: var(--app-color-primary);
-  border-color: var(--app-color-primary);
-}
-
-.description {
-  margin: 0;
-  line-height: 1.6;
-  color: var(--app-text-secondary);
-}
-
-.uploader-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.uploader-details {
-  flex: 1;
-}
-
-.uploader-name {
-  font-weight: 600;
-  color: var(--app-text-main);
-  margin-bottom: 4px;
-}
-
-.uploader-stats {
-  font-size: 14px;
-  color: var(--app-text-secondary);
-}
-
-.related-section {
-  background: var(--app-bg-card);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: var(--app-shadow-card);
-  border: 1px solid var(--app-border);
-}
-
-.related-section h2 {
-  margin: 0 0 20px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--app-text-main);
-}
-
-.related-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.related-item {
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--app-bg-hover);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-}
-
-.related-item:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--app-shadow-hover);
-}
-
-.related-item img {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-}
-
-.related-info {
-  padding: 15px;
-}
-
-.related-info h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text-main);
-  line-height: 1.4;
-}
-
-.related-stats {
-  display: flex;
-  gap: 15px;
-  font-size: 12px;
-  color: var(--app-text-secondary);
-}
-
-.related-stats span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.preview-dialog {
-  text-align: center;
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 80vh;
-  object-fit: contain;
-}
-
-/* 响应式设计 */
-@media (max-width: 900px) {
-  .detail-content {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  .wallpaper-info {
-    order: -1;
-    position: static;
-  }
-  
-  .wallpaper-display {
-    max-height: 60vh;
-  }
-}
-
-@media (max-width: 768px) {
-  .detail {
-    padding: 12px;
-  }
-  
-  .wallpaper-container {
-    border-radius: 8px;
-  }
-  
-  .wallpaper-overlay {
-    padding: 20px;
-    opacity: 1;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
-  }
-  
-  .overlay-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .overlay-actions .el-button {
-    width: 100%;
-    font-size: 14px;
-  }
-  
-  .wallpaper-info {
-    padding: 16px;
-  }
-  
-  .wallpaper-title {
-    font-size: 20px;
-    line-height: 1.4;
-  }
-  
-  .wallpaper-stats {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  
-  .stat-item {
-    font-size: 13px;
-  }
-  
-  .info-section {
-    margin-bottom: 20px;
-  }
-  
-  .info-section h3 {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-  
-  .info-item {
-    padding: 6px 0;
-  }
-  
-  .uploader-info {
-    gap: 12px;
-  }
-  
-  .related-section {
-    padding: 16px;
-  }
-  
-  .related-section h2 {
-    font-size: 18px;
-    margin-bottom: 16px;
-  }
-  
-  .related-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .related-item img {
-    height: 100px;
-  }
-  
-  .related-info {
-    padding: 12px;
-  }
-  
-  .related-info h4 {
-    font-size: 13px;
-  }
-  
-  .related-stats {
-    font-size: 11px;
-    gap: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .detail {
-    padding: 8px;
-  }
-  
-  .wallpaper-title {
-    font-size: 18px;
-  }
-  
-  .wallpaper-stats {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .stat-item {
-    font-size: 12px;
-  }
-  
-  .overlay-actions {
-    gap: 6px;
-  }
-  
-  .overlay-actions .el-button {
-    font-size: 12px;
-    padding: 8px 12px;
-  }
-  
-  .info-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 8px 0;
-  }
-  
-  .info-item label {
-    font-size: 13px;
-  }
-  
-  .info-item span {
-    font-size: 14px;
-  }
-  
-  .tags {
-    gap: 6px;
-  }
-  
-  .tag-item {
-    font-size: 12px;
-  }
-  
-  .uploader-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .related-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .related-item img {
-    height: 120px;
-  }
-  
-  .related-info h4 {
-    font-size: 14px;
-  }
-  
-  .related-stats {
-    font-size: 12px;
-  }
-}
-
-
-/* 1. 消除 Dialog 默认白盒样式 */
-:deep(.cinema-preview-dialog) {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  margin: 0 !important;
-  --el-dialog-bg-color: transparent;
-}
-
-/* 2. 移除 Header 和 Body 的内边距 */
-:deep(.cinema-preview-dialog .el-dialog__header) {
-  display: none; 
-}
-:deep(.cinema-preview-dialog .el-dialog__body) {
-  padding: 0 !important;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 3. 沉浸式背景：深度模糊 */
-:deep(.el-overlay) {
-  background-color: rgba(0, 0, 0, 0.85) !important;
-  backdrop-filter: blur(15px); /* 毛玻璃效果 */
-  transition: all 0.4s ease;
-}
-
-/* 4. 图片容器与动画 */
-.cinema-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  cursor: zoom-out; /* 提示点击缩小 */
-}
-
-.cinema-image {
-  max-width: 95vw;
-  max-height: 85vh;
-  object-fit: contain;
-  box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
-  /* 入场动画：轻微放大弹出 */
-  animation: cinemaZoom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  user-select: none;
-  -webkit-user-drag: none;
-  /* 占位背景：跟随主题变化，避免加载时白屏 */
-  background: var(--app-bg-card);
-}
-
-/* 5. 电影字幕式文案 */
-.cinema-caption {
-  position: absolute;
-  bottom: 5vh;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.7);
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  pointer-events: none; /* 点击事件穿透到父容器 */
-}
-
-.cinema-caption h3 {
-  font-weight: 300;
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-}
-
-/* 放大入场动画 */
-@keyframes cinemaZoom {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
+.detail { margin: 0 auto; width: 100%; }
+.wallpaper-stats,.stat-item,.tags,.uploader-info,.related-stats,.dialog-footer-content,.dialog-actions { display: flex; align-items: center; }
+.wallpaper-stats { flex-direction: row; }
+.stat-item { gap: 6px; color: var(--app-text-secondary); }
+.info-grid,.related-grid { display: grid; }
+.tags { flex-wrap: wrap; }
+.tag-item { cursor: pointer; }
+.uploader-info { gap: 13px; }
+.uploader-details { flex: 1; }
+.uploader-name { font-size: 14px; font-weight: 500; }
+.uploader-stats { font-size: 11px; color: var(--app-text-secondary); }
+.author-actions { margin-top: 12px; }
+.related-item { cursor: pointer; }
+.related-item img { width: 100%; display: block; }
+.related-info { padding: 16px; }
+.related-info h4 { margin: 0 0 10px; font-weight: 500; }
+.related-stats { gap: 18px; color: var(--app-text-secondary); font-size: 11px; }
+.related-stats span { display: inline-flex; align-items: center; gap: 5px; }
+.dialog-footer-content { justify-content: space-between; gap: 12px; }
+.dialog-actions { gap: 10px; }
+.description { color: var(--app-text-secondary); }
 </style>

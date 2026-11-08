@@ -30,13 +30,6 @@ vi.mock('@/components/layout/FloatingActions.vue', () => ({
   }
 }))
 
-vi.mock('@/components/layout/AppFooter.vue', () => ({
-  default: {
-    name: 'AppFooter',
-    template: '<footer>footer</footer>'
-  }
-}))
-
 vi.mock('@/components/layout/AuthDialog.vue', () => ({
   default: {
     name: 'AuthDialog',
@@ -65,9 +58,9 @@ describe('App', () => {
     await wrapper.find('.logout').trigger('click')
     await wrapper.find('.login').trigger('click')
     await wrapper.find('.notify').trigger('click')
-    await wrapper.find('.settings').trigger('click')
 
     expect(mocks.handleLogout).toHaveBeenCalledOnce()
-    expect(wrapper.text()).toContain('暂无更多设置')
+    expect(wrapper.find('.auth-dialog').exists()).toBe(true)
+    expect(wrapper.find('.notification-center').exists()).toBe(true)
   })
 })

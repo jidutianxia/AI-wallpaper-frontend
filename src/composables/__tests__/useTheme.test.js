@@ -28,14 +28,13 @@ describe('useTheme', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
-  it('initializes from system dark preference when no saved theme exists', async () => {
+  it('defaults to dark mode when no saved theme exists', async () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true })
     const { useTheme } = await loadUseTheme()
     const { initTheme, isDark } = useTheme()
 
     initTheme()
 
-    expect(window.matchMedia).toHaveBeenCalledWith('(prefers-color-scheme: dark)')
     expect(isDark.value).toBe(true)
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
@@ -50,5 +49,14 @@ describe('useTheme', () => {
     expect(isDark.value).toBe(true)
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(localStorage.getItem('theme')).toBe('dark')
+  })
+
+  it('preserves an explicitly selected light theme', async () => {
+    localStorage.setItem('theme', 'light')
+    const { useTheme } = await loadUseTheme()
+    const { initTheme, isDark } = useTheme()
+    initTheme()
+    expect(isDark.value).toBe(false)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 })
